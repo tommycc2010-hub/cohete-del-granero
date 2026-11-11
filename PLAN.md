@@ -87,7 +87,7 @@ Juego 3D en primera persona con estilo tipo Schedule I: modelos low-poly, colore
 - [ ] Cargar la base de datos de la NASA en `datos.js` cuando la liberen.
 - [ ] Ajustar el balance: precios, combustible, oxígeno y probabilidades.
 - [x] Sonido, pantalla de inicio y tutorial corto.
-- [ ] Publicar la versión web (link para jueces) y empaquetar la app con Electron.
+- [x] Publicar la versión web (https://tommycc2010-hub.github.io/cohete-del-granero/) y empaquetar la app con Electron (`npm run empaquetar`).
 - [ ] Grabar el video demo y preparar la presentación.
 
 ---

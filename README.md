@@ -2,6 +2,8 @@
 
 Juego 3D para el reto **Space Mission Design Game** de NASA Space Apps Challenge 2026.
 
+**▶ Jugar en el navegador:** https://tommycc2010-hub.github.io/cohete-del-granero/
+
 Encontraste un cohete averiado en un granero. Repáralo, aterriza en Mercurio, Venus, Marte, Ío y Europa, cumple una misión científica en cada lugar y sigue una señal hasta el océano bajo el hielo de Europa.
 
 Cada decisión es un trade-off real de diseño de misiones: cada mejora añade masa, y más masa gasta más combustible.
