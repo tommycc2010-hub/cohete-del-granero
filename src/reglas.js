@@ -60,16 +60,26 @@ export function desbloqueado(id) {
 }
 
 // Cada acción devuelve el mensaje que explica lo que pasó.
+// Combustible mínimo para un viaje completo a Mercurio (ida, vuelta y maniobras).
+export function combustibleMinimo() { return costoIda("mercurio") * 2 + 8; }
+
 export function comprarCombustible(cant) {
-  cant = Math.min(cant, capacidad() - estado.combustible, Math.floor(estado.dinero / COMBUSTIBLE_PRECIO));
-  if (cant <= 0) {
-    const t = msg(estado.combustible >= capacidad() ? "El tanque ya está lleno." : "No te alcanza el dinero para combustible.");
-    cambio();
-    return t;
+  // Se cobran unidades enteras; el tanque nunca pasa de su capacidad.
+  cant = Math.min(cant, Math.ceil(capacidad() - estado.combustible), Math.floor(estado.dinero / COMBUSTIBLE_PRECIO));
+  let t;
+  if (cant > 0) {
+    estado.combustible = Math.min(capacidad(), estado.combustible + cant);
+    estado.dinero -= cant * COMBUSTIBLE_PRECIO;
+    t = msg(`Compraste ${cant} de combustible.`);
+  } else {
+    t = msg(estado.combustible >= capacidad() ? "El tanque ya está lleno." : "No te alcanza el dinero para combustible.");
   }
-  estado.combustible += cant;
-  estado.dinero -= cant * COMBUSTIBLE_PRECIO;
-  const t = msg(`Compraste ${cant} de combustible.`);
+  // Red de seguridad: sin dinero ni combustible para ir a Mercurio, el juego no puede quedarse atascado.
+  const falta = combustibleMinimo() - estado.combustible;
+  if (falta > 0 && estado.dinero < falta * COMBUSTIBLE_PRECIO) {
+    estado.combustible = combustibleMinimo();
+    t = msg("El Dr. Nova te presta combustible de emergencia: alcanza justo para un viaje a Mercurio.");
+  }
   cambio();
   return t;
 }

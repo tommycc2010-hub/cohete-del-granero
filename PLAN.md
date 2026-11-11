@@ -164,7 +164,7 @@ Juego 3D en primera persona con estilo tipo Schedule I: modelos low-poly, colore
 2. ✅ **Hecho.** Aterrizaje controlado, averías (pata rota, fuga, antena) y piezas de repuesto. Falta el viento de Marte y los rebotes en gravedad baja.
 3. ✅ **Hecho.** Sistema de misiones (app Misiones, recompensas, cada misión abre el siguiente destino) y la misión de Mercurio.
 4. ✅ **Hecho.** Misiones de Venus, Marte, Ío y Europa. En Europa hay que triangular la señal antes de poder caminar hasta ella.
-5. Balance con el simulador, ya con las recompensas de misiones.
+5. ✅ **Hecho.** Balance con el simulador (`npm run simular`). Resultado con un jugador promedio simulado: 7 viajes y unos 29 minutos hasta el final, el 100 % de las partidas termina y 9 de cada 10 lo hacen en 9 viajes o menos. Falta contrastarlo con partidas reales.
 6. Animaciones restantes: brazos, recoger, vecinos, patas del cohete.
 
 **Línea de corte:** si el viernes en la noche no está todo, se recortan primero las misiones secundarias, el escáner espectral y las animaciones de vecinos.

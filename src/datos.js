@@ -21,27 +21,27 @@ export const DATOS_PLANETAS = {
 
 // Misión principal de cada destino. `dato` es el hecho real en el que se basa.
 export const MISIONES = {
-  mercurio: { titulo: "Hielo en la sombra", recompensa: 400,
+  mercurio: { titulo: "Hielo en la sombra", recompensa: 300,
     desc: "Toma una muestra de hielo en un cráter donde nunca da el sol.",
     dato: "En los cráteres de los polos de Mercurio hay hielo de agua en sombra permanente, aunque el planeta está pegado al Sol." },
-  venus: { titulo: "Estación contra el calor", recompensa: 700,
+  venus: { titulo: "Estación contra el calor", recompensa: 450,
     desc: "Instala una estación meteorológica antes de que el calor la destruya.",
     dato: "Las sondas soviéticas Venera aguantaron como mucho unas dos horas en la superficie de Venus." },
-  marte: { titulo: "El rover dormido", recompensa: 1000,
+  marte: { titulo: "El rover dormido", recompensa: 650,
     desc: "Limpia y orienta el panel solar de un rover abandonado.",
     dato: "El polvo acumulado en los paneles solares dejó sin energía a varias misiones reales en Marte." },
-  jupiter: { titulo: "El pulso del volcán", recompensa: 1400,
+  jupiter: { titulo: "El pulso del volcán", recompensa: 900,
     desc: "Coloca un sismógrafo junto a un volcán activo de Ío.",
     dato: "Ío es el cuerpo con más volcanes activos del sistema solar: la gravedad de Júpiter lo estira y lo calienta por dentro." },
-  europa: { titulo: "Triangular la señal", recompensa: 2000,
+  europa: { titulo: "Triangular la señal", recompensa: 1500,
     desc: "Planta tres antenas y encuentra el origen de la señal.",
     dato: "Con varios receptores separados se ubica una fuente de radio viendo dónde se cruzan sus lecturas." },
 };
 
 // Objetos recolectables: prob = peso base de aparición, valor = precio base de venta.
 export const OBJETOS = [
-  { nombre: "Chatarra espacial", valor: 20,   prob: 0.50, color: "#9aa3a8" },
-  { nombre: "Hielo",             valor: 60,   prob: 0.25, color: "#8fe3f0" },
+  { nombre: "Chatarra espacial", valor: 30,   prob: 0.50, color: "#9aa3a8" },
+  { nombre: "Hielo",             valor: 80,   prob: 0.25, color: "#8fe3f0" },
   { nombre: "Mineral raro",      valor: 200,  prob: 0.15, color: "#ffc94a" },
   { nombre: "Cristal lunar",     valor: 600,  prob: 0.07, color: "#e28bff" },
   { nombre: "Muestra biológica", valor: 2000, prob: 0.03, color: "#6ee37a" },
