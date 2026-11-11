@@ -285,5 +285,6 @@ export function crearGranero(scene, mejoras) {
     scene, altura, colisiones, interactuables, actualizar, reconstruirCohete, limite: TAM / 2 - 22,
     iniciarDespegue, actualizarDespegue, terminarDespegue,
     cientifico: { x: 3.9, z: Z0 + 2.6 },
+    hablando(nombre) { cientifico.hablando = nombre === NOMBRE; pueblo.hablando(nombre); },
   };
 }

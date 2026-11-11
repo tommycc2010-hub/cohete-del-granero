@@ -69,11 +69,23 @@ export function crearSuperficie() {
   const colisiones = [], interactuables = [];
   let altura = () => 0, objetos = [], zonas = [], piezas = [], senal = null, bioma = BIOMAS.mercurio, t = 0;
   let cohete = null, baseCohete = 0, gravedad = 1, mision = null;
+  let patas = [], volando = [], tPolvo = 0, golpePolvo = 0;
+  // Nube de polvo bajo el cohete al aterrizar
+  const polvo = [];
+  for (let i = 0; i < 16; i++) {
+    const p = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 }));
+    p.userData = { ang: i / 16 * Math.PI * 2 + Math.random() * 0.3, fase: Math.random() };
+    p.visible = false;
+    polvo.push(p);
+  }
   const llama = new THREE.Mesh(new THREE.ConeGeometry(0.55, 2.6, 10), new THREE.MeshBasicMaterial({ color: 0xffa726 }));
   llama.rotation.x = Math.PI; // punta hacia abajo
 
   function iniciar(dest, mejoras, campo, misionHecha) {
     mundo.clear();
+    patas = [];
+    volando = [];
+    golpePolvo = 0;
     colisiones.length = 0;
     interactuables.length = 0;
     bioma = BIOMAS[dest];
@@ -162,12 +174,14 @@ export function crearSuperficie() {
       pata.position.set(1.15, -largo / 2 - 0.3, 0);
       pata.rotation.z = 0.6;
       giro.add(pata);
+      patas.push(pata);
       cohete.add(giro);
     }
     llama.position.y = -(largo / 2 + 0.6 + 1.2);
     llama.visible = false;
     cohete.add(llama);
     mundo.add(cohete);
+    polvo.forEach(p => { p.material.color.set(bioma.suelo[2]); p.visible = false; mundo.add(p); });
     colisiones.push({ minX: -1.6, maxX: 1.6, minZ: -1.6, maxZ: 1.6 });
     interactuables.push({ id: "despegar", texto: "Despegar de regreso al granero", x: 0, z: 0, radio: 6 });
 
@@ -216,8 +230,28 @@ export function crearSuperficie() {
     cohete.position.y = baseCohete + Math.max(0, h);
     llama.visible = conLlama;
     llama.scale.set(1, 0.7 + Math.random() * 0.6, 1);
+    // Las patas se despliegan cerca del suelo
+    const k = THREE.MathUtils.clamp((45 - h) / 25, 0, 1);
+    patas.forEach(p => { p.rotation.z = -0.1 + 0.7 * k; p.position.x = 0.9 + 0.25 * k; });
+    // El chorro del motor levanta polvo cuando está cerca del suelo
+    tPolvo += 1 / 60;
+    pintarPolvo(conLlama ? Math.max(0, 1 - h / 30) : 0, tPolvo);
     return cohete.position.y;
   }
+
+  function pintarPolvo(fuerza, tt) {
+    polvo.forEach(p => {
+      p.visible = fuerza > 0.01;
+      if (!p.visible) return;
+      const f = (tt * 0.9 + p.userData.fase) % 1, r = 1.5 + f * 9 * (0.4 + fuerza);
+      p.position.set(Math.cos(p.userData.ang) * r, 0.5 + f * 1.4, Math.sin(p.userData.ang) * r);
+      p.scale.setScalar(0.6 + f * 2.2);
+      p.material.opacity = 0.55 * fuerza * (1 - f);
+    });
+  }
+
+  // Polvareda al tocar el suelo; más grande cuanto más fuerte el golpe.
+  function polvareda(fuerza) { golpePolvo = Math.min(1.6, 0.5 + fuerza); tPolvo = 0; }
 
   // Un aterrizaje muy duro deja el cohete torcido hasta que se repara.
   function inclinar(si) { cohete.rotation.z = si ? 0.14 : 0; }
@@ -248,11 +282,32 @@ export function crearSuperficie() {
     sol.position.set(pos.x + 14, pos.y + 22, pos.z + 12);
     sol.target.position.set(pos.x, pos.y - 1.7, pos.z);
 
+    // Lo recogido vuela hacia la mochila y se encoge
+    volando = volando.filter(v => {
+      v.t += dt / 0.35;
+      v.mesh.position.lerpVectors(v.desde, new THREE.Vector3(pos.x, pos.y - 0.9, pos.z), Math.min(1, v.t));
+      v.mesh.scale.setScalar(v.escala * Math.max(0.05, 1 - v.t));
+      v.mesh.rotation.y += dt * 12;
+      if (v.t < 1) return true;
+      mundo.remove(v.mesh);
+      return false;
+    });
+    const alVuelo = o => {
+      mundo.remove(o.haz);
+      volando.push({ mesh: o.mesh, desde: o.mesh.position.clone(), escala: o.mesh.scale.x, t: 0 });
+    };
+
+    if (golpePolvo > 0) { // polvareda del aterrizaje
+      tPolvo += dt;
+      golpePolvo -= dt * 0.8;
+      pintarPolvo(Math.max(0, golpePolvo), tPolvo * 0.5);
+    }
+
     const recogidos = [];
     objetos = objetos.filter(o => {
       o.mesh.rotation.y += dt * 1.2;
       if (Math.hypot(o.mesh.position.x - pos.x, o.mesh.position.z - pos.z) < RADIO_RECOGER) {
-        mundo.remove(o.mesh, o.haz);
+        alVuelo(o);
         recogidos.push(o.dato);
         return false;
       }
@@ -263,7 +318,7 @@ export function crearSuperficie() {
     piezas = piezas.filter(o => {
       o.mesh.rotation.y += dt * 1.5;
       if (Math.hypot(o.mesh.position.x - pos.x, o.mesh.position.z - pos.z) < RADIO_RECOGER) {
-        mundo.remove(o.mesh, o.haz);
+        alVuelo(o);
         piezasRecogidas++;
         return false;
       }
@@ -291,7 +346,7 @@ export function crearSuperficie() {
   }
 
   return {
-    scene, colisiones, interactuables, iniciar, actualizar, moverCohete, inclinar, ponerPiezas, limite: TAM / 2 - 22,
+    scene, colisiones, interactuables, iniciar, actualizar, moverCohete, inclinar, ponerPiezas, polvareda, limite: TAM / 2 - 22,
     get gravedad() { return gravedad; },
     get piezas() { return piezas; },
     get mision() { return mision; },

@@ -76,7 +76,7 @@ export function crearPueblo({ cx, cz, poner, col, interactuables }) {
 
   // ----- Vecinos -----
   const VECINOS = [
-    { x: -4, z: 4, nombre: "Doña Luz", ropa: 0xe28bff, pelo: 0xeeeeee, pantalon: 0x6a4a8a, cartel: "#e28bff", gafas: true, lineas: [
+    { x: -4, z: 4, ruta: [[-9.5, 0], [0, 9.5], [9.5, 0], [0, -9.5]], velocidad: 1, nombre: "Doña Luz", ropa: 0xe28bff, pelo: 0xeeeeee, pantalon: 0x6a4a8a, cartel: "#e28bff", gafas: true, lineas: [
       "¿Tú eres quien revivió el cohete del viejo granero? ¡Todo el pueblo te vio despegar!",
       "Sube al cerro de noche: desde aquí Júpiter se ve a simple vista, como una estrella muy brillante.",
     ] },
@@ -84,22 +84,34 @@ export function crearPueblo({ cx, cz, poner, col, interactuables }) {
       "¡Bienvenido al mercado! Aquí pago un 20 % más que en tu granero. El paseo vale la pena si traes buena carga.",
       "Los cristales y las muestras biológicas son lo que más me piden. La chatarra... bueno, también la compro.",
     ] },
-    { x: 5, z: 9, nombre: "Tomás", ropa: 0xe5843b, pelo: 0x2a2a2a, pantalon: 0x4a4a4a, cartel: "#ffd23f", bigote: true, lineas: [
+    { x: 5, z: 9, ruta: [[5, 12], [16, 14], [17, 2], [5, 12], [-14, 16]], velocidad: 1.4, nombre: "Tomás", ropa: 0xe5843b, pelo: 0x2a2a2a, pantalon: 0x4a4a4a, cartel: "#ffd23f", bigote: true, lineas: [
       "Consejo de mecánico: lo que pesa, cuesta. Cada pieza que le pones al cohete pide más combustible para moverla.",
       "Antes de comprar, pregúntate qué problema te está frenando: ¿el tanque, el oxígeno o el traje?",
     ] },
-    { x: -9, z: -3, nombre: "Leo", ropa: 0x4aa3e8, pelo: 0xd9a441, pantalon: 0x2f6f3a, cartel: "#4aa3e8", escala: 0.72, lineas: [
+    { x: -9, z: -3, ruta: [[-4.5, 0], [0, 4.5], [4.5, 0], [0, -4.5], [-14, -10]], velocidad: 2.3, nombre: "Leo", ropa: 0x4aa3e8, pelo: 0xd9a441, pantalon: 0x2f6f3a, cartel: "#4aa3e8", escala: 0.72, lineas: [
       "¿Es verdad que en Venus las nubes son de ácido? ¡Guácala!",
       "Cuando sea grande quiero ir a Marte. ¿Me traes una piedra?",
     ] },
   ];
   const personas = VECINOS.map(v => {
-    const p = crearPersona({ ...v, x: cx + v.x, z: cz + v.z });
+    const ruta = v.ruta && v.ruta.map(([x, z]) => [cx + x, cz + z]);
+    const p = crearPersona({ ...v, ruta, x: cx + v.x, z: cz + v.z });
     poner(p.grupo, cx + v.x, 0, cz + v.z);
-    C(v.x, v.z, 0.7, 0.6);
-    interactuables.push({ id: "vecino", texto: `Hablar con ${v.nombre}`, nombre: v.nombre, lineas: v.lineas, x: cx + v.x, z: cz + v.z, radio: 2.4 });
+    if (!ruta) C(v.x, v.z, 0.7, 0.6); // los que pasean no bloquean el paso
+    p.nombre = v.nombre;
+    p.boton = { id: "vecino", texto: `Hablar con ${v.nombre}`, nombre: v.nombre, lineas: v.lineas, x: cx + v.x, z: cz + v.z, radio: 2.4 };
+    interactuables.push(p.boton);
     return p;
   });
 
-  return { actualizar(dt, pos) { personas.forEach(p => p.actualizar(dt, pos)); } };
+  return {
+    actualizar(dt, pos) {
+      personas.forEach(p => {
+        p.actualizar(dt, pos);
+        p.boton.x = p.grupo.position.x; // el botón de "hablar" sigue al vecino
+        p.boton.z = p.grupo.position.z;
+      });
+    },
+    hablando(nombre) { personas.forEach(p => { p.hablando = p.nombre === nombre; }); },
+  };
 }

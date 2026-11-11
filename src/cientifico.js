@@ -10,6 +10,7 @@ export const NOMBRE = "Dr. Nova";
 export function crearPersona({
   x, z, y = 0, nombre, piel = 0xf2c9a0, ropa = 0xf4f4f4, pantalon = 0x34495e, pelo = 0xb9bcc2,
   cartel = "#4aa3e8", gafas = false, bigote = false, corbata = false, giro = 0, escala = 1,
+  ruta = null, velocidad = 1.3, // ruta: puntos [x, z] por los que pasea, en orden
 }) {
   const g = new THREE.Group();
   g.position.set(x, y, z);
@@ -17,8 +18,13 @@ export function crearPersona({
   g.rotation.y = giro;
   const pieza = (m, px, py, pz, padre = g) => { m.position.set(px, py, pz); padre.add(m); return m; };
 
-  pieza(caja(0.24, 0.8, 0.26, pantalon), -0.16, 0.4, 0);
-  pieza(caja(0.24, 0.8, 0.26, pantalon), 0.16, 0.4, 0);
+  const piernas = [-1, 1].map(lado => { // giran desde la cadera
+    const cadera = new THREE.Group();
+    cadera.position.set(lado * 0.16, 0.8, 0);
+    g.add(cadera);
+    pieza(caja(0.24, 0.8, 0.26, pantalon), 0, -0.4, 0, cadera);
+    return cadera;
+  });
   pieza(caja(0.74, 1.0, 0.42, ropa), 0, 1.25, 0);
   if (corbata) {
     pieza(caja(0.2, 0.7, 0.03, 0x4aa3e8, false), 0, 1.35, 0.22);
@@ -56,23 +62,62 @@ export function crearPersona({
   letrero.position.y = 2.85;
   g.add(letrero);
 
-  let t = Math.random() * 6;
-  // Se mece un poco y gira para mirar al jugador cuando está cerca.
-  function actualizar(dt, jugadorPos) {
-    t += dt;
-    g.position.y = y + Math.sin(t * 2) * 0.03;
-    brazos[0].rotation.x = Math.sin(t * 2) * 0.12;
-    brazos[1].rotation.x = -Math.sin(t * 2) * 0.12;
-    cabeza.rotation.z = Math.sin(t * 1.3) * 0.05;
-    const dx = jugadorPos.x - g.position.x, dz = jugadorPos.z - g.position.z;
-    if (Math.hypot(dx, dz) < 9) {
-      let dif = Math.atan2(dx, dz) - g.rotation.y;
-      dif = Math.atan2(Math.sin(dif), Math.cos(dif));
-      g.rotation.y += dif * Math.min(1, dt * 5);
-    }
+  let t = Math.random() * 6, paso = 0, destino = 0, espera = Math.random() * 3;
+  const estado = { hablando: false };
+
+  function mirarHacia(px, pz, dt, rapidez = 5) {
+    let dif = Math.atan2(px - g.position.x, pz - g.position.z) - g.rotation.y;
+    dif = Math.atan2(Math.sin(dif), Math.cos(dif));
+    g.rotation.y += dif * Math.min(1, dt * rapidez);
   }
 
-  return { grupo: g, actualizar };
+  // Pasea por su ruta; se detiene y mira al jugador si está cerca o si le habla.
+  function actualizar(dt, jugadorPos) {
+    t += dt;
+    const cerca = Math.hypot(jugadorPos.x - g.position.x, jugadorPos.z - g.position.z);
+    let caminando = false;
+    if (ruta && !estado.hablando && cerca > 4.5) {
+      if (espera > 0) espera -= dt;
+      else {
+        const [tx, tz] = ruta[destino];
+        const dx = tx - g.position.x, dz = tz - g.position.z, d = Math.hypot(dx, dz);
+        if (d < 0.3) { destino = (destino + 1) % ruta.length; espera = 1 + Math.random() * 3; }
+        else {
+          const v = Math.min(d, velocidad * dt);
+          g.position.x += dx / d * v;
+          g.position.z += dz / d * v;
+          mirarHacia(tx, tz, dt, 8);
+          caminando = true;
+        }
+      }
+    }
+    if (!caminando && (cerca < 9 || estado.hablando)) mirarHacia(jugadorPos.x, jugadorPos.z, dt);
+
+    // Piernas y brazos: paso al caminar; gestos al hablar; respiración en reposo.
+    paso = caminando ? paso + dt * velocidad * 5.5 : paso * Math.exp(-10 * dt);
+    const zancada = caminando ? Math.sin(paso) * 0.55 : 0;
+    piernas[0].rotation.x = zancada;
+    piernas[1].rotation.x = -zancada;
+    if (estado.hablando) {
+      brazos[0].rotation.x = -0.5 + Math.sin(t * 5) * 0.35;
+      brazos[1].rotation.x = -0.2 + Math.sin(t * 3.7 + 1) * 0.25;
+      brazos[0].rotation.z = -0.25;
+      cabeza.rotation.x = Math.sin(t * 6) * 0.08;
+    } else {
+      brazos[0].rotation.x = caminando ? -zancada * 0.8 : Math.sin(t * 2) * 0.12;
+      brazos[1].rotation.x = caminando ? zancada * 0.8 : -Math.sin(t * 2) * 0.12;
+      brazos[0].rotation.z = 0;
+      cabeza.rotation.x = 0;
+    }
+    cabeza.rotation.z = Math.sin(t * 1.3) * 0.05;
+    g.position.y = y + (caminando ? Math.abs(Math.sin(paso)) * 0.06 : Math.sin(t * 2) * 0.03);
+  }
+
+  return {
+    grupo: g, actualizar,
+    get hablando() { return estado.hablando; },
+    set hablando(v) { estado.hablando = v; },
+  };
 }
 
 export function crearCientifico(x, z) {

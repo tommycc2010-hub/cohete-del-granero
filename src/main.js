@@ -4,6 +4,7 @@ import { crearEspacio } from "./espacio.js";
 import { crearSuperficie } from "./superficie.js";
 import { crearFinal, DURACION } from "./final.js";
 import { crearJugador } from "./jugador.js";
+import { crearManos } from "./manos.js";
 import { crearTelefono } from "./telefono.js";
 import { crearTutorial } from "./tutorial.js";
 import { sonido } from "./sonido.js";
@@ -21,6 +22,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.autoClear = false; // se dibuja el mundo y encima los brazos
 document.getElementById("juego").appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -30,6 +32,7 @@ const granero = crearGranero(scene, estado.mejoras);
 const espacio = crearEspacio();
 const superficie = crearSuperficie();
 const final = crearFinal();
+const manos = crearManos();
 const jugador = crearJugador(camera, renderer.domElement, {
   alPaso: () => sonido.reproducir("paso"),
   alSaltar: () => sonido.reproducir("salto"),
@@ -57,6 +60,7 @@ function ajustar() {
     c.aspect = innerWidth / innerHeight;
     c.updateProjectionMatrix();
   }
+  manos.ajustar(innerWidth / innerHeight);
 }
 addEventListener("resize", ajustar);
 ajustar();
@@ -141,6 +145,7 @@ function pintarDialogo() {
 }
 function hablar(nombre, lineas, x, z) {
   dialogo = { nombre, lineas, i: 0, x, z };
+  granero.hablando(nombre);
   $("accion").classList.remove("visible");
   sonido.reproducir("hablar");
   pintarDialogo();
@@ -153,6 +158,7 @@ function avanzarDialogo() {
 function cerrarDialogo() {
   if (!dialogo) return;
   dialogo = null;
+  granero.hablando(null);
   cercano = null; // para que vuelva a salir el aviso de "E" (lo repinta buscarCercano)
   pintarDialogo();
 }
@@ -226,6 +232,7 @@ function venderCarga(bono) {
 
 function interactuar() {
   if (telefono.abierto) return;
+  manos.usar();
   if (dialogo) return avanzarDialogo();
   if (!cercano) return;
   const c = cercano;
@@ -414,7 +421,7 @@ function pasoDescenso(dt) {
   $("m-vel").classList.toggle("alerta", vel > V_DURO);
   $("vel-relleno").style.width = `${Math.min(100, vel / 30 * 100)}%`;
   $("desc-comb").textContent = `⛽ ${estado.combustible.toFixed(1)} · reserva ${estado.mision.ida}`;
-  if (dt > 0 && desc.h <= 0) tocarSuelo(vel);
+  if (dt > 0 && desc.h <= 0) { superficie.polvareda(vel / 8); tocarSuelo(vel); }
 }
 
 // Según la velocidad al tocar el suelo, el cohete queda intacto o con averías que hay que reparar.
@@ -505,9 +512,10 @@ function pasoSuperficie(dt) {
   buscarCercano();
   const p = camera.position, m = estado.mision;
   const r = superficie.actualizar(dt, p);
-  r.recogidos.forEach(o => { aviso(recolectar(o)); sonido.reproducir("recoger"); tutorial.marcar("recogio"); });
+  r.recogidos.forEach(o => { aviso(recolectar(o)); sonido.reproducir("recoger"); tutorial.marcar("recogio"); manos.recoger(o.color); });
   if (r.piezasRecogidas) {
     piezasEnMano += r.piezasRecogidas;
+    manos.recoger("#ff8a2a");
     aviso(`🔧 Pieza de repuesto ${piezasEnMano}/${piezasNecesarias}.${piezasEnMano >= piezasNecesarias ? " Vuelve al cohete para reparar." : ""}`);
     sonido.reproducir("recoger");
   }
@@ -704,12 +712,43 @@ function paso(dt) {
   }
 }
 
+// Lectura del escáner: el objeto más cercano en el planeta, o la próxima misión en el granero.
+let relojEscaner = 0;
+function leerEscaner() {
+  const p = camera.position;
+  if (modo === "superficie") {
+    const lista = superficie.objetos.concat(superficie.piezas);
+    let cerca = null, d = Infinity;
+    for (const o of lista) {
+      const dd = Math.hypot(o.mesh.position.x - p.x, o.mesh.position.z - p.z);
+      if (dd < d) { d = dd; cerca = o; }
+    }
+    if (!cerca) return manos.escribir("ESCÁNER", "Zona limpia");
+    if (cerca.pieza) return manos.escribir("🔧 Pieza", `${Math.round(d)} m`, "#ff8a2a");
+    const conocido = !averias.antena && d <= alcanceSensor();
+    return manos.escribir(conocido ? cerca.dato.nombre : "Señal ¿?", `${Math.round(d)} m`, conocido ? cerca.dato.color : "#6ee37a");
+  }
+  const sig = ORDEN_MISIONES.find(id => !estado.misiones[id]);
+  manos.escribir(sig ? "Próximo destino" : "Misión cumplida", sig ? DATOS_PLANETAS[sig].nombre : "🛸");
+}
+const ORDEN_MISIONES = ["mercurio", "venus", "marte", "jupiter", "europa"];
+
 let antes = performance.now();
 function bucle() {
   const ahora = performance.now();
-  paso(Math.min((ahora - antes) / 1000, 0.05));
+  const dt = Math.min((ahora - antes) / 1000, 0.05);
+  paso(dt);
   antes = ahora;
+  renderer.clear();
   renderer.render(vista.escena, vista.camara);
+  // Brazos en primera persona: solo caminando, y no con el teléfono abierto
+  if ((modo === "granero" || modo === "superficie") && !telefono.abierto) {
+    manos.vestir(modo === "superficie");
+    manos.actualizar(dt, jugador.mov, jugador.enSuelo, camera);
+    if ((relojEscaner -= dt) <= 0) { relojEscaner = 0.25; leerEscaner(); }
+    renderer.clearDepth();
+    renderer.render(manos.scene, manos.camara);
+  }
 }
 renderer.setAnimationLoop(bucle);
 
