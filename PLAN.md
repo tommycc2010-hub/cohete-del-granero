@@ -17,7 +17,7 @@ Juego 3D en primera persona con estilo tipo Schedule I: modelos low-poly, colore
 - [x] Instalar Node.js (versión LTS).
 - [x] Crear el proyecto con Vite e instalar Three.js.
 - [x] Mover las reglas de `juego.js` a un módulo separado de la parte visual.
-- [ ] Guardar todo en git.
+- [x] Guardar todo en git.
 
 **Listo cuando:** `npm run dev` abre una página con un cubo 3D girando.
 
