@@ -19,6 +19,7 @@
   body[data-modo="granero"] [data-en~="granero"],
   body[data-modo="espacio"] [data-en~="espacio"],
   body[data-modo="superficie"] [data-en~="superficie"],
+  body[data-modo="descenso"] [data-en~="descenso"],
   body[data-modo="final"] [data-en~="final"] { display: var(--ver, block); }
 
   /* ----- HUD ----- */
@@ -32,7 +33,10 @@
   .medidor { position: relative; flex: 1; min-width: 190px; max-width: 320px; height: 40px; padding: 0 !important; overflow: hidden; background: #fff; }
   .medidor .relleno { position: absolute; inset: 0 auto 0 0; background: var(--green); border-right: 3px solid var(--ink); }
   .medidor.azul .relleno { background: #8fd6f5; }
+  .medidor.aviso .relleno { background: var(--yellow); }
   .medidor.alerta .relleno { background: var(--red); }
+  .fila-hud .rojo { background: var(--red); }
+  #averia { background: #ffcf9e; }
   .medidor span { position: absolute; inset: 0; display: grid; place-items: center; }
   #barra-reserva { position: absolute; top: 0; bottom: 0; width: 0; border-left: 3px dashed var(--ink); }
 
@@ -158,7 +162,7 @@
   <div class="tarjeta">📦 <span id="carga"></span></div>
 </div>
 <div id="pista" class="tarjeta" data-en="granero"><kbd>Tab</kbd> teléfono</div>
-<div id="objetivo" class="tarjeta" data-en="granero espacio superficie"></div>
+<div id="objetivo" class="tarjeta" data-en="granero espacio descenso superficie"></div>
 <div id="mira" data-en="granero superficie"></div>
 <div id="accion" class="tarjeta" data-en="granero superficie"></div>
 <div id="dialogo" class="tarjeta" data-en="granero">
@@ -179,15 +183,28 @@
   <span><kbd>W</kbd> impulso</span><span><kbd>S</kbd> frenar</span><span>🖱 o <kbd>A</kbd><kbd>D</kbd><kbd>↑</kbd><kbd>↓</kbd> dirigir</span><span><kbd>R</kbd> volver a casa</span>
 </div>
 
+<!-- Descenso -->
+<div id="hud-descenso" class="fila-hud" data-en="descenso">
+  <div class="tarjeta" id="lugar-desc"></div>
+  <div class="tarjeta" id="desc-altura"></div>
+  <div class="tarjeta medidor" id="m-vel"><div class="relleno" id="vel-relleno"></div><span id="desc-vel"></span></div>
+  <div class="tarjeta" id="desc-comb"></div>
+</div>
+<div class="tarjeta ayuda" data-en="descenso">
+  <span>Mantén <kbd>W</kbd> para frenar</span><span>🟢 hasta 3 m/s: suave</span><span>🟡 hasta 7 m/s: avería</span><span>🔴 más de 7 m/s: pata rota</span>
+</div>
+
 <!-- A pie en un planeta -->
 <div id="hud-suelo" class="fila-hud" data-en="superficie">
   <div class="tarjeta" id="lugar"></div>
   <div class="tarjeta medidor azul" id="m-oxi"><div class="relleno" id="oxi-relleno"></div><span id="oxi-txt"></span></div>
   <div class="tarjeta medidor" id="m-traje"><div class="relleno" id="traje-relleno"></div><span id="traje-txt"></span></div>
   <div class="tarjeta" id="recolectado-suelo"></div>
+  <div class="tarjeta" id="suelo-comb"></div>
+  <div class="tarjeta" id="averia"></div>
 </div>
 <div class="tarjeta ayuda" data-en="superficie">
-  <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> caminar</span><span><kbd>Shift</kbd> correr (gasta más oxígeno)</span><span>El cohete recarga el oxígeno</span>
+  <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> caminar</span><span><kbd>Espacio</kbd> saltar</span><span><kbd>Shift</kbd> correr (gasta más oxígeno)</span><span>El cohete recarga el oxígeno</span>
 </div>
 
 <div id="marcadores" data-en="espacio superficie"></div>
@@ -215,7 +232,7 @@
   <div class="tarjeta">
     <h1>🚀 Cohete del Granero</h1>
     <p>Repara el cohete, explora los planetas a pie y descubre qué hay en Europa.</p>
-    <p><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> caminar · <kbd>Shift</kbd> correr · <kbd>E</kbd> usar</p>
+    <p><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> caminar · <kbd>Espacio</kbd> saltar · <kbd>Shift</kbd> correr · <kbd>E</kbd> usar</p>
     <p><kbd>Tab</kbd> teléfono · <kbd>M</kbd> sonido · <kbd>Esc</kbd> pausa</p>
     <div class="boton">Haz clic para jugar</div>
   </div>

@@ -90,7 +90,85 @@ Juego 3D en primera persona con estilo tipo Schedule I: modelos low-poly, colore
 - [ ] Publicar la versión web (link para jueces) y empaquetar la app con Electron.
 - [ ] Grabar el video demo y preparar la presentación.
 
-## Ideas si sobra tiempo
+---
+
+# Fase 2: más que hacer en cada planeta
+
+**Idea central:** cada planeta tiene un problema real de ingeniería o ciencia, y la misión consiste en resolverlo. Los puzzles son pocos sistemas reutilizables, aplicados de forma distinta en cada planeta, para que quepa en el tiempo.
+
+**Prioridad:** 🟢 imprescindible antes del sábado · 🟡 si da tiempo · ⚪ solo si sobra.
+
+## A. Movimiento y animaciones
+
+- 🟢 **Saltar con Espacio y gravedad real de cada lugar.** En Europa saltas mucho más alto que en Venus. Es un dato real que se siente al jugar:
+
+  | Lugar | Gravedad (Tierra = 1) |
+  |---|---|
+  | Tierra (granero) | 1.00 |
+  | Venus | 0.90 |
+  | Mercurio | 0.38 |
+  | Marte | 0.38 |
+  | Ío | 0.18 |
+  | Europa | 0.13 |
+
+- 🟢 **Balanceo de cámara al caminar** y sacudida al caer o aterrizar.
+- 🟢 **Brazos en primera persona** sosteniendo el escáner, como en Schedule I.
+- 🟢 **Animación al recoger:** el objeto vuela hacia la mochila.
+- 🟡 **Vecinos que caminan** por el pueblo y el Dr. Nova que gesticula al hablar.
+- 🟡 **Patas del cohete** que se despliegan al aterrizar, con nube de polvo.
+- ⚪ **Mochila propulsora** como mejora, útil en gravedad baja.
+
+## B. Aterrizaje con problemas
+
+- 🟢 **Descenso controlado:** tú manejas el empuje contra la gravedad del lugar. Hay que tocar el suelo despacio y sin gastar todo el combustible. (En Marte la NASA lo llama "siete minutos de terror".)
+- 🟢 **Velocímetro con zona verde, amarilla y roja** al tocar suelo.
+- 🟢 **Aterrizaje duro = avería** que hay que reparar antes de despegar:
+  - Pata rota: buscar piezas cerca (puzzle de reparación).
+  - Fuga de combustible: cada minuto en el planeta cuesta combustible.
+  - Antena desalineada: los sensores no identifican objetos hasta repararla.
+- 🟡 **Problemas propios de cada lugar:**
+  - Venus: atmósfera densa que frena y calienta (el escudo importa).
+  - Marte: viento lateral que empuja la nave.
+  - Ío y Europa: casi sin gravedad, la nave rebota si llegas rápido.
+- 🟡 **Elegir dónde aterrizar:** llano y seguro lejos de los objetivos, o cerca y peligroso.
+
+## C. Sistema de misiones
+
+- 🟢 **App "Misiones" en el teléfono** con la misión activa, objetivos y recompensa.
+- 🟢 **Una misión principal por planeta**, en cadena hasta Europa. Completar una desbloquea el siguiente destino (en vez de solo "haber ido").
+- 🟢 **Recompensa en dinero** mucho mayor que recolectar al azar: la misión es la forma principal de ganar.
+- 🟡 **Misiones secundarias** de los vecinos (por ejemplo, Leo quiere una piedra de Marte).
+- ⚪ **Reporte de misión** al volver: qué salió bien y qué trade-off te costó más.
+
+## D. Misiones y puzzles por planeta
+
+| Lugar | Misión | Puzzle | Dato real detrás |
+|---|---|---|---|
+| **Mercurio** | Encontrar hielo en un cráter en sombra | **Sombras:** al sol el traje se calienta rápido; hay que ir de sombra en sombra | En los cráteres polares de Mercurio hay hielo de agua en sombra permanente |
+| **Venus** | Instalar una estación meteorológica antes de que el calor la destruya | **Ruta:** cruzar campos de lava eligiendo el camino; hay un reloj | Las sondas soviéticas Venera duraron como mucho unas dos horas en la superficie |
+| **Marte** | Reactivar un rover abandonado cubierto de polvo | **Paneles:** limpiar y orientar los paneles solares hacia el sol | El polvo sobre los paneles solares terminó con varias misiones reales en Marte |
+| **Ío** | Medir un volcán activo | **Ritmo:** cruzar entre erupciones que se repiten; la radiación limita el tiempo | Ío es el cuerpo con más actividad volcánica del sistema solar |
+| **Europa** | Encontrar el origen de la señal | **Triangulación:** colocar 3 antenas; donde se cruzan las lecturas está la señal | Así se ubica una fuente de radio con varios receptores |
+
+**Puzzle extra reutilizable:** 🟡 **Escáner espectral.** El escáner muestra el "código de colores" de una roca y hay que encontrar la que coincide con la buscada. Enseña cómo se identifica un mineral a distancia.
+
+## E. Balance
+
+- 🟢 **Simulador de partidas:** un script que juega muchas partidas con reglas simples y mide cuántos viajes hacen falta y cuánto dura el juego.
+- 🟢 **Metas:** primer viaje paga al menos una mejora, cada planeta nuevo pide 2 o 3 mejoras, Europa se alcanza en unos 30 a 40 minutos.
+- 🟢 **Ajustar:** precios de mejoras, recompensas de misiones, consumo de combustible y oxígeno, y daño del traje.
+
+## Orden propuesto
+
+1. ✅ **Hecho.** Saltar con gravedad real y balanceo de cámara.
+2. ✅ **Hecho.** Aterrizaje controlado, averías (pata rota, fuga, antena) y piezas de repuesto. Falta el viento de Marte y los rebotes en gravedad baja.
+3. Sistema de misiones y la misión de Mercurio con su puzzle.
+4. Misiones de Marte, Venus, Ío y Europa (Europa reemplaza el final actual con la triangulación).
+5. Balance con el simulador, ya con las recompensas de misiones.
+6. Animaciones restantes: brazos, recoger, vecinos, patas del cohete.
+
+**Línea de corte:** si el viernes en la noche no está todo, se recortan primero las misiones secundarias, el escáner espectral y las animaciones de vecinos.
+
+## Otras ideas si sobra tiempo
 - Eventos aleatorios: tormenta solar, fallo de componente, fuga de combustible.
 - Ventanas de lanzamiento y retraso de comunicaciones.
-- Reporte de misión al volver de cada viaje.

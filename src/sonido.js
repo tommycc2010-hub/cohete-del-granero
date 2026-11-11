@@ -57,6 +57,7 @@ const EFECTOS = {
   error: () => tono(170, 0.2, "sawtooth", 0.14, 110),
   dano: () => tono(120, 0.22, "sawtooth", 0.2, 60),
   alarma: () => { tono(900, 0.1, "square", 0.1); tono(900, 0.1, "square", 0.1, null, 0.18); },
+  salto: () => tono(300, 0.14, "sine", 0.14, 520),
   paso: () => tono(70 + Math.random() * 30, 0.05, "triangle", 0.1, 45),
   telefono: () => tono(740, 0.07, "sine", 0.14, 980),
   aterrizar: () => tono(220, 0.7, "sawtooth", 0.16, 55),

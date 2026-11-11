@@ -13,7 +13,7 @@ import {
   estado, capacidad, comprarCombustible, vender, suscribir, regresar,
   generarCampo, consumoImpulso, alcanceSensor, gastar, recolectar, detectarSenal,
   oxigenoMax, resistenciaTraje, desgasteTraje, puedeAterrizar, aterrizar, perderRecolectado,
-  BONO_PUEBLO, VALOR_ORBITA,
+  BONO_PUEBLO, VALOR_ORBITA, FUGA_POR_SEGUNDO,
 } from "./reglas.js";
 
 // ----- Render -----
@@ -30,7 +30,18 @@ const granero = crearGranero(scene, estado.mejoras);
 const espacio = crearEspacio();
 const superficie = crearSuperficie();
 const final = crearFinal();
-const jugador = crearJugador(camera, renderer.domElement, () => sonido.reproducir("paso"));
+const jugador = crearJugador(camera, renderer.domElement, {
+  alPaso: () => sonido.reproducir("paso"),
+  alSaltar: () => sonido.reproducir("salto"),
+  alCaer(golpe) {
+    if (golpe > 3) sonido.reproducir("paso");
+    if (modo === "superficie" && golpe > 11) { // una caída fuerte daña el traje
+      traje = Math.max(0, traje - (golpe - 11) * 3 / resistenciaTraje());
+      aviso("Caída fuerte: el traje se dañó.");
+      sonido.reproducir("dano");
+    }
+  },
+});
 
 // `mundo` es donde camina el jugador: el granero o la superficie de un planeta.
 let mundo = granero;
@@ -50,7 +61,8 @@ function ajustar() {
 addEventListener("resize", ajustar);
 ajustar();
 
-// Modos: "granero" (caminar), "despegue" (animación), "espacio" (pilotar), "superficie" (explorar a pie),
+// Modos: "granero" (caminar), "despegue" (animación), "espacio" (pilotar), "descenso" (aterrizar),
+// "superficie" (explorar a pie),
 // "final" (escena de Europa) y "transicion" (fundido entre modos).
 let modo = "granero";
 let vista = { escena: scene, camara: camera }; // lo que se dibuja; no cambia durante un fundido
@@ -58,6 +70,7 @@ const VISTAS = {
   granero: () => ({ escena: scene, camara: camera }),
   despegue: () => ({ escena: scene, camara: camera }),
   espacio: () => ({ escena: espacio.scene, camara: espacio.camera }),
+  descenso: () => ({ escena: superficie.scene, camara: camera }),
   superficie: () => ({ escena: superficie.scene, camara: camera }),
   final: () => ({ escena: final.scene, camara: final.camera }),
 };
@@ -200,8 +213,8 @@ function buscarCercano() {
   if (mejor !== cercano) {
     cercano = mejor;
     $("accion").classList.toggle("visible", !!cercano);
-    if (cercano) $("accion").innerHTML = `<b>E</b> ${cercano.texto}`;
   }
+  if (cercano) $("accion").innerHTML = `<b>E</b> ${cercano.texto}`; // el texto puede cambiar (reparaciones)
 }
 
 function venderCarga(bono) {
@@ -223,7 +236,7 @@ function interactuar() {
   else if (c.id === "cohete") telefono.abrir("mapa");
   else if (c.id === "cientifico") { hablar(NOMBRE, consejos(), c.x, c.z); tutorial.marcar("hablo"); }
   else if (c.id === "vecino") hablar(c.nombre, c.lineas.map(texto => ({ texto })), c.x, c.z);
-  else if (c.id === "despegar") volver();
+  else if (c.id === "despegar") usarCohete();
 }
 
 // ----- Despegue -----
@@ -280,7 +293,7 @@ function volar(dt) {
 
   esperaAviso -= dt;
   if (r.enPista) {
-    if (puedeAterrizar()) return aterrizarEnSuperficie();
+    if (puedeAterrizar()) return empezarDescenso();
     if (esperaAviso <= 0) {
       esperaAviso = 4;
       aviso("No alcanza el combustible para aterrizar y volver. Regresa con R.");
@@ -319,9 +332,10 @@ function crearMarcadores(lista) {
 
 const proy = new THREE.Vector3();
 function pintarMarcadores(camara, ref) {
-  const lista = modo === "espacio" ? espacio.objetos : superficie.objetos;
+  const enSuelo = modo === "superficie";
+  const lista = enSuelo ? superficie.objetos.concat(superficie.piezas) : espacio.objetos;
   const vivos = new Set(lista);
-  const alcance = alcanceSensor();
+  const alcance = enSuelo && averias.antena ? 0 : alcanceSensor(); // con la antena desalineada no se identifica nada
   marcadores = marcadores.filter(m => {
     if (vivos.has(m.o)) return true;
     m.el.remove();
@@ -334,8 +348,8 @@ function pintarMarcadores(camara, ref) {
     if (!visible) continue;
     const d = Math.round(o.mesh.position.distanceTo(ref));
     el.style.transform = `translate(${(proy.x + 1) / 2 * innerWidth}px, ${(1 - proy.y) / 2 * innerHeight}px)`;
-    el.innerHTML = d <= alcance
-      ? `<i style="background:${o.dato.color}"></i>${o.dato.nombre} · ${o.dato.valor}💰 · ${d} m`
+    el.innerHTML = o.pieza ? `🔧 Pieza de repuesto · ${d} m`
+      : d <= alcance ? `<i style="background:${o.dato.color}"></i>${o.dato.nombre} · ${o.dato.valor}💰 · ${d} m`
       : `<i></i>¿? · ${d} m`;
   }
 }
@@ -356,27 +370,110 @@ let oxi = 0, traje = 100, cargaSegura = 0, esperaPeligro = 0, esperaAlarma = 0;
 const posCohete = new THREE.Vector3(0, 3, 0);
 const ZONA_NAVE = 6.5; // cerca del cohete se recarga el oxígeno y la carga queda a salvo
 
-function aterrizarEnSuperficie() {
+// ----- Descenso: el jugador frena el cohete contra la gravedad del lugar -----
+const V_SUAVE = 3, V_DURO = 7; // velocidad al tocar el suelo, en m/s
+const NOMBRE_AVERIA = { pata: "pata rota", fuga: "fuga de combustible", antena: "antena desalineada" };
+let desc = null;
+let averias = {}, piezasNecesarias = 0, piezasEnMano = 0;
+
+function empezarDescenso() {
   ponerModo("transicion");
   sonido.motor(0);
-  sonido.reproducir("aterrizar");
-  aterrizar();
-  const dest = estado.mision.dest;
+  const dest = estado.mision.dest, d = DATOS_PLANETAS[dest];
   fundido(() => {
     superficie.iniciar(dest, estado.mejoras, generarCampo(dest, 12));
     mundo = superficie;
+    desc = { h: 150, v: -8, g: 9.8 * d.gravedad, arrastre: d.arrastre };
+    $("marcadores").innerHTML = "";
+    marcadores = [];
+    $("lugar-desc").textContent = `🛬 ${d.lugar} · gravedad ${d.gravedad.toFixed(2)} g`;
+    pasoDescenso(0);
+    ponerModo("descenso");
+    aviso(`📻 ${NOMBRE}: Mantén W para frenar. Toca el suelo a menos de ${V_SUAVE} m/s o romperás algo.`);
+  });
+}
+
+function pasoDescenso(dt) {
+  const k = jugador.teclas;
+  const empuje = !!(k.KeyW || k.Space || k.ArrowUp) && estado.combustible > 0;
+  let a = -desc.g - desc.arrastre * desc.v * Math.abs(desc.v); // gravedad y freno de la atmósfera
+  if (empuje) { a += 2.5 * desc.g + 3; gastar(consumoImpulso() * 1.2 * dt); }
+  desc.v += a * dt;
+  desc.h += desc.v * dt;
+  if (desc.h > 220) { desc.h = 220; desc.v = Math.min(0, desc.v); }
+  const y = superficie.moverCohete(desc.h, empuje);
+  camera.position.set(15, y + 3, 24);
+  camera.lookAt(0, y - 2, 0);
+  sonido.motor(empuje ? 0.8 : 0);
+
+  const vel = Math.max(0, -desc.v);
+  $("desc-altura").textContent = `Altura ${Math.max(0, desc.h).toFixed(0)} m`;
+  $("desc-vel").textContent = `${vel.toFixed(1)} m/s`;
+  $("m-vel").classList.toggle("aviso", vel > V_SUAVE && vel <= V_DURO);
+  $("m-vel").classList.toggle("alerta", vel > V_DURO);
+  $("vel-relleno").style.width = `${Math.min(100, vel / 30 * 100)}%`;
+  $("desc-comb").textContent = `⛽ ${estado.combustible.toFixed(1)} · reserva ${estado.mision.ida}`;
+  if (dt > 0 && desc.h <= 0) tocarSuelo(vel);
+}
+
+// Según la velocidad al tocar el suelo, el cohete queda intacto o con averías que hay que reparar.
+function tocarSuelo(vel) {
+  ponerModo("transicion");
+  sonido.motor(0);
+  superficie.moverCohete(0, false);
+  const dest = estado.mision.dest, d = DATOS_PLANETAS[dest];
+  averias = {};
+  const leve = Math.random() < 0.5 ? "fuga" : "antena";
+  if (vel > V_DURO) { averias.pata = true; averias[leve] = true; }
+  else if (vel > V_SUAVE) averias[leve] = true;
+  piezasNecesarias = (averias.pata ? 2 : 0) + (averias.fuga || averias.antena ? 1 : 0);
+  piezasEnMano = 0;
+  superficie.ponerPiezas(piezasNecesarias);
+  superficie.inclinar(!!averias.pata);
+  sonido.reproducir(piezasNecesarias ? "dano" : "aterrizar");
+  aterrizar();
+  const lista = Object.keys(averias).map(k => NOMBRE_AVERIA[k]).join(" y ");
+  const texto = !piezasNecesarias
+    ? `📻 ${NOMBRE}: ¡Aterrizaje suave a ${vel.toFixed(1)} m/s! ${d.suelo}`
+    : `📻 ${NOMBRE}: Tocaste suelo a ${vel.toFixed(1)} m/s y hay averías: ${lista}. Busca ${piezasNecesarias === 1 ? "la pieza de repuesto" : `las ${piezasNecesarias} piezas de repuesto`} 🔧 y vuelve al cohete.`;
+  fundido(() => {
     jugador.colocar(superficie, 2.4, 4, 12, 30);
     oxi = oxigenoMax();
     traje = 100;
     cargaSegura = estado.mision.carga.length;
     soltarCercano();
-    crearMarcadores(superficie.objetos);
-    $("lugar").textContent = `📍 ${DATOS_PLANETAS[dest].lugar}`;
+    crearMarcadores(superficie.objetos.concat(superficie.piezas));
+    $("lugar").textContent = `📍 ${d.lugar} · ${d.gravedad.toFixed(2)} g`;
     ponerModo("superficie");
     sonido.viento(dest === "venus" || dest === "marte" ? 1 : 0.25);
-    aviso(`📻 ${NOMBRE}: ${DATOS_PLANETAS[dest].suelo}`);
+    aviso(texto);
     tutorial.marcar("aterrizo");
   });
+}
+
+const hayAverias = () => piezasNecesarias > 0;
+
+// E en el cohete: reparar si hay piezas, o despegar si se puede.
+function usarCohete() {
+  if (hayAverias() && piezasEnMano >= piezasNecesarias) {
+    averias = {};
+    piezasNecesarias = 0;
+    superficie.inclinar(false);
+    sonido.reproducir("comprar");
+    return aviso("🔧 Cohete reparado. Todo en orden.");
+  }
+  if (averias.pata) {
+    sonido.reproducir("error");
+    return aviso(`Con la pata rota no se puede despegar. Te faltan ${piezasNecesarias - piezasEnMano} piezas de repuesto 🔧.`);
+  }
+  volver();
+}
+
+function textoCohete() {
+  if (!hayAverias()) return "Despegar de regreso al granero";
+  const cuenta = `piezas ${piezasEnMano}/${piezasNecesarias}`;
+  if (piezasEnMano >= piezasNecesarias) return `Reparar el cohete (${cuenta})`;
+  return averias.pata ? `Pata rota: faltan piezas (${cuenta})` : `Despegar sin reparar (${cuenta})`;
 }
 
 function pasoSuperficie(dt) {
@@ -385,6 +482,13 @@ function pasoSuperficie(dt) {
   const p = camera.position, m = estado.mision;
   const r = superficie.actualizar(dt, p);
   r.recogidos.forEach(o => { aviso(recolectar(o)); sonido.reproducir("recoger"); tutorial.marcar("recogio"); });
+  if (r.piezasRecogidas) {
+    piezasEnMano += r.piezasRecogidas;
+    aviso(`🔧 Pieza de repuesto ${piezasEnMano}/${piezasNecesarias}.${piezasEnMano >= piezasNecesarias ? " Vuelve al cohete para reparar." : ""}`);
+    sonido.reproducir("recoger");
+  }
+  if (averias.fuga) gastar(FUGA_POR_SEGUNDO * dt); // el tanque pierde combustible hasta que se repare
+  superficie.interactuables[0].texto = textoCohete();
 
   const enNave = Math.hypot(p.x, p.z) < ZONA_NAVE;
   if (enNave) {
@@ -424,6 +528,10 @@ function pintarHudSuelo(enNave) {
   $("m-oxi").classList.toggle("alerta", pocoAire);
   $("m-traje").classList.toggle("alerta", traje < 25);
   $("recolectado-suelo").textContent = `📦 ${m.carga.length} · quedan ${superficie.objetos.length}`;
+  $("suelo-comb").textContent = `⛽ ${estado.combustible.toFixed(0)} · reserva ${m.ida}`;
+  $("suelo-comb").classList.toggle("rojo", estado.combustible < m.ida);
+  $("averia").style.display = hayAverias() ? "" : "none";
+  $("averia").textContent = `🔧 ${Object.keys(averias).map(k => NOMBRE_AVERIA[k]).join(", ")} · piezas ${piezasEnMano}/${piezasNecesarias}`;
   document.body.classList.toggle("traje-roto", traje <= 0);
   $("alerta").classList.toggle("visible", !enNave && (pocoAire || traje <= 0));
   $("alerta").textContent = traje <= 0
@@ -461,6 +569,8 @@ function limpiarMision() {
   marcadores = [];
   $("alerta").classList.remove("visible");
   document.body.classList.remove("traje-roto");
+  averias = {};
+  piezasNecesarias = 0;
   sonido.viento(0);
   sonido.motor(0);
 }
@@ -541,6 +651,8 @@ function paso(dt) {
     if (tDespegue > 4) entrarAlEspacio();
   } else if (modo === "espacio" && !pausado()) {
     volar(dt);
+  } else if (modo === "descenso" && !pausado()) {
+    pasoDescenso(dt);
   } else if (modo === "superficie" && !pausado()) {
     pasoSuperficie(dt);
   } else if (modo === "final") {
@@ -561,7 +673,8 @@ renderer.setAnimationLoop(bucle);
 window.__juego = {
   camera, jugador, granero, espacio, superficie, estado, telefono, interactuar, despegar, volver,
   get modo() { return modo; },
-  get suelo() { return { oxi, traje, cargaSegura }; },
+  get suelo() { return { oxi, traje, cargaSegura, averias, piezasNecesarias, piezasEnMano }; },
+  get desc() { return desc; },
   set suelo(v) { if (v.oxi !== undefined) oxi = v.oxi; if (v.traje !== undefined) traje = v.traje; },
   avanzar(segundos) { for (let i = 0; i < segundos / 0.05; i++) paso(0.05); },
 };

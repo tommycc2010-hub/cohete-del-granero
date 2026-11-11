@@ -6,6 +6,7 @@ import { crearCohete } from "./cohete.js";
 import { crearPlaneta, crearObjeto } from "./espacio.js";
 import { crearTerreno } from "./terreno.js";
 import { fbm, ruido, paso, azarSemilla } from "./ruido.js";
+import { DATOS_PLANETAS } from "./datos.js";
 
 const TAM = 440;
 const RADIO_RECOGER = 2.4;
@@ -65,13 +66,18 @@ export function crearSuperficie() {
   scene.add(mundo);
 
   const colisiones = [], interactuables = [];
-  let altura = () => 0, objetos = [], zonas = [], senal = null, bioma = BIOMAS.mercurio, t = 0;
+  let altura = () => 0, objetos = [], zonas = [], piezas = [], senal = null, bioma = BIOMAS.mercurio, t = 0;
+  let cohete = null, baseCohete = 0, gravedad = 1;
+  const llama = new THREE.Mesh(new THREE.ConeGeometry(0.55, 2.6, 10), new THREE.MeshBasicMaterial({ color: 0xffa726 }));
+  llama.rotation.x = Math.PI; // punta hacia abajo
 
   function iniciar(dest, mejoras, campo) {
     mundo.clear();
     colisiones.length = 0;
     interactuables.length = 0;
     bioma = BIOMAS[dest];
+    gravedad = DATOS_PLANETAS[dest].gravedad;
+    piezas = [];
     const azar = azarSemilla(bioma.semilla);
 
     scene.background = new THREE.Color(bioma.cielo);
@@ -142,11 +148,25 @@ export function crearSuperficie() {
     }
 
     // ----- Cohete aterrizado en el centro -----
-    const cohete = crearCohete(mejoras);
-    cohete.position.set(0, cohete.userData.largo / 2 + 0.95, 0);
+    cohete = crearCohete(mejoras);
+    const largo = cohete.userData.largo;
+    baseCohete = largo / 2 + 0.95;
+    cohete.position.set(0, baseCohete, 0);
+    for (let i = 0; i < 3; i++) { // patas de aterrizaje
+      const giro = new THREE.Group();
+      giro.rotation.y = i * Math.PI * 2 / 3;
+      const pata = caja(0.16, 1.5, 0.16, 0x555555);
+      pata.position.set(1.15, -largo / 2 - 0.3, 0);
+      pata.rotation.z = 0.6;
+      giro.add(pata);
+      cohete.add(giro);
+    }
+    llama.position.y = -(largo / 2 + 0.6 + 1.2);
+    llama.visible = false;
+    cohete.add(llama);
     mundo.add(cohete);
-    colisiones.push({ minX: -1.3, maxX: 1.3, minZ: -1.3, maxZ: 1.3 });
-    interactuables.push({ id: "despegar", texto: "Despegar de regreso al granero", x: 0, z: 0, radio: 4.2 });
+    colisiones.push({ minX: -1.6, maxX: 1.6, minZ: -1.6, maxZ: 1.6 });
+    interactuables.push({ id: "despegar", texto: "Despegar de regreso al granero", x: 0, z: 0, radio: 6 });
 
     // ----- Objetos: los más valiosos quedan más lejos del cohete -----
     objetos = campo.map((dato, i) => {
@@ -185,6 +205,37 @@ export function crearSuperficie() {
     }
   }
 
+  // Durante el descenso: coloca el cohete a `h` metros del suelo, con la llama encendida o no.
+  function moverCohete(h, conLlama) {
+    cohete.position.y = baseCohete + Math.max(0, h);
+    llama.visible = conLlama;
+    llama.scale.set(1, 0.7 + Math.random() * 0.6, 1);
+    return cohete.position.y;
+  }
+
+  // Un aterrizaje muy duro deja el cohete torcido hasta que se repara.
+  function inclinar(si) { cohete.rotation.z = si ? 0.14 : 0; }
+
+  // Reparte `n` piezas de repuesto cerca del cohete.
+  function ponerPiezas(n) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, r = 22 + Math.random() * 24;
+      const x = Math.cos(a) * r, z = Math.sin(a) * r, y = altura(x, z);
+      const mesh = new THREE.Group();
+      mesh.add(caja(0.8, 0.5, 0.5, 0xff8a2a));
+      const asa = caja(0.4, 0.12, 0.12, 0x333333);
+      asa.position.y = 0.34;
+      mesh.add(asa);
+      mesh.position.set(x, y + 0.9, z);
+      mundo.add(mesh);
+      const haz = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 16, 6),
+        new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.45, fog: false }));
+      haz.position.set(x, y + 9, z);
+      mundo.add(haz);
+      piezas.push({ pieza: true, mesh, haz });
+    }
+  }
+
   // Devuelve lo recogido en este paso y si el jugador pisa una zona peligrosa.
   function actualizar(dt, pos) {
     t += dt;
@@ -197,6 +248,17 @@ export function crearSuperficie() {
       if (Math.hypot(o.mesh.position.x - pos.x, o.mesh.position.z - pos.z) < RADIO_RECOGER) {
         mundo.remove(o.mesh, o.haz);
         recogidos.push(o.dato);
+        return false;
+      }
+      return true;
+    });
+
+    let piezasRecogidas = 0;
+    piezas = piezas.filter(o => {
+      o.mesh.rotation.y += dt * 1.5;
+      if (Math.hypot(o.mesh.position.x - pos.x, o.mesh.position.z - pos.z) < RADIO_RECOGER) {
+        mundo.remove(o.mesh, o.haz);
+        piezasRecogidas++;
         return false;
       }
       return true;
@@ -219,11 +281,13 @@ export function crearSuperficie() {
       enSenal = Math.hypot(senal.position.x - pos.x, senal.position.z - pos.z) < 5;
     }
 
-    return { recogidos, enPeligro, enSenal, nombrePeligro: bioma.peligro.nombre };
+    return { recogidos, piezasRecogidas, enPeligro, enSenal, nombrePeligro: bioma.peligro.nombre };
   }
 
   return {
-    scene, colisiones, interactuables, iniciar, actualizar, limite: TAM / 2 - 22,
+    scene, colisiones, interactuables, iniciar, actualizar, moverCohete, inclinar, ponerPiezas, limite: TAM / 2 - 22,
+    get gravedad() { return gravedad; },
+    get piezas() { return piezas; },
     altura: (x, z) => altura(x, z),
     get objetos() { return objetos; },
     get senal() { return senal; },

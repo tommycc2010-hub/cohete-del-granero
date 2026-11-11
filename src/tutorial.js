@@ -2,7 +2,7 @@
 const PASOS = [
   { clave: "hablo",    texto: "Entra al granero y habla con el Dr. Nova (E)" },
   { clave: "despego",  texto: "Ve al cohete, pulsa E y despega hacia Mercurio" },
-  { clave: "aterrizo", texto: "Vuela hasta la zona de aterrizaje 🛬" },
+  { clave: "aterrizo", texto: "Vuela hasta la zona 🛬 y frena con W para posarte a menos de 3 m/s" },
   { clave: "recogio",  texto: "Recoge objetos a pie. Vigila el oxígeno: el cohete lo recarga" },
   { clave: "regreso",  texto: "Vuelve al cohete y pulsa E para regresar al granero" },
   { clave: "vendio",   texto: "Vende la carga en la mesa de VENTA (o en el pueblo, +20 %)" },

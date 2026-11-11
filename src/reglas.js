@@ -14,7 +14,8 @@ export const MEJORAS = {
 export const COMBUSTIBLE_PRECIO = 2;
 export const COSTO_EXPLORAR = 3;
 export const ENCUENTROS = 4;
-export const COSTO_ATERRIZAR = 4;   // combustible para bajar a la superficie
+export const COSTO_ATERRIZAR = 4;   // reserva mínima de combustible para empezar el descenso
+export const FUGA_POR_SEGUNDO = 0.12; // combustible que se pierde con una fuga en el tanque
 export const BONO_PUEBLO = 1.2;     // el mercado del pueblo paga un 20 % más
 export const VALOR_ORBITA = 0.35;   // lo que flota en órbita vale poco: lo bueno está en el suelo
 
@@ -156,7 +157,6 @@ export function puedeAterrizar() {
 }
 
 export function aterrizar() {
-  gastar(COSTO_ATERRIZAR);
   const t = msg(`Aterrizaste en ${DATOS_PLANETAS[estado.mision.dest].lugar}.`);
   cambio();
   return t;
