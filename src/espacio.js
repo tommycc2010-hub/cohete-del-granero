@@ -64,7 +64,7 @@ const FORMAS = {
   "Muestra biológica": () => new THREE.IcosahedronGeometry(1.2, 1),
 };
 
-function crearObjeto(dato) {
+export function crearObjeto(dato) {
   const geo = (FORMAS[dato.nombre] || FORMAS["Hielo"])();
   const m = new THREE.Mesh(geo, toon(dato.color));
   const borde = new THREE.Mesh(geo, matContorno);
@@ -106,7 +106,7 @@ export function crearEspacio() {
   const mundo = new THREE.Group(); // planeta y objetos de la misión actual
   scene.add(mundo);
 
-  let objetos = [], senal = null;
+  let objetos = [], pista = null;
   let yaw = 0, pitch = 0, t = 0;
   const vel = new THREE.Vector3();
   const frente = new THREE.Vector3(), deseada = new THREE.Vector3();
@@ -130,19 +130,18 @@ export function crearEspacio() {
     mundo.add(planeta);
     mundo.userData.planeta = planeta;
 
-    // En Europa hay una señal cerca de la superficie: llegar a ella dispara el final.
-    senal = null;
-    if (dest === "europa") {
-      senal = new THREE.Group();
-      senal.position.copy(planeta.position).setLength(255);
-      const matSenal = new THREE.MeshBasicMaterial({ color: 0x4de3ff, transparent: true, opacity: 0.85 });
-      senal.add(new THREE.Mesh(new THREE.OctahedronGeometry(2.2), matSenal));
+    // Zona de aterrizaje: llegar a ella baja la nave a la superficie.
+    {
+      pista = new THREE.Group();
+      pista.position.copy(planeta.position).setLength(200);
+      const matPista = new THREE.MeshBasicMaterial({ color: 0x6ee37a, transparent: true, opacity: 0.85 });
+      pista.add(new THREE.Mesh(new THREE.OctahedronGeometry(2.2), matPista));
       for (let i = 0; i < 3; i++) {
-        const aro = new THREE.Mesh(new THREE.TorusGeometry(1, 0.08, 6, 28), matSenal.clone());
+        const aro = new THREE.Mesh(new THREE.TorusGeometry(1, 0.08, 6, 28), matPista.clone());
         aro.userData.fase = i / 3;
-        senal.add(aro);
+        pista.add(aro);
       }
-      mundo.add(senal);
+      mundo.add(pista);
     }
 
     // Los objetos más valiosos quedan más lejos del punto de llegada.
@@ -203,16 +202,16 @@ export function crearEspacio() {
 
     if (mundo.userData.planeta) mundo.userData.planeta.rotation.y += dt * 0.02;
 
-    let enSenal = false;
-    if (senal) {
-      senal.children[0].rotation.y += dt * 1.5;
-      senal.children.slice(1).forEach(aro => { // aros que se expanden como ondas
+    let enPista = false;
+    if (pista) {
+      pista.children[0].rotation.y += dt * 1.5;
+      pista.children.slice(1).forEach(aro => { // aros que se expanden como ondas
         const f = (t * 0.5 + aro.userData.fase) % 1;
         aro.scale.setScalar(2 + f * 12);
         aro.material.opacity = 0.9 * (1 - f);
         aro.quaternion.copy(camera.quaternion);
       });
-      enSenal = senal.position.distanceTo(nave.position) < 12;
+      enPista = pista.position.distanceTo(nave.position) < 12;
     }
 
     // Cámara detrás de la nave
@@ -222,12 +221,12 @@ export function crearEspacio() {
     camera.quaternion.slerp(nave.quaternion, k);
     estrellas.position.copy(camera.position);
 
-    return { recogidos, enLimite, enSenal, velocidad: vel.length() };
+    return { recogidos, enLimite, enPista, velocidad: vel.length() };
   }
 
   return {
     scene, camera, nave, iniciar, girar, actualizar,
     get objetos() { return objetos; },
-    get senal() { return senal; },
+    get pista() { return pista; },
   };
 }

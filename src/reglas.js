@@ -8,15 +8,20 @@ export const MEJORAS = {
   escudo: { nombre: "Escudo térmico", base: 200, max: 5, desc: "Protege la carga en la reentrada." },
   sensor: { nombre: "Sensores",       base: 180, max: 5, desc: "Más probabilidad de objetos raros." },
   antena: { nombre: "Antena",         base: 250, max: 3, desc: "Nivel 2 necesario para la señal de Europa." },
+  traje:  { nombre: "Traje espacial", base: 160, max: 5, desc: "Resiste más el ambiente al explorar a pie. Añade algo de masa." },
+  oxigeno:{ nombre: "Tanque de oxígeno", base: 140, max: 5, desc: "+25 s de oxígeno para explorar a pie. Añade algo de masa." },
 };
 export const COMBUSTIBLE_PRECIO = 2;
 export const COSTO_EXPLORAR = 3;
 export const ENCUENTROS = 4;
+export const COSTO_ATERRIZAR = 4;   // combustible para bajar a la superficie
+export const BONO_PUEBLO = 1.2;     // el mercado del pueblo paga un 20 % más
+export const VALOR_ORBITA = 0.35;   // lo que flota en órbita vale poco: lo bueno está en el suelo
 
 export const estado = {
   dinero: 100,
   combustible: 60,
-  mejoras: { motor: 0, tanque: 0, escudo: 0, sensor: 0, antena: 0 },
+  mejoras: { motor: 0, tanque: 0, escudo: 0, sensor: 0, antena: 0, traje: 0, oxigeno: 0 },
   carga: [],
   visitados: {},
   mision: null,
@@ -38,7 +43,7 @@ export function capacidad() { return 60 + 20 * estado.mejoras.tanque; }
 
 export function factorMasa() {
   const m = estado.mejoras;
-  return 1 + 0.1 * m.motor + 0.08 * (m.tanque + m.escudo + m.sensor + m.antena);
+  return 1 + 0.1 * m.motor + 0.08 * (m.tanque + m.escudo + m.sensor + m.antena) + 0.04 * (m.traje + m.oxigeno);
 }
 
 export function costoIda(id) {
@@ -82,13 +87,13 @@ export function comprarMejora(k) {
   return t;
 }
 
-export function vender() {
+export function vender(bono = 1) {
   let t;
   if (!estado.carga.length) t = msg("No tienes carga que vender.");
   else {
-    const total = estado.carga.reduce((s, o) => s + o.valor, 0);
+    const total = Math.round(estado.carga.reduce((s, o) => s + o.valor, 0) * bono);
     estado.dinero += total;
-    t = msg(`Vendiste ${estado.carga.length} objetos por ${total}.`);
+    t = msg(`Vendiste ${estado.carga.length === 1 ? "1 objeto" : estado.carga.length + " objetos"} por ${total} 💰${bono > 1 ? " (precio de mercado)" : ""}.`);
     estado.carga = [];
   }
   cambio();
@@ -127,8 +132,46 @@ export function tirarObjeto(id) {
 // ----- Vuelo en 3D -----
 // Objetos que flotan cerca del destino, ordenados del más barato al más valioso.
 // La escena coloca los valiosos más lejos: ir por ellos cuesta más combustible.
-export function generarCampo(id, n = 9) {
-  return Array.from({ length: n }, () => tirarObjeto(id)).sort((a, b) => a.valor - b.valor);
+export function generarCampo(id, n = 9, factor = 1) {
+  return Array.from({ length: n }, () => {
+    const o = tirarObjeto(id);
+    o.valor = Math.max(1, Math.round(o.valor * factor));
+    return o;
+  }).sort((a, b) => a.valor - b.valor);
+}
+
+// ----- Exploración a pie -----
+// Segundos de oxígeno con el tanque lleno.
+export function oxigenoMax() { return 75 + 25 * estado.mejoras.oxigeno; }
+
+// Cuánto resiste el traje: divide todo el daño que recibe.
+export function resistenciaTraje() { return 1 + 0.5 * estado.mejoras.traje; }
+
+// Desgaste del traje por segundo (en %) solo por estar en ese ambiente.
+export function desgasteTraje(id) { return 1.2 * DATOS_PLANETAS[id].peligro / resistenciaTraje(); }
+
+export function puedeAterrizar() {
+  const m = estado.mision;
+  return !!m && estado.combustible >= m.ida + COSTO_ATERRIZAR;
+}
+
+export function aterrizar() {
+  gastar(COSTO_ATERRIZAR);
+  const t = msg(`Aterrizaste en ${DATOS_PLANETAS[estado.mision.dest].lugar}.`);
+  cambio();
+  return t;
+}
+
+// Si te desmayas sin oxígeno pierdes lo recogido desde la última vez que pasaste por el cohete.
+export function perderRecolectado(desde) {
+  const m = estado.mision;
+  const perdidos = m.carga.length - desde;
+  m.carga.length = desde;
+  const t = msg(perdidos > 0
+    ? `Te quedaste sin oxígeno. Perdiste ${perdidos === 1 ? "1 objeto" : perdidos + " objetos"} en el camino.`
+    : "Te quedaste sin oxígeno. Por suerte no llevabas nada encima.");
+  cambio();
+  return t;
 }
 
 // Combustible por segundo de impulso. Más masa gasta más; un mejor motor gasta menos.

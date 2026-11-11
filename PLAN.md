@@ -74,10 +74,19 @@ Juego 3D en primera persona con estilo tipo Schedule I: modelos low-poly, colore
 - [x] Diálogos que explican cada mejora y cada planeta, con datos y su nivel de confianza.
 - [x] Él interpreta la señal final.
 
+## Paso 8b. Exploración a pie y mundo abierto
+- [x] Aterrizar en cada destino y explorar su bioma a pie (en Júpiter se aterriza en su luna Ío).
+- [x] Oxígeno y traje: el cohete recarga el oxígeno, las zonas peligrosas dañan el traje.
+- [x] Mejoras nuevas: traje espacial y tanque de oxígeno.
+- [x] Lo que flota en órbita queda como extra pequeño (35 % del valor).
+- [x] La señal de Europa está en la superficie: hay que caminar hasta ella.
+- [x] Granero con montañas, mesetas, llanuras y lago.
+- [x] Pueblo visitable (Villa Siderense) con vecinos y mercado que paga un 20 % más.
+
 ## Paso 9. Durante el hackathon (sábado y domingo)
 - [ ] Cargar la base de datos de la NASA en `datos.js` cuando la liberen.
-- [ ] Ajustar el balance: precios, combustible y probabilidades.
-- [ ] Sonido, pantalla de inicio y tutorial corto.
+- [ ] Ajustar el balance: precios, combustible, oxígeno y probabilidades.
+- [x] Sonido, pantalla de inicio y tutorial corto.
 - [ ] Publicar la versión web (link para jueces) y empaquetar la app con Electron.
 - [ ] Grabar el video demo y preparar la presentación.
 

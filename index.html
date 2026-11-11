@@ -5,44 +5,70 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cohete del Granero</title>
 <style>
-  :root { --ink:#1d1d1d; --paper:#fff6e5; --yellow:#ffd23f; --green:#5cc46b; }
+  :root { --ink:#1d1d1d; --paper:#fff6e5; --yellow:#ffd23f; --green:#5cc46b; --blue:#4aa3e8; --red:#f3a59e; }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: #8ed1f0; color: var(--ink);
     font-family: "Trebuchet MS", system-ui, sans-serif; }
   #juego canvas { display: block; }
+  kbd { background: var(--ink); color: #fff; border-radius: 6px; padding: 1px 7px; font: inherit; font-weight: bold; }
 
   .tarjeta { background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--ink); }
 
-  #hud { position: fixed; top: 16px; left: 16px; display: flex; gap: 10px; font-weight: bold; font-size: 18px; }
-  #hud .tarjeta { padding: 8px 14px; }
+  /* ----- Qué se ve en cada modo ----- */
+  [data-en] { display: none; }
+  body[data-modo="granero"] [data-en~="granero"],
+  body[data-modo="espacio"] [data-en~="espacio"],
+  body[data-modo="superficie"] [data-en~="superficie"],
+  body[data-modo="final"] [data-en~="final"] { display: var(--ver, block); }
+
+  /* ----- HUD ----- */
+  .fila-hud { --ver: flex; position: fixed; top: 16px; left: 16px; right: 200px; gap: 10px; flex-wrap: wrap; align-items: center;
+    font-weight: bold; font-size: 17px; }
+  .fila-hud .tarjeta { padding: 8px 14px; }
+  #pista { position: fixed; top: 16px; right: 16px; padding: 8px 14px; font-weight: bold; }
+  #objetivo { position: fixed; top: 66px; right: 16px; width: 250px; padding: 8px 12px; font-size: 14px; line-height: 1.3; }
+  #objetivo b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #1c6fb5; }
+
+  .medidor { position: relative; flex: 1; min-width: 190px; max-width: 320px; height: 40px; padding: 0 !important; overflow: hidden; background: #fff; }
+  .medidor .relleno { position: absolute; inset: 0 auto 0 0; background: var(--green); border-right: 3px solid var(--ink); }
+  .medidor.azul .relleno { background: #8fd6f5; }
+  .medidor.alerta .relleno { background: var(--red); }
+  .medidor span { position: absolute; inset: 0; display: grid; place-items: center; }
+  #barra-reserva { position: absolute; top: 0; bottom: 0; width: 0; border-left: 3px dashed var(--ink); }
 
   #mira { position: fixed; top: 50%; left: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px;
     background: #fff; border: 2px solid var(--ink); border-radius: 50%; }
-
-  #accion { position: fixed; left: 50%; bottom: 22%; transform: translateX(-50%); padding: 10px 16px;
-    font-weight: bold; font-size: 18px; background: var(--yellow); opacity: 0; transition: opacity .15s; }
-  #accion.visible { opacity: 1; }
+  #accion { --ver: none; position: fixed; left: 50%; bottom: 22%; transform: translateX(-50%); padding: 10px 16px;
+    font-weight: bold; font-size: 18px; background: var(--yellow); }
+  #accion.visible { --ver: block; }
   #accion b { display: inline-block; background: var(--ink); color: #fff; border-radius: 6px; padding: 0 8px; margin-right: 6px; }
 
-  #aviso { position: fixed; left: 50%; bottom: 8%; transform: translateX(-50%); padding: 10px 16px;
-    font-weight: bold; max-width: 90vw; text-align: center; opacity: 0; transition: opacity .2s; }
+  #aviso { position: fixed; left: 50%; bottom: 8%; transform: translateX(-50%); padding: 10px 16px; z-index: 6;
+    font-weight: bold; max-width: min(680px, 92vw); text-align: center; opacity: 0; transition: opacity .2s; pointer-events: none; }
   #aviso.visible { opacity: 1; }
+  #alerta { position: fixed; top: 76px; left: 50%; transform: translateX(-50%); padding: 8px 14px; font-weight: bold;
+    background: var(--red); max-width: 92vw; text-align: center; opacity: 0; transition: opacity .2s; }
+  #alerta.visible { opacity: 1; }
+  .ayuda { --ver: flex; position: fixed; left: 16px; bottom: 16px; padding: 8px 14px; gap: 12px; flex-wrap: wrap; font-size: 14px; font-weight: bold; }
 
-  #inicio { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-    background: rgba(20, 30, 50, .45); cursor: pointer; padding: 16px; }
-  #inicio.oculto { display: none; }
-  #inicio .tarjeta { padding: 24px 28px; max-width: 440px; text-align: center; }
-  #inicio h1 { margin: 0 0 8px; font-size: 30px; }
-  #inicio p { margin: 6px 0; }
-  #inicio .boton { display: inline-block; margin-top: 12px; padding: 10px 18px; font-weight: bold;
-    background: var(--yellow); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); }
-  #pista { position: fixed; top: 16px; right: 16px; padding: 8px 14px; font-weight: bold; }
+  /* ----- Marcadores ----- */
+  .marcador { position: fixed; top: 0; left: 0; margin: -44px 0 0 -6px; padding: 2px 8px; font-size: 13px; font-weight: bold;
+    white-space: nowrap; color: #fff; background: rgba(29, 29, 29, .75); border: 2px solid #fff; border-radius: 8px; pointer-events: none; }
+  .marcador i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 50%; background: #888; border: 1px solid #fff; }
+  .baliza { margin: -16px 0 0 -70px; font-size: 15px; z-index: 5; }
+  #marcador-pista { background: #2f7d3a; border-color: #6ee37a; }
+  #marcador-senal { background: #0e6f8f; border-color: #4de3ff; }
+
+  /* ----- Casco del traje ----- */
+  #visor { position: fixed; inset: 0; pointer-events: none; border-radius: 26% / 34%;
+    box-shadow: 0 0 0 200px rgba(10, 12, 20, .92), inset 0 0 90px 30px rgba(10, 12, 20, .55); }
+  body.traje-roto #visor { box-shadow: 0 0 0 200px rgba(10, 12, 20, .92), inset 0 0 110px 40px rgba(200, 30, 20, .6); }
 
   /* ----- Diálogo ----- */
-  #dialogo { position: fixed; left: 50%; bottom: 6%; transform: translateX(-50%); width: min(620px, calc(100vw - 32px));
-    padding: 14px 16px; display: none; z-index: 10; }
-  #dialogo.visible { display: block; }
-  #dialogo h4 { display: inline-block; margin: -30px 0 8px; padding: 3px 12px; font-size: 15px; background: #4aa3e8;
+  #dialogo { --ver: none; position: fixed; left: 50%; bottom: 6%; transform: translateX(-50%); width: min(620px, calc(100vw - 32px));
+    padding: 14px 16px; z-index: 10; }
+  #dialogo.visible { --ver: block; }
+  #dialogo h4 { display: inline-block; margin: -30px 0 8px; padding: 3px 12px; font-size: 15px; background: var(--blue);
     border: 3px solid var(--ink); border-radius: 10px; }
   #dialogo-texto { margin: 0; font-size: 17px; line-height: 1.35; }
   #dialogo-confianza { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: bold; border-radius: 8px; }
@@ -51,41 +77,13 @@
   #dialogo-confianza.media { background: var(--yellow); }
   #dialogo-sigue { float: right; margin-top: 8px; font-size: 13px; font-weight: bold; }
   #dialogo-sigue b { background: var(--ink); color: #fff; border-radius: 6px; padding: 0 7px; }
-  body:not([data-modo="granero"]) #dialogo { display: none; }
-
-  /* ----- Modos: qué se ve en cada uno ----- */
-  #fundido { position: fixed; inset: 0; z-index: 30; background: #000; opacity: 0; pointer-events: none; transition: opacity .45s; }
-  #fundido.activo { opacity: 1; }
-  #hud-espacio, #ayuda-espacio, #marcadores, #alerta { display: none; }
-  body[data-modo="espacio"] #hud-espacio, body[data-modo="espacio"] #ayuda-espacio { display: flex; }
-  body[data-modo="espacio"] #marcadores, body[data-modo="espacio"] #alerta { display: block; }
-  body:not([data-modo="granero"]) #hud, body:not([data-modo="granero"]) #pista,
-  body:not([data-modo="granero"]) #mira, body:not([data-modo="granero"]) #accion { display: none; }
-
-  /* ----- Vuelo ----- */
-  #hud-espacio { position: fixed; top: 16px; left: 16px; right: 16px; gap: 10px; flex-wrap: wrap; align-items: center;
-    font-weight: bold; font-size: 17px; }
-  #hud-espacio .tarjeta { padding: 8px 14px; }
-  #barra { position: relative; flex: 1; min-width: 220px; max-width: 420px; height: 40px; padding: 0; overflow: hidden; background: #fff; }
-  #barra-comb { position: absolute; inset: 0 auto 0 0; background: var(--green); border-right: 3px solid var(--ink); }
-  #barra.alerta #barra-comb { background: #f3a59e; }
-  #barra-reserva { position: absolute; top: 0; bottom: 0; width: 0; border-left: 3px dashed var(--ink); }
-  #txt-comb { position: absolute; inset: 0; display: grid; place-items: center; }
-  #alerta { position: fixed; top: 76px; left: 50%; transform: translateX(-50%); padding: 8px 14px; font-weight: bold;
-    background: #f3a59e; max-width: 92vw; text-align: center; opacity: 0; transition: opacity .2s; }
-  #alerta.visible { opacity: 1; }
-  #ayuda-espacio { position: fixed; left: 16px; bottom: 16px; padding: 8px 14px; gap: 12px; flex-wrap: wrap; font-size: 14px; font-weight: bold; }
-  .marcador { position: fixed; top: 0; left: 0; margin: -44px 0 0 -6px; padding: 2px 8px; font-size: 13px; font-weight: bold;
-    white-space: nowrap; color: #fff; background: rgba(29, 29, 29, .75); border: 2px solid #fff; border-radius: 8px; pointer-events: none; }
-  .marcador i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 50%; background: #888; border: 1px solid #fff; }
-
-  body:not([data-modo="espacio"]) #marcador-senal { display: none; }
-  #marcador-senal { margin: -16px 0 0 -70px; background: #0e6f8f; border-color: #4de3ff; font-size: 15px; z-index: 5; }
 
   /* ----- Final ----- */
-  #subtitulo { position: fixed; left: 50%; bottom: 9%; transform: translateX(-50%); width: min(640px, calc(100vw - 32px));
-    padding: 12px 16px; font-size: 18px; text-align: center; display: none; }
-  body[data-modo="final"] #subtitulo.visible { display: block; }
+  #fundido { position: fixed; inset: 0; z-index: 30; background: #000; opacity: 0; pointer-events: none; transition: opacity .45s; }
+  #fundido.activo { opacity: 1; }
+  #subtitulo { --ver: none; position: fixed; left: 50%; bottom: 9%; transform: translateX(-50%); width: min(640px, calc(100vw - 32px));
+    padding: 12px 16px; font-size: 18px; text-align: center; }
+  #subtitulo.visible { --ver: block; }
   #subtitulo b { color: #1c6fb5; }
   #subtitulo small { display: block; margin-top: 6px; opacity: .7; font-weight: bold; }
   #tarjeta-final { position: fixed; inset: 0; z-index: 25; display: none; align-items: center; justify-content: center;
@@ -131,33 +129,75 @@
   .tel-item small { display: block; margin-top: 3px; opacity: .8; }
   .tel-precio { float: right; font-weight: bold; background: var(--green); border: 2px solid var(--ink);
     border-radius: 8px; padding: 0 6px; }
-  .tel-precio.caro { background: #f3a59e; }
+  .tel-precio.caro { background: var(--red); }
   .tel-boton { font-weight: bold; background: var(--yellow); }
-  .tel-boton.azul { background: #4aa3e8; }
+  .tel-boton.azul { background: var(--blue); }
   .tel-boton.verde { background: var(--green); }
   .tel-msg { margin: 0 12px 12px; padding: 8px 10px; font-size: 14px; font-weight: bold; background: #fff;
     border: 3px dashed var(--ink); border-radius: 12px; }
 
-  kbd { background: var(--ink); color: #fff; border-radius: 6px; padding: 1px 7px; font: inherit; font-weight: bold; }
+  /* ----- Inicio / pausa ----- */
+  #inicio { position: fixed; inset: 0; z-index: 15; display: flex; align-items: center; justify-content: center;
+    background: rgba(20, 30, 50, .45); cursor: pointer; padding: 16px; }
+  #inicio.oculto { display: none; }
+  #inicio .tarjeta { padding: 24px 28px; max-width: 470px; text-align: center; }
+  #inicio h1 { margin: 0 0 8px; font-size: 30px; }
+  #inicio p { margin: 6px 0; }
+  #inicio .boton { display: inline-block; margin-top: 12px; padding: 10px 18px; font-weight: bold;
+    background: var(--yellow); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); }
 </style>
 </head>
 <body>
 <div id="juego"></div>
+<div id="visor" data-en="superficie"></div>
 
-<div id="hud">
+<!-- Granero -->
+<div id="hud" class="fila-hud" data-en="granero">
   <div class="tarjeta">💰 <span id="dinero"></span></div>
   <div class="tarjeta">⛽ <span id="combustible"></span></div>
   <div class="tarjeta">📦 <span id="carga"></span></div>
 </div>
-<div id="pista" class="tarjeta"><kbd>Tab</kbd> teléfono</div>
-<div id="mira"></div>
-<div id="dialogo" class="tarjeta">
-  <h4>Dr. Nova</h4>
+<div id="pista" class="tarjeta" data-en="granero"><kbd>Tab</kbd> teléfono</div>
+<div id="objetivo" class="tarjeta" data-en="granero espacio superficie"></div>
+<div id="mira" data-en="granero superficie"></div>
+<div id="accion" class="tarjeta" data-en="granero superficie"></div>
+<div id="dialogo" class="tarjeta" data-en="granero">
+  <h4 id="dialogo-nombre"></h4>
   <p id="dialogo-texto"></p>
   <span id="dialogo-confianza"></span>
   <span id="dialogo-sigue"></span>
 </div>
-<div id="subtitulo" class="tarjeta"><b>📻 Dr. Nova:</b> <span id="subtitulo-texto"></span><small><kbd>E</kbd> saltar</small></div>
+
+<!-- Vuelo -->
+<div id="hud-espacio" class="fila-hud" data-en="espacio">
+  <div class="tarjeta" id="destino"></div>
+  <div class="tarjeta medidor" id="barra"><div class="relleno" id="barra-comb"></div><div id="barra-reserva"></div><span id="txt-comb"></span></div>
+  <div class="tarjeta" id="recolectado"></div>
+  <div class="tarjeta" id="velocidad"></div>
+</div>
+<div class="tarjeta ayuda" data-en="espacio">
+  <span><kbd>W</kbd> impulso</span><span><kbd>S</kbd> frenar</span><span>🖱 o <kbd>A</kbd><kbd>D</kbd><kbd>↑</kbd><kbd>↓</kbd> dirigir</span><span><kbd>R</kbd> volver a casa</span>
+</div>
+
+<!-- A pie en un planeta -->
+<div id="hud-suelo" class="fila-hud" data-en="superficie">
+  <div class="tarjeta" id="lugar"></div>
+  <div class="tarjeta medidor azul" id="m-oxi"><div class="relleno" id="oxi-relleno"></div><span id="oxi-txt"></span></div>
+  <div class="tarjeta medidor" id="m-traje"><div class="relleno" id="traje-relleno"></div><span id="traje-txt"></span></div>
+  <div class="tarjeta" id="recolectado-suelo"></div>
+</div>
+<div class="tarjeta ayuda" data-en="superficie">
+  <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> caminar</span><span><kbd>Shift</kbd> correr (gasta más oxígeno)</span><span>El cohete recarga el oxígeno</span>
+</div>
+
+<div id="marcadores" data-en="espacio superficie"></div>
+<div id="marcador-pista" class="marcador baliza" data-en="espacio superficie"></div>
+<div id="marcador-senal" class="marcador baliza" data-en="superficie"></div>
+<div id="alerta" class="tarjeta" data-en="espacio superficie"></div>
+<div id="aviso" class="tarjeta"></div>
+
+<!-- Final -->
+<div id="subtitulo" class="tarjeta" data-en="final"><b>📻 Dr. Nova:</b> <span id="subtitulo-texto"></span><small><kbd>E</kbd> saltar</small></div>
 <div id="tarjeta-final">
   <div class="tarjeta">
     <h1>🛸 ¡Vida en Europa!</h1>
@@ -167,28 +207,16 @@
     <button id="final-reiniciar">Jugar de nuevo</button>
   </div>
 </div>
-<div id="marcadores"></div>
-<div id="marcador-senal" class="marcador"></div>
-<div id="hud-espacio">
-  <div class="tarjeta" id="destino"></div>
-  <div class="tarjeta" id="barra"><div id="barra-comb"></div><div id="barra-reserva"></div><span id="txt-comb"></span></div>
-  <div class="tarjeta" id="recolectado"></div>
-  <div class="tarjeta" id="velocidad"></div>
-</div>
-<div id="alerta" class="tarjeta"></div>
-<div id="ayuda-espacio" class="tarjeta">
-  <span><kbd>W</kbd> impulso</span><span><kbd>S</kbd> frenar</span><span>🖱 o <kbd>A</kbd><kbd>D</kbd><kbd>↑</kbd><kbd>↓</kbd> dirigir</span><span><kbd>R</kbd> regresar</span>
-</div>
+
 <div id="fundido"></div>
 <div id="telefono"><div class="tel-pantalla"></div></div>
-<div id="accion" class="tarjeta"></div>
-<div id="aviso" class="tarjeta"></div>
 
 <div id="inicio">
   <div class="tarjeta">
     <h1>🚀 Cohete del Granero</h1>
-    <p>Repara el cohete, sal al espacio y descubre qué hay en Europa.</p>
-    <p><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> caminar · <kbd>Shift</kbd> correr · <kbd>E</kbd> usar · <kbd>Tab</kbd> teléfono · <kbd>Esc</kbd> pausa</p>
+    <p>Repara el cohete, explora los planetas a pie y descubre qué hay en Europa.</p>
+    <p><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> caminar · <kbd>Shift</kbd> correr · <kbd>E</kbd> usar</p>
+    <p><kbd>Tab</kbd> teléfono · <kbd>M</kbd> sonido · <kbd>Esc</kbd> pausa</p>
     <div class="boton">Haz clic para jugar</div>
   </div>
 </div>

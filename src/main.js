@@ -1,14 +1,19 @@
 import * as THREE from "three";
 import { crearGranero } from "./granero.js";
 import { crearEspacio } from "./espacio.js";
+import { crearSuperficie } from "./superficie.js";
 import { crearFinal, DURACION } from "./final.js";
 import { crearJugador } from "./jugador.js";
 import { crearTelefono } from "./telefono.js";
+import { crearTutorial } from "./tutorial.js";
+import { sonido } from "./sonido.js";
 import { consejos, NOMBRE, TEXTO_CONFIANZA } from "./cientifico.js";
 import { DATOS_PLANETAS } from "./datos.js";
 import {
   estado, capacidad, comprarCombustible, vender, suscribir, regresar,
   generarCampo, consumoImpulso, alcanceSensor, gastar, recolectar, detectarSenal,
+  oxigenoMax, resistenciaTraje, desgasteTraje, puedeAterrizar, aterrizar, perderRecolectado,
+  BONO_PUEBLO, VALOR_ORBITA,
 } from "./reglas.js";
 
 // ----- Render -----
@@ -19,18 +24,21 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 document.getElementById("juego").appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 300);
+const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 2400);
 
 const granero = crearGranero(scene, estado.mejoras);
 const espacio = crearEspacio();
+const superficie = crearSuperficie();
 const final = crearFinal();
-const jugador = crearJugador(camera, renderer.domElement, granero.colisiones, granero.limite);
+const jugador = crearJugador(camera, renderer.domElement, () => sonido.reproducir("paso"));
 
-function camaraAlInicio() {
-  camera.position.set(0, 1.7, 13);
-  camera.lookAt(0, 2.2, -8);
+// `mundo` es donde camina el jugador: el granero o la superficie de un planeta.
+let mundo = granero;
+function alGranero() {
+  mundo = granero;
+  jugador.colocar(granero, 0, 13, 0, -8);
 }
-camaraAlInicio();
+alGranero();
 
 function ajustar() {
   renderer.setSize(innerWidth, innerHeight);
@@ -42,15 +50,25 @@ function ajustar() {
 addEventListener("resize", ajustar);
 ajustar();
 
-// Modos: "granero" (caminar), "despegue" (animación), "espacio" (pilotar), "final" (escena de Europa),
-// "transicion" (fundido).
+// Modos: "granero" (caminar), "despegue" (animación), "espacio" (pilotar), "superficie" (explorar a pie),
+// "final" (escena de Europa) y "transicion" (fundido entre modos).
 let modo = "granero";
+let vista = { escena: scene, camara: camera }; // lo que se dibuja; no cambia durante un fundido
+const VISTAS = {
+  granero: () => ({ escena: scene, camara: camera }),
+  despegue: () => ({ escena: scene, camara: camera }),
+  espacio: () => ({ escena: espacio.scene, camara: espacio.camera }),
+  superficie: () => ({ escena: superficie.scene, camara: camera }),
+  final: () => ({ escena: final.scene, camara: final.camera }),
+};
 const $ = id => document.getElementById(id);
 const pausado = () => !$("inicio").classList.contains("oculto");
 
 function ponerModo(m) {
   modo = m;
   document.body.dataset.modo = m;
+  $("aviso").classList.remove("visible"); // los avisos del modo anterior no se arrastran al nuevo
+  if (VISTAS[m]) vista = VISTAS[m]();
 }
 ponerModo("granero");
 
@@ -59,6 +77,12 @@ function fundido(fn) {
   $("fundido").classList.add("activo");
   setTimeout(() => { fn(); $("fundido").classList.remove("activo"); }, 500);
 }
+
+// El navegador solo deja sonar después del primer clic o tecla.
+addEventListener("pointerdown", () => sonido.iniciar(), { once: true });
+addEventListener("keydown", () => sonido.iniciar(), { once: true });
+
+const tutorial = crearTutorial($("objetivo"));
 
 // ----- HUD del granero -----
 function pintarHud() {
@@ -72,7 +96,12 @@ let firmaMejoras = JSON.stringify(estado.mejoras);
 suscribir(() => {
   pintarHud();
   const firma = JSON.stringify(estado.mejoras);
-  if (firma !== firmaMejoras) { firmaMejoras = firma; granero.reconstruirCohete(estado.mejoras); }
+  if (firma !== firmaMejoras) {
+    firmaMejoras = firma;
+    granero.reconstruirCohete(estado.mejoras);
+    sonido.reproducir("comprar");
+    tutorial.marcar("mejoro");
+  }
 });
 pintarHud();
 
@@ -85,30 +114,33 @@ function aviso(texto) {
   relojAviso = setTimeout(() => $("aviso").classList.remove("visible"), Math.max(2600, texto.length * 65));
 }
 
-// ----- Diálogo con el científico: E pasa a la siguiente frase -----
+// ----- Diálogos: E pasa a la siguiente frase -----
 let dialogo = null;
 function pintarDialogo() {
   $("dialogo").classList.toggle("visible", !!dialogo);
   if (!dialogo) return;
   const l = dialogo.lineas[dialogo.i];
+  $("dialogo-nombre").textContent = dialogo.nombre;
   $("dialogo-texto").textContent = l.texto;
   $("dialogo-confianza").textContent = l.confianza ? TEXTO_CONFIANZA[l.confianza] : "";
   $("dialogo-confianza").className = l.confianza || "";
   $("dialogo-sigue").innerHTML = `<b>E</b> ${dialogo.i < dialogo.lineas.length - 1 ? "seguir" : "cerrar"} · ${dialogo.i + 1}/${dialogo.lineas.length}`;
 }
-function hablar() {
-  dialogo = { lineas: consejos(), i: 0 };
+function hablar(nombre, lineas, x, z) {
+  dialogo = { nombre, lineas, i: 0, x, z };
   $("accion").classList.remove("visible");
+  sonido.reproducir("hablar");
   pintarDialogo();
 }
 function avanzarDialogo() {
-  if (++dialogo.i >= dialogo.lineas.length) cerrarDialogo();
-  else pintarDialogo();
+  if (++dialogo.i >= dialogo.lineas.length) return cerrarDialogo();
+  sonido.reproducir("hablar");
+  pintarDialogo();
 }
 function cerrarDialogo() {
   if (!dialogo) return;
   dialogo = null;
-  cercano = null; // para que vuelva a salir el aviso de "E"
+  cercano = null; // para que vuelva a salir el aviso de "E" (lo repinta buscarCercano)
   pintarDialogo();
 }
 
@@ -124,9 +156,9 @@ jugador.controls.addEventListener("unlock", () => {
 const telefono = crearTelefono({
   alAbrir() {
     cerrarDialogo();
+    sonido.reproducir("telefono");
     $("inicio").classList.add("oculto");
-    $("accion").classList.remove("visible");
-    cercano = null;
+    soltarCercano();
     if (jugador.controls.isLocked) jugador.controls.unlock();
   },
   alCerrar() {
@@ -141,22 +173,27 @@ addEventListener("keydown", e => {
     e.preventDefault();
     if (!e.repeat && modo === "granero") telefono.alternar();
   } else if (e.code === "Escape" && telefono.abierto) telefono.cerrar();
-  else if (e.code === "KeyE" && !e.repeat && modo === "granero") interactuar();
-  else if (e.code === "KeyR" && !e.repeat && modo === "espacio") volver();
+  else if (e.code === "KeyE" && !e.repeat && (modo === "granero" || modo === "superficie")) interactuar();
   else if (e.code === "KeyE" && !e.repeat && modo === "final") tFinal = Math.max(tFinal, DURACION); // saltar la escena
+  else if (e.code === "KeyR" && !e.repeat && modo === "espacio") volver();
+  else if (e.code === "KeyM" && !e.repeat) aviso(sonido.alternarMudo() ? "🔇 Sonido apagado" : "🔊 Sonido encendido");
 });
 
 // ----- Interacción con la tecla E -----
 let cercano = null;
+function soltarCercano() {
+  cercano = null;
+  $("accion").classList.remove("visible");
+}
 function buscarCercano() {
   if (telefono.abierto) return;
   const p = camera.position;
-  if (dialogo) { // alejarse del científico cierra la conversación
-    if (Math.hypot(p.x - granero.cientifico.x, p.z - granero.cientifico.z) > 4) cerrarDialogo();
+  if (dialogo) { // alejarse cierra la conversación
+    if (Math.hypot(p.x - dialogo.x, p.z - dialogo.z) > 4.5) cerrarDialogo();
     return;
   }
   let mejor = null, dMejor = Infinity;
-  for (const it of granero.interactuables) {
+  for (const it of mundo.interactuables) {
     const d = Math.hypot(p.x - it.x, p.z - it.z);
     if (d < it.radio && d < dMejor) { mejor = it; dMejor = d; }
   }
@@ -167,15 +204,26 @@ function buscarCercano() {
   }
 }
 
+function venderCarga(bono) {
+  const habia = estado.carga.length;
+  aviso(vender(bono));
+  sonido.reproducir(habia ? "vender" : "error");
+  if (habia) tutorial.marcar("vendio");
+}
+
 function interactuar() {
   if (telefono.abierto) return;
   if (dialogo) return avanzarDialogo();
   if (!cercano) return;
-  if (cercano.id === "cientifico") return hablar();
-  if (cercano.id === "bomba") aviso(comprarCombustible(10));
-  else if (cercano.id === "venta") aviso(vender());
-  else if (cercano.id === "taller") telefono.abrir("taller");
-  else if (cercano.id === "cohete") telefono.abrir("mapa");
+  const c = cercano;
+  if (c.id === "bomba") { aviso(comprarCombustible(10)); sonido.reproducir("clic"); }
+  else if (c.id === "venta") venderCarga(1);
+  else if (c.id === "mercado") venderCarga(BONO_PUEBLO);
+  else if (c.id === "taller") telefono.abrir("taller");
+  else if (c.id === "cohete") telefono.abrir("mapa");
+  else if (c.id === "cientifico") { hablar(NOMBRE, consejos(), c.x, c.z); tutorial.marcar("hablo"); }
+  else if (c.id === "vecino") hablar(c.nombre, c.lineas.map(texto => ({ texto })), c.x, c.z);
+  else if (c.id === "despegar") volver();
 }
 
 // ----- Despegue -----
@@ -183,11 +231,11 @@ let tDespegue = 0;
 function despegar() {
   tDespegue = 0;
   cerrarDialogo();
-  cercano = null;
-  $("accion").classList.remove("visible");
+  soltarCercano();
   granero.iniciarDespegue(estado.mejoras);
   camera.position.set(11, 1.6, 17);
   ponerModo("despegue");
+  tutorial.marcar("despego");
   jugador.controls.lock(); // el clic en el teléfono permite capturar el mouse para el vuelo
 }
 
@@ -196,13 +244,12 @@ function entrarAlEspacio() {
   const dest = estado.mision.dest;
   fundido(() => {
     granero.terminarDespegue();
-    espacio.iniciar(dest, estado.mejoras, generarCampo(dest));
-    crearMarcadores();
+    sonido.motor(0);
+    espacio.iniciar(dest, estado.mejoras, generarCampo(dest, 5, VALOR_ORBITA));
+    crearMarcadores(espacio.objetos);
     $("destino").textContent = `🪐 ${DATOS_PLANETAS[dest].nombre}`;
     ponerModo("espacio");
-    aviso(dest === "europa"
-      ? `📻 ${NOMBRE}: ¡La antena capta una señal cerca de la superficie! Sigue el marcador 📡.`
-      : `📻 ${NOMBRE}: Llegaste a ${DATOS_PLANETAS[dest].nombre}. ${DATOS_PLANETAS[dest].dato}`);
+    aviso(`📻 ${NOMBRE}: Lo que flota en órbita vale poco. Sigue el marcador 🛬 para aterrizar en ${DATOS_PLANETAS[dest].lugar}.`);
   });
 }
 
@@ -211,6 +258,7 @@ addEventListener("mousemove", e => {
   if (modo === "espacio" && document.pointerLockElement && !pausado()) espacio.girar(e.movementX * 0.0022, e.movementY * 0.0022);
 });
 
+let esperaAviso = 0;
 function volar(dt) {
   const k = jugador.teclas;
   const giroYaw = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
@@ -221,66 +269,26 @@ function volar(dt) {
   if (estado.combustible <= 0) impulso = 0;
   const r = espacio.actualizar(dt, impulso);
   if (impulso) gastar(consumoImpulso() * dt);
-  r.recogidos.forEach(o => aviso(recolectar(o)));
+  sonido.motor(impulso > 0 ? 0.6 : 0);
+  r.recogidos.forEach(o => { aviso(recolectar(o)); sonido.reproducir("recoger"); });
   if (r.enLimite) aviso("Te alejas demasiado. Vuelve hacia el planeta.");
 
   pintarHudVuelo(r.velocidad);
-  pintarMarcadores();
-  if (r.enSenal) return empezarFinal();
+  pintarMarcadores(espacio.camera, espacio.nave.position);
+  pintarBaliza($("marcador-pista"), espacio.pista.position, espacio.camera, espacio.nave.position, "🛬 Aterrizar");
+  pintarBaliza($("marcador-senal"), null);
+
+  esperaAviso -= dt;
+  if (r.enPista) {
+    if (puedeAterrizar()) return aterrizarEnSuperficie();
+    if (esperaAviso <= 0) {
+      esperaAviso = 4;
+      aviso("No alcanza el combustible para aterrizar y volver. Regresa con R.");
+      sonido.reproducir("error");
+    }
+  }
   if (estado.combustible <= 0) volver();
 }
-
-// ----- Final en Europa -----
-const SUBTITULOS = [
-  [1, "La antena capta algo... La señal viene de esa grieta en el hielo."],
-  [5.5, "Se repite con un ritmo exacto. Eso no es ruido."],
-  [9.5, "¡Espera! Algo sube por el agua..."],
-  [14, "Brillan. Se mueven. Responden a nuestra luz."],
-  [17, "No estamos solos."],
-];
-let tFinal = 0, tarjetaFinal = false;
-
-function empezarFinal() {
-  ponerModo("transicion");
-  detectarSenal();
-  fundido(() => {
-    $("marcadores").innerHTML = "";
-    marcadores = [];
-    tFinal = 0;
-    final.iniciar(estado.mejoras);
-    $("subtitulo").classList.remove("visible");
-    ponerModo("final");
-  });
-}
-
-function pasoFinal(dt) {
-  tFinal += dt;
-  final.actualizar(dt);
-  const actual = SUBTITULOS.filter(([t]) => tFinal >= t).pop();
-  $("subtitulo").classList.toggle("visible", !!actual && !tarjetaFinal);
-  if (actual) $("subtitulo-texto").textContent = actual[1];
-  if (tFinal >= DURACION && !tarjetaFinal) {
-    tarjetaFinal = true;
-    $("tarjeta-final").classList.add("visible");
-    if (jugador.controls.isLocked) jugador.controls.unlock(); // libera el mouse para los botones
-  }
-}
-
-$("final-seguir").addEventListener("click", () => {
-  if (modo !== "final") return;
-  $("tarjeta-final").classList.remove("visible");
-  ponerModo("transicion");
-  jugador.controls.lock();
-  const texto = regresar();
-  fundido(() => {
-    tarjetaFinal = false;
-    camaraAlInicio();
-    ponerModo("granero");
-    if (!jugador.controls.isLocked) $("inicio").classList.remove("oculto");
-    aviso(`${texto} El ${NOMBRE} quiere hablar contigo.`);
-  });
-});
-$("final-reiniciar").addEventListener("click", () => location.reload());
 
 function pintarHudVuelo(velocidad) {
   const m = estado.mision, cap = capacidad();
@@ -297,11 +305,11 @@ function pintarHudVuelo(velocidad) {
     : "⚠ Combustible justo para volver. Pulsa R para regresar.";
 }
 
-// Marcadores: etiquetas sobre cada objeto. Los sensores deciden a qué distancia se identifican.
+// ----- Marcadores sobre los objetos. Los sensores deciden a qué distancia se identifican. -----
 let marcadores = [];
-function crearMarcadores() {
+function crearMarcadores(lista) {
   $("marcadores").innerHTML = "";
-  marcadores = espacio.objetos.map(o => {
+  marcadores = lista.map(o => {
     const el = document.createElement("div");
     el.className = "marcador";
     $("marcadores").appendChild(el);
@@ -310,8 +318,9 @@ function crearMarcadores() {
 }
 
 const proy = new THREE.Vector3();
-function pintarMarcadores() {
-  const vivos = new Set(espacio.objetos);
+function pintarMarcadores(camara, ref) {
+  const lista = modo === "espacio" ? espacio.objetos : superficie.objetos;
+  const vivos = new Set(lista);
   const alcance = alcanceSensor();
   marcadores = marcadores.filter(m => {
     if (vivos.has(m.o)) return true;
@@ -319,45 +328,206 @@ function pintarMarcadores() {
     return false;
   });
   for (const { o, el } of marcadores) {
-    proy.copy(o.mesh.position).project(espacio.camera);
+    proy.copy(o.mesh.position).project(camara);
     const visible = proy.z < 1 && Math.abs(proy.x) < 1 && Math.abs(proy.y) < 1;
     el.style.display = visible ? "" : "none";
     if (!visible) continue;
-    const d = Math.round(o.mesh.position.distanceTo(espacio.nave.position));
-    const conocido = d <= alcance;
+    const d = Math.round(o.mesh.position.distanceTo(ref));
     el.style.transform = `translate(${(proy.x + 1) / 2 * innerWidth}px, ${(1 - proy.y) / 2 * innerHeight}px)`;
-    el.innerHTML = conocido
+    el.innerHTML = d <= alcance
       ? `<i style="background:${o.dato.color}"></i>${o.dato.nombre} · ${o.dato.valor}💰 · ${d} m`
       : `<i></i>¿? · ${d} m`;
   }
+}
 
-  // Marcador de la señal de Europa: siempre visible, pegado al borde si queda fuera de pantalla.
-  const ms = $("marcador-senal");
-  ms.style.display = espacio.senal ? "" : "none";
-  if (espacio.senal) {
-    proy.copy(espacio.senal.position).project(espacio.camera);
-    if (proy.z > 1) { proy.x = -proy.x; proy.y = -1; } // detrás de la cámara: apunta hacia abajo
-    const x = THREE.MathUtils.clamp(proy.x, -0.85, 0.85), y = THREE.MathUtils.clamp(proy.y, -0.7, 0.75);
-    ms.style.transform = `translate(${(x + 1) / 2 * innerWidth}px, ${(1 - y) / 2 * innerHeight}px)`;
-    ms.textContent = `📡 Señal · ${Math.round(espacio.senal.position.distanceTo(espacio.nave.position))} m`;
+// Baliza: marcador siempre visible, pegado al borde si el punto queda fuera de pantalla.
+function pintarBaliza(el, pos, camara, ref, texto) {
+  el.style.display = pos ? "" : "none";
+  if (!pos) return;
+  proy.copy(pos).project(camara);
+  if (proy.z > 1) { proy.x = -proy.x; proy.y = -1; } // detrás de la cámara: apunta hacia abajo
+  const x = THREE.MathUtils.clamp(proy.x, -0.85, 0.85), y = THREE.MathUtils.clamp(proy.y, -0.7, 0.72);
+  el.style.transform = `translate(${(x + 1) / 2 * innerWidth}px, ${(1 - y) / 2 * innerHeight}px)`;
+  el.textContent = `${texto} · ${Math.round(pos.distanceTo(ref))} m`;
+}
+
+// ----- Exploración a pie -----
+let oxi = 0, traje = 100, cargaSegura = 0, esperaPeligro = 0, esperaAlarma = 0;
+const posCohete = new THREE.Vector3(0, 3, 0);
+const ZONA_NAVE = 6.5; // cerca del cohete se recarga el oxígeno y la carga queda a salvo
+
+function aterrizarEnSuperficie() {
+  ponerModo("transicion");
+  sonido.motor(0);
+  sonido.reproducir("aterrizar");
+  aterrizar();
+  const dest = estado.mision.dest;
+  fundido(() => {
+    superficie.iniciar(dest, estado.mejoras, generarCampo(dest, 12));
+    mundo = superficie;
+    jugador.colocar(superficie, 2.4, 4, 12, 30);
+    oxi = oxigenoMax();
+    traje = 100;
+    cargaSegura = estado.mision.carga.length;
+    soltarCercano();
+    crearMarcadores(superficie.objetos);
+    $("lugar").textContent = `📍 ${DATOS_PLANETAS[dest].lugar}`;
+    ponerModo("superficie");
+    sonido.viento(dest === "venus" || dest === "marte" ? 1 : 0.25);
+    aviso(`📻 ${NOMBRE}: ${DATOS_PLANETAS[dest].suelo}`);
+    tutorial.marcar("aterrizo");
+  });
+}
+
+function pasoSuperficie(dt) {
+  jugador.actualizar(dt);
+  buscarCercano();
+  const p = camera.position, m = estado.mision;
+  const r = superficie.actualizar(dt, p);
+  r.recogidos.forEach(o => { aviso(recolectar(o)); sonido.reproducir("recoger"); tutorial.marcar("recogio"); });
+
+  const enNave = Math.hypot(p.x, p.z) < ZONA_NAVE;
+  if (enNave) {
+    oxi = Math.min(oxigenoMax(), oxi + oxigenoMax() * dt / 3);
+    cargaSegura = m.carga.length;
+  } else {
+    const dano = desgasteTraje(m.dest) + (r.enPeligro ? 16 / resistenciaTraje() : 0);
+    traje = Math.max(0, traje - dano * dt);
+    oxi -= dt * (jugador.mov.corriendo ? 1.6 : 1) * (traje <= 0 ? 4 : 1); // correr y el traje roto gastan más
+  }
+
+  esperaPeligro -= dt;
+  if (r.enPeligro && esperaPeligro <= 0) {
+    esperaPeligro = 1.5;
+    aviso(`⚠ ${r.nombrePeligro}: ¡el traje se está dañando!`);
+    sonido.reproducir("dano");
+  }
+  esperaAlarma -= dt;
+  if (!enNave && oxi < oxigenoMax() * 0.25 && esperaAlarma <= 0) { esperaAlarma = 1.2; sonido.reproducir("alarma"); }
+
+  pintarHudSuelo(enNave);
+  pintarMarcadores(camera, p);
+  pintarBaliza($("marcador-pista"), posCohete, camera, p, "🚀 Cohete");
+  pintarBaliza($("marcador-senal"), superficie.senal && superficie.senal.position, camera, p, "📡 Señal");
+
+  if (r.enSenal) return empezarFinal();
+  if (oxi <= 0) desmayo();
+}
+
+function pintarHudSuelo(enNave) {
+  const m = estado.mision, max = oxigenoMax();
+  $("oxi-relleno").style.width = `${100 * Math.max(0, oxi) / max}%`;
+  $("oxi-txt").textContent = `🫁 Oxígeno ${Math.ceil(Math.max(0, oxi))} s`;
+  $("traje-relleno").style.width = `${traje}%`;
+  $("traje-txt").textContent = traje > 0 ? `🛡 Traje ${Math.ceil(traje)} %` : "🛡 ¡Traje roto!";
+  const pocoAire = oxi < max * 0.25;
+  $("m-oxi").classList.toggle("alerta", pocoAire);
+  $("m-traje").classList.toggle("alerta", traje < 25);
+  $("recolectado-suelo").textContent = `📦 ${m.carga.length} · quedan ${superficie.objetos.length}`;
+  document.body.classList.toggle("traje-roto", traje <= 0);
+  $("alerta").classList.toggle("visible", !enNave && (pocoAire || traje <= 0));
+  $("alerta").textContent = traje <= 0
+    ? "⚠ Traje roto: el oxígeno se escapa 4 veces más rápido. ¡Vuelve al cohete!"
+    : "⚠ Poco oxígeno. Vuelve al cohete para recargar.";
+}
+
+// Sin oxígeno: despiertas junto al cohete y pierdes lo que llevabas encima.
+function desmayo() {
+  ponerModo("transicion");
+  sonido.reproducir("error");
+  const texto = perderRecolectado(cargaSegura);
+  fundido(() => {
+    jugador.colocar(superficie, 2.4, 4, 12, 30);
+    oxi = oxigenoMax() * 0.5;
+    traje = Math.max(0, traje - 15);
+    soltarCercano();
+    ponerModo("superficie");
+    aviso(`${texto} Despertaste junto al cohete, con el traje más gastado.`);
+  });
+}
+
+// ----- Final en Europa -----
+const SUBTITULOS = [
+  [1, "La antena capta algo... La señal viene de esa grieta en el hielo."],
+  [5.5, "Se repite con un ritmo exacto. Eso no es ruido."],
+  [9.5, "¡Espera! Algo sube por el agua..."],
+  [14, "Brillan. Se mueven. Responden a nuestra luz."],
+  [17, "No estamos solos."],
+];
+let tFinal = 0, tarjetaFinal = false, sonoFinal = false;
+
+function limpiarMision() {
+  $("marcadores").innerHTML = "";
+  marcadores = [];
+  $("alerta").classList.remove("visible");
+  document.body.classList.remove("traje-roto");
+  sonido.viento(0);
+  sonido.motor(0);
+}
+
+function empezarFinal() {
+  ponerModo("transicion");
+  detectarSenal();
+  sonido.reproducir("senal");
+  fundido(() => {
+    limpiarMision();
+    tFinal = 0;
+    sonoFinal = false;
+    final.iniciar(estado.mejoras);
+    $("subtitulo").classList.remove("visible");
+    ponerModo("final");
+  });
+}
+
+function pasoFinal(dt) {
+  tFinal += dt;
+  final.actualizar(dt);
+  const actual = SUBTITULOS.filter(([t]) => tFinal >= t).pop();
+  $("subtitulo").classList.toggle("visible", !!actual && !tarjetaFinal);
+  if (actual) $("subtitulo-texto").textContent = actual[1];
+  if (tFinal >= 9.5 && !sonoFinal) { sonoFinal = true; sonido.reproducir("final"); }
+  if (tFinal >= DURACION && !tarjetaFinal) {
+    tarjetaFinal = true;
+    $("tarjeta-final").classList.add("visible");
+    if (jugador.controls.isLocked) jugador.controls.unlock(); // libera el mouse para los botones
   }
 }
 
-function volver() {
-  if (modo !== "espacio") return;
+$("final-seguir").addEventListener("click", () => {
+  if (modo !== "final") return;
+  $("tarjeta-final").classList.remove("visible");
   ponerModo("transicion");
+  jugador.controls.lock();
   const texto = regresar();
   fundido(() => {
-    $("marcadores").innerHTML = "";
-    marcadores = [];
-    camaraAlInicio();
+    tarjetaFinal = false;
+    soltarCercano();
+    alGranero();
+    ponerModo("granero");
+    if (!jugador.controls.isLocked) $("inicio").classList.remove("oculto");
+    aviso(`${texto} El ${NOMBRE} quiere hablar contigo.`);
+  });
+});
+$("final-reiniciar").addEventListener("click", () => location.reload());
+
+// ----- Regreso al granero (desde la órbita o desde la superficie) -----
+function volver() {
+  if (modo !== "espacio" && modo !== "superficie") return;
+  const desdeSuelo = modo === "superficie";
+  ponerModo("transicion");
+  if (desdeSuelo) sonido.motor(1);
+  const texto = regresar();
+  fundido(() => {
+    limpiarMision();
+    soltarCercano();
+    alGranero();
     ponerModo("granero");
     aviso(texto);
+    if (desdeSuelo) tutorial.marcar("regreso");
   });
 }
 
 // ----- Bucle -----
-let antes = performance.now();
 function paso(dt) {
   if (modo === "granero") {
     jugador.actualizar(dt);
@@ -367,27 +537,31 @@ function paso(dt) {
     tDespegue += dt;
     const altura = granero.actualizarDespegue(tDespegue);
     camera.lookAt(0, Math.max(3, altura), 6);
+    sonido.motor(tDespegue > 0.4 ? 1 : 0);
     if (tDespegue > 4) entrarAlEspacio();
   } else if (modo === "espacio" && !pausado()) {
     volar(dt);
+  } else if (modo === "superficie" && !pausado()) {
+    pasoSuperficie(dt);
   } else if (modo === "final") {
     pasoFinal(dt);
   }
 }
 
+let antes = performance.now();
 function bucle() {
   const ahora = performance.now();
   paso(Math.min((ahora - antes) / 1000, 0.05));
   antes = ahora;
-  if (modo === "final") renderer.render(final.scene, final.camera);
-  else if (modo === "espacio") renderer.render(espacio.scene, espacio.camera);
-  else renderer.render(scene, camera);
+  renderer.render(vista.escena, vista.camara);
 }
 renderer.setAnimationLoop(bucle);
 
 // Acceso para pruebas desde la consola del navegador.
 window.__juego = {
-  camera, jugador, granero, espacio, estado, telefono, interactuar, despegar, volver,
+  camera, jugador, granero, espacio, superficie, estado, telefono, interactuar, despegar, volver,
   get modo() { return modo; },
+  get suelo() { return { oxi, traje, cargaSegura }; },
+  set suelo(v) { if (v.oxi !== undefined) oxi = v.oxi; if (v.traje !== undefined) traje = v.traje; },
   avanzar(segundos) { for (let i = 0; i < segundos / 0.05; i++) paso(0.05); },
 };
