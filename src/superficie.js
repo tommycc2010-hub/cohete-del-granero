@@ -7,6 +7,7 @@ import { crearPlaneta, crearObjeto } from "./espacio.js";
 import { crearTerreno } from "./terreno.js";
 import { fbm, ruido, paso, azarSemilla } from "./ruido.js";
 import { DATOS_PLANETAS } from "./datos.js";
+import { crearMision } from "./misiones.js";
 
 const TAM = 440;
 const RADIO_RECOGER = 2.4;
@@ -67,11 +68,11 @@ export function crearSuperficie() {
 
   const colisiones = [], interactuables = [];
   let altura = () => 0, objetos = [], zonas = [], piezas = [], senal = null, bioma = BIOMAS.mercurio, t = 0;
-  let cohete = null, baseCohete = 0, gravedad = 1;
+  let cohete = null, baseCohete = 0, gravedad = 1, mision = null;
   const llama = new THREE.Mesh(new THREE.ConeGeometry(0.55, 2.6, 10), new THREE.MeshBasicMaterial({ color: 0xffa726 }));
   llama.rotation.x = Math.PI; // punta hacia abajo
 
-  function iniciar(dest, mejoras, campo) {
+  function iniciar(dest, mejoras, campo, misionHecha) {
     mundo.clear();
     colisiones.length = 0;
     interactuables.length = 0;
@@ -136,15 +137,17 @@ export function crearSuperficie() {
 
     // ----- Zonas peligrosas: dañan el traje -----
     zonas = [];
-    for (let i = 0; i < 11; i++) {
-      const a = azar() * Math.PI * 2, r = 24 + azar() * 130, radio = 4 + azar() * 3.5;
-      const x = Math.cos(a) * r, z = Math.sin(a) * r;
+    const ponerZona = (x, z, radio) => {
       const m = new THREE.Mesh(new THREE.SphereGeometry(radio, 14, 8),
         new THREE.MeshBasicMaterial({ color: bioma.peligro.color, transparent: true, opacity: 0.8 }));
       m.scale.y = 0.16;
       m.position.set(x, altura(x, z) + 0.1, z);
       mundo.add(m);
       zonas.push({ x, z, radio, mesh: m, fase: azar() * 6 });
+    };
+    for (let i = 0; i < 11; i++) {
+      const a = azar() * Math.PI * 2, r = 24 + azar() * 130;
+      ponerZona(Math.cos(a) * r, Math.sin(a) * r, 4 + azar() * 3.5);
     }
 
     // ----- Cohete aterrizado en el centro -----
@@ -203,6 +206,9 @@ export function crearSuperficie() {
       }
       mundo.add(senal);
     }
+
+    // ----- Misión del lugar (y su mecánica propia) -----
+    mision = crearMision(dest, { grupo: mundo, altura, colisiones, interactuables, azar, ponerZona, senal }, misionHecha);
   }
 
   // Durante el descenso: coloca el cohete a `h` metros del suelo, con la llama encendida o no.
@@ -278,16 +284,17 @@ export function crearSuperficie() {
         aro.scale.setScalar(1 + f * 9);
         aro.material.opacity = 0.9 * (1 - f);
       });
-      enSenal = Math.hypot(senal.position.x - pos.x, senal.position.z - pos.z) < 5;
+      enSenal = senal.visible && Math.hypot(senal.position.x - pos.x, senal.position.z - pos.z) < 5;
     }
 
-    return { recogidos, piezasRecogidas, enPeligro, enSenal, nombrePeligro: bioma.peligro.nombre };
+    return { recogidos, piezasRecogidas, enPeligro, enSenal, nombrePeligro: bioma.peligro.nombre, mision: mision.actualizar(dt, pos) };
   }
 
   return {
     scene, colisiones, interactuables, iniciar, actualizar, moverCohete, inclinar, ponerPiezas, limite: TAM / 2 - 22,
     get gravedad() { return gravedad; },
     get piezas() { return piezas; },
+    get mision() { return mision; },
     altura: (x, z) => altura(x, z),
     get objetos() { return objetos; },
     get senal() { return senal; },

@@ -13,7 +13,7 @@ import {
   estado, capacidad, comprarCombustible, vender, suscribir, regresar,
   generarCampo, consumoImpulso, alcanceSensor, gastar, recolectar, detectarSenal,
   oxigenoMax, resistenciaTraje, desgasteTraje, puedeAterrizar, aterrizar, perderRecolectado,
-  BONO_PUEBLO, VALOR_ORBITA, FUGA_POR_SEGUNDO,
+  BONO_PUEBLO, VALOR_ORBITA, FUGA_POR_SEGUNDO, completarMision,
 } from "./reglas.js";
 
 // ----- Render -----
@@ -237,6 +237,7 @@ function interactuar() {
   else if (c.id === "cientifico") { hablar(NOMBRE, consejos(), c.x, c.z); tutorial.marcar("hablo"); }
   else if (c.id === "vecino") hablar(c.nombre, c.lineas.map(texto => ({ texto })), c.x, c.z);
   else if (c.id === "despegar") usarCohete();
+  else if (c.id === "mision") usarMision(c.clave);
 }
 
 // ----- Despegue -----
@@ -381,7 +382,7 @@ function empezarDescenso() {
   sonido.motor(0);
   const dest = estado.mision.dest, d = DATOS_PLANETAS[dest];
   fundido(() => {
-    superficie.iniciar(dest, estado.mejoras, generarCampo(dest, 12));
+    superficie.iniciar(dest, estado.mejoras, generarCampo(dest, 12), !!estado.misiones[dest]);
     mundo = superficie;
     desc = { h: 150, v: -8, g: 9.8 * d.gravedad, arrastre: d.arrastre };
     $("marcadores").innerHTML = "";
@@ -453,6 +454,29 @@ function tocarSuelo(vel) {
 
 const hayAverias = () => piezasNecesarias > 0;
 
+// E sobre algo de la misión del lugar.
+function usarMision(clave) {
+  const res = superficie.mision.usar(clave);
+  soltarCercano();
+  if (!res.hecha) {
+    sonido.reproducir(res.error ? "error" : "clic");
+    return aviso(res.aviso);
+  }
+  sonido.reproducir("vender");
+  aviso(`${res.aviso} ${completarMision(estado.mision.dest)}`);
+}
+
+// Balizas de la misión: se crean según hagan falta.
+function pintarBalizasMision(lista, p) {
+  const caja = $("balizas-mision");
+  while (caja.children.length < lista.length) {
+    const el = document.createElement("div");
+    el.className = "marcador baliza mision";
+    caja.appendChild(el);
+  }
+  [...caja.children].forEach((el, i) => pintarBaliza(el, lista[i] && lista[i].pos, camera, p, lista[i] && lista[i].texto));
+}
+
 // E en el cohete: reparar si hay piezas, o despegar si se puede.
 function usarCohete() {
   if (hayAverias() && piezasEnMano >= piezasNecesarias) {
@@ -488,6 +512,8 @@ function pasoSuperficie(dt) {
     sonido.reproducir("recoger");
   }
   if (averias.fuga) gastar(FUGA_POR_SEGUNDO * dt); // el tanque pierde combustible hasta que se repare
+  const mi = superficie.mision, rm = r.mision;
+  jugador.mov.sinCorrer = !!rm.sinCorrer;
   superficie.interactuables[0].texto = textoCohete();
 
   const enNave = Math.hypot(p.x, p.z) < ZONA_NAVE;
@@ -495,7 +521,7 @@ function pasoSuperficie(dt) {
     oxi = Math.min(oxigenoMax(), oxi + oxigenoMax() * dt / 3);
     cargaSegura = m.carga.length;
   } else {
-    const dano = desgasteTraje(m.dest) + (r.enPeligro ? 16 / resistenciaTraje() : 0);
+    const dano = desgasteTraje(m.dest) + ((r.enPeligro ? 16 : 0) + rm.dano) / resistenciaTraje();
     traje = Math.max(0, traje - dano * dt);
     oxi -= dt * (jugador.mov.corriendo ? 1.6 : 1) * (traje <= 0 ? 4 : 1); // correr y el traje roto gastan más
   }
@@ -506,13 +532,28 @@ function pasoSuperficie(dt) {
     aviso(`⚠ ${r.nombrePeligro}: ¡el traje se está dañando!`);
     sonido.reproducir("dano");
   }
+  if (rm.aviso && esperaPeligro <= 0) {
+    esperaPeligro = 2.5;
+    aviso(rm.aviso);
+    sonido.reproducir("dano");
+  }
   esperaAlarma -= dt;
   if (!enNave && oxi < oxigenoMax() * 0.25 && esperaAlarma <= 0) { esperaAlarma = 1.2; sonido.reproducir("alarma"); }
 
   pintarHudSuelo(enNave);
   pintarMarcadores(camera, p);
   pintarBaliza($("marcador-pista"), posCohete, camera, p, "🚀 Cohete");
-  pintarBaliza($("marcador-senal"), superficie.senal && superficie.senal.position, camera, p, "📡 Señal");
+  pintarBaliza($("marcador-senal"), superficie.senal && superficie.senal.visible && superficie.senal.position, camera, p, "📡 Señal");
+  pintarBalizasMision(mi.balizas, p);
+  $("mision").style.display = mi.objetivo ? "" : "none";
+  if (mi.objetivo) $("mision").innerHTML = `<b>🎯 Misión</b>${mi.objetivo}`;
+  const med = mi.medidor;
+  $("m-mision").style.display = med ? "" : "none";
+  if (med) {
+    $("mision-relleno").style.width = `${100 * Math.max(0, Math.min(1, med.valor))}%`;
+    $("mision-txt").textContent = med.texto;
+    $("m-mision").classList.toggle("alerta", !!med.alerta);
+  }
 
   if (r.enSenal) return empezarFinal();
   if (oxi <= 0) desmayo();
@@ -571,6 +612,8 @@ function limpiarMision() {
   document.body.classList.remove("traje-roto");
   averias = {};
   piezasNecesarias = 0;
+  jugador.mov.sinCorrer = false;
+  $("balizas-mision").innerHTML = "";
   sonido.viento(0);
   sonido.motor(0);
 }
@@ -578,6 +621,7 @@ function limpiarMision() {
 function empezarFinal() {
   ponerModo("transicion");
   detectarSenal();
+  completarMision("europa");
   sonido.reproducir("senal");
   fundido(() => {
     limpiarMision();

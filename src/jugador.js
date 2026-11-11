@@ -20,7 +20,7 @@ export function crearJugador(camera, dom, avisos = {}) {
   let mundo = null, recorrido = 0;
   let pie = 0, vy = 0, enSuelo = true; // altura de los pies, velocidad vertical
   let fase = 0, hundido = 0;           // balanceo al caminar y bajón al caer
-  const mov = { moviendo: false, corriendo: false };
+  const mov = { moviendo: false, corriendo: false, sinCorrer: false }; // sinCorrer: lo pone una misión al cargar algo
 
   function libre(x, z) {
     if (Math.abs(x) > mundo.limite || Math.abs(z) > mundo.limite) return false;
@@ -87,7 +87,7 @@ export function crearJugador(camera, dom, avisos = {}) {
       const f = (teclas.KeyW || teclas.ArrowUp ? 1 : 0) - (teclas.KeyS || teclas.ArrowDown ? 1 : 0);
       const s = (teclas.KeyD || teclas.ArrowRight ? 1 : 0) - (teclas.KeyA || teclas.ArrowLeft ? 1 : 0);
       mov.moviendo = !!(f || s);
-      mov.corriendo = mov.moviendo && !!(teclas.ShiftLeft || teclas.ShiftRight);
+      mov.corriendo = mov.moviendo && !mov.sinCorrer && !!(teclas.ShiftLeft || teclas.ShiftRight);
       if (teclas.Space) saltar();
       mover(f, s, dt, mov.corriendo);
     }

@@ -162,8 +162,8 @@ Juego 3D en primera persona con estilo tipo Schedule I: modelos low-poly, colore
 
 1. ✅ **Hecho.** Saltar con gravedad real y balanceo de cámara.
 2. ✅ **Hecho.** Aterrizaje controlado, averías (pata rota, fuga, antena) y piezas de repuesto. Falta el viento de Marte y los rebotes en gravedad baja.
-3. Sistema de misiones y la misión de Mercurio con su puzzle.
-4. Misiones de Marte, Venus, Ío y Europa (Europa reemplaza el final actual con la triangulación).
+3. ✅ **Hecho.** Sistema de misiones (app Misiones, recompensas, cada misión abre el siguiente destino) y la misión de Mercurio.
+4. ✅ **Hecho.** Misiones de Venus, Marte, Ío y Europa. En Europa hay que triangular la señal antes de poder caminar hasta ella.
 5. Balance con el simulador, ya con las recompensas de misiones.
 6. Animaciones restantes: brazos, recoger, vecinos, patas del cohete.
 

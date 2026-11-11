@@ -1,7 +1,7 @@
 // Personajes de bloques y los consejos del Dr. Nova, que guía al jugador sin decidir por él.
 import * as THREE from "three";
 import { caja, etiqueta } from "./estilo.js";
-import { DATOS_PLANETAS } from "./datos.js";
+import { DATOS_PLANETAS, MISIONES } from "./datos.js";
 import { estado, ORDEN, capacidad, costoIda, alcanceSensor, oxigenoMax, COSTO_ATERRIZAR } from "./reglas.js";
 
 export const NOMBRE = "Dr. Nova";
@@ -99,12 +99,12 @@ export function consejos() {
     presentado = true;
     di("¡Hola! Soy el Dr. Nova. Veo que encontraste mi viejo cohete... o lo que queda de él.");
     di("Si lo reparamos pieza por pieza, llegaremos cada vez más lejos. Mi sueño es escuchar qué hay bajo el hielo de Europa.");
-    di("El plan de cada viaje: despegar, aterrizar, explorar a pie y volver con muestras. Lo que flota en órbita vale poco; lo bueno está en el suelo.");
+    di("El plan de cada viaje: despegar, aterrizar despacio, cumplir la misión del lugar y volver con muestras. Mira la app Misiones del teléfono.");
     di("Regla de oro: cada mejora añade masa, y más masa gasta más combustible. En una misión espacial nada es gratis.");
     return L;
   }
 
-  const objetivo = ORDEN.find(id => !estado.visitados[id]) || "europa";
+  const objetivo = ORDEN.find(id => !estado.misiones[id]) || "europa";
   const p = DATOS_PLANETAS[objetivo];
   const necesita = costoIda(objetivo) * 2 + COSTO_ATERRIZAR;
   const yaVolo = Object.keys(estado.visitados).length > 0;
@@ -114,6 +114,8 @@ export function consejos() {
     const uno = estado.carga.length === 1;
     di(`Traes ${uno ? "1 objeto" : estado.carga.length + " objetos"} por ${total} 💰. ${uno ? "Véndelo" : "Véndelos"} en la mesa de afuera, o camina al pueblo: el mercado paga un 20 % más.`);
   }
+
+  di(`Misión en ${p.lugar}: ${MISIONES[objetivo].desc} Paga ${MISIONES[objetivo].recompensa} 💰 y abre el siguiente destino.`);
 
   if (objetivo === "europa" && m.antena < 2) {
     di("Para Europa necesito la antena en nivel 2. Sin ella no podremos escuchar nada bajo el hielo.", "alta");

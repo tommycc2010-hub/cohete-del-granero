@@ -3,12 +3,13 @@ import {
   estado, MEJORAS, ORDEN, COSTO_EXPLORAR, capacidad, factorMasa, costoIda, costoMejora,
   desbloqueado, comprarMejora, iniciarMision, explorar, regresar,
 } from "./reglas.js";
-import { DATOS_PLANETAS } from "./datos.js";
+import { DATOS_PLANETAS, MISIONES } from "./datos.js";
 
 const APPS = {
   estado: { icono: "📊", nombre: "Estado", color: "#4aa3e8" },
   taller: { icono: "🔧", nombre: "Taller", color: "#ffd23f" },
   mapa:   { icono: "🚀", nombre: "Mapa",   color: "#e5483b" },
+  misiones: { icono: "🎯", nombre: "Misiones", color: "#e28bff" },
   diario: { icono: "📓", nombre: "Diario", color: "#5cc46b" },
 };
 
@@ -51,8 +52,8 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
       const d = DATOS_PLANETAS[id], ok = desbloqueado(id), ida = costoIda(id);
       let nota = d.nota;
       if (!ok) nota = id === "europa"
-        ? "Bloqueado: visita Júpiter y sube la antena a nivel 2."
-        : `Bloqueado: visita ${DATOS_PLANETAS[ORDEN[ORDEN.indexOf(id) - 1]].nombre} primero.`;
+        ? "Bloqueado: cumple la misión de Júpiter y sube la antena a nivel 2."
+        : `Bloqueado: cumple la misión de ${DATOS_PLANETAS[ORDEN[ORDEN.indexOf(id) - 1]].nombre}.`;
       return `<button class="tel-item" data-acc="lanzar:${id}" ${ok ? "" : "disabled"}>
         <b>${ok ? "" : "🔒 "}${d.nombre}</b>${estado.visitados[id] ? " <em>visitado</em>" : ""}
         <span class="tel-precio ${ok && estado.combustible < ida * 2 ? "caro" : ""}">${ida * 2} ⛽ ida y vuelta</span>
@@ -71,6 +72,18 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
          <button class="tel-boton" data-acc="regresar">🏠 Regresar al granero</button>
          <h3>Recolectado (${m.carga.length})</h3>${carga || `<p class="tel-nota">Nada todavía.</p>`}
          <p class="tel-nota">Modo simple: el vuelo en 3D llega en el Paso 5.</p>`;
+  }
+
+  function vistaMisiones() {
+    return ORDEN.map(id => {
+      const M = MISIONES[id], hecha = estado.misiones[id], abierta = desbloqueado(id);
+      const marca = hecha ? "✅" : abierta ? "🎯" : "🔒";
+      return `<div class="tel-fila tel-mision ${hecha ? "hecha" : ""}">
+        <div><b>${marca} ${DATOS_PLANETAS[id].lugar}: ${M.titulo}</b>
+          <small>${abierta || hecha ? M.desc : "Cumple la misión anterior para verla."}</small>
+          ${hecha ? `<small class="tel-dato">Dato real: ${M.dato}</small>` : ""}</div>
+        <span class="tel-precio">${M.recompensa} 💰</span></div>`;
+    }).join("");
   }
 
   function vistaDiario() {
@@ -92,7 +105,7 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
   }
 
   function pintar() {
-    const vistas = { inicio: vistaInicio, estado: vistaEstado, taller: vistaTaller, mapa: vistaMapa, mision: vistaMision, diario: vistaDiario, final: vistaFinal };
+    const vistas = { inicio: vistaInicio, estado: vistaEstado, taller: vistaTaller, mapa: vistaMapa, misiones: vistaMisiones, mision: vistaMision, diario: vistaDiario, final: vistaFinal };
     const titulo = app === "inicio" ? "Mi teléfono" : app === "mision" ? "Misión" : app === "final" ? "Europa" : APPS[app].nombre;
     const atras = ["inicio", "mision", "final"].includes(app) ? "" : `<button class="tel-atras" data-acc="app:inicio">‹</button>`;
     pantalla.innerHTML = `<div class="tel-barra">${atras}<span>${titulo}</span></div>

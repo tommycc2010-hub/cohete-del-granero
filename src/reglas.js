@@ -1,5 +1,5 @@
 // Reglas del juego, sin nada visual. La parte 3D y el HUD leen `estado` y llaman a estas funciones.
-import { DATOS_PLANETAS, OBJETOS } from "./datos.js";
+import { DATOS_PLANETAS, OBJETOS, MISIONES } from "./datos.js";
 
 export const ORDEN = ["mercurio", "venus", "marte", "jupiter", "europa"];
 export const MEJORAS = {
@@ -25,6 +25,7 @@ export const estado = {
   mejoras: { motor: 0, tanque: 0, escudo: 0, sensor: 0, antena: 0, traje: 0, oxigeno: 0 },
   carga: [],
   visitados: {},
+  misiones: {}, // misiones principales cumplidas, por destino
   mision: null,
   final: false,
   log: ["Bienvenido al granero. El cohete necesita reparaciones."],
@@ -53,8 +54,9 @@ export function costoIda(id) {
 
 export function desbloqueado(id) {
   if (id === "mercurio") return true;
-  if (id === "europa") return !!estado.visitados.jupiter && estado.mejoras.antena >= 2;
-  return !!estado.visitados[ORDEN[ORDEN.indexOf(id) - 1]];
+  // Cada destino se abre al cumplir la misión del anterior.
+  if (id === "europa") return !!estado.misiones.jupiter && estado.mejoras.antena >= 2;
+  return !!estado.misiones[ORDEN[ORDEN.indexOf(id) - 1]];
 }
 
 // Cada acción devuelve el mensaje que explica lo que pasó.
@@ -192,6 +194,16 @@ export function recolectar(o) {
   m.carga.push(o);
   m.hecho++;
   const t = msg(`Recogiste ${o.nombre} (valor ${o.valor}).`);
+  cambio();
+  return t;
+}
+
+// Cumplir la misión de un destino paga su recompensa y abre el siguiente.
+export function completarMision(id) {
+  if (estado.misiones[id]) return "";
+  estado.misiones[id] = true;
+  estado.dinero += MISIONES[id].recompensa;
+  const t = msg(`✅ Misión cumplida: ${MISIONES[id].titulo}. Recompensa: ${MISIONES[id].recompensa} 💰.`);
   cambio();
   return t;
 }
