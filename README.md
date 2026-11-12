@@ -94,7 +94,9 @@ La partida se guarda sola en el navegador cada vez que estás en el granero.
   - 🧭 **Giroscopio averiado:** la nave gira sola y hay que corregir el rumbo. El telescopio Hubble trabaja con un solo giroscopio desde 2024.
   - 📡 **El eco de Europa:** después de Marte, la antena capta el pulso que oyó el Dr. Nova hace treinta años.
 - **Eventos en la superficie:** un meteorito cae cerca y deja una muestra en su cráter (en Venus no, porque la atmósfera espesa frena las rocas pequeñas). También puede haber sismos que dejan al descubierto un mineral; la sonda InSight registró más de 1300 en Marte.
-- **15 logros** que se ven en el teléfono, como aterrizar a menos de 1 m/s, saltar con menos de 0.2 g o atrapar hielo de un cometa.
+- **El granero cuenta tu progreso:** un tablero con una tarjeta por destino que recibe un sello verde al cumplir la misión, una vitrina con una copa por logro, un telescopio que muestra qué ventanas de lanzamiento están abiertas y una estación de tierra cuya antena, paneles y tanques crecen con las mejoras del cohete.
+- **Villa Siderense tiene vida:** el Museo del Espacio paga el 150 % por la primera pieza de cada tipo y la expone en su pedestal. También hay un tablón de encargos, el Café Estelar, banderines y una fuente con agua.
+- **16 logros** que se ven en el teléfono, como aterrizar a menos de 1 m/s, saltar con menos de 0.2 g o atrapar hielo de un cometa.
 
 ### Controles
 
@@ -142,6 +144,7 @@ src/
   cientifico.js   personajes y consejos del Dr. Nova
   dialogos.js     conversaciones con opciones, encargos y saludos de los vecinos
   eventos.js      eventos aleatorios en el espacio y en la superficie
+  granja.js       alrededores del granero: tablero, vitrina, telescopio y estación de tierra
   postpro.js      resplandor y viñeteado (calidad alta)
   objetos.js, particulas.js, ambiente.js   modelos de las muestras, partículas y fenómenos de cada bioma
   telefono.js     menú del teléfono

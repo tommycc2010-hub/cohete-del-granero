@@ -23,7 +23,7 @@ import {
   oxigenoMax, resistenciaTraje, desgasteTraje, puedeAterrizar, aterrizar, COSTO_ATERRIZAR, perderRecolectado,
   BONO_PUEBLO, VALOR_ORBITA, FUGA_POR_SEGUNDO, completarMision, exportarEstado, importarEstado, factorMasa,
   energiaMax, generacion, consumoSistemas, ENERGIA_RECARGA_OXI, retrasoSenal,
-  LOGROS, logrosNuevos, desbloquearLogro,
+  LOGROS, logrosNuevos, desbloquearLogro, donarMuseo, ventana, desbloqueado, ORDEN,
 } from "./reglas.js";
 
 // ----- Render -----
@@ -169,6 +169,7 @@ function pintarHud() {
 let firmaMejoras = JSON.stringify(estado.mejoras);
 suscribir(() => {
   pintarHud();
+  granero.mostrarProgreso(estado);
   guardarPartida();
   if (Object.values(estado.mejoras).reduce((a, b) => a + b, 0) >= 10) desbloquearLogro("ingeniero");
   if (["mercurio", "venus", "marte", "jupiter", "europa"].every(id => estado.visitados[id])) desbloquearLogro("explorador");
@@ -181,6 +182,7 @@ suscribir(() => {
   }
 });
 pintarHud();
+granero.mostrarProgreso(estado);
 
 let relojAviso;
 function aviso(texto) {
@@ -374,6 +376,19 @@ function interactuar() {
   else if (c.id === "vecino") hablar(c.nombre, conversacionVecino(c.nombre), c.x, c.z);
   else if (c.id === "despegar") usarCohete();
   else if (c.id === "mision") usarMision(c.clave);
+  else if (c.id === "museo") { const t = donarMuseo(); aviso(t); sonido.reproducir(t.includes("Donaste") ? "vender" : "clic"); }
+  else if (c.id === "tablon" || c.id === "tablero") telefono.abrir("misiones");
+  else if (c.id === "vitrina") telefono.abrir("logros");
+  else if (c.id === "telescopio") { aviso(textoTelescopio()); sonido.reproducir("senal"); }
+}
+
+// Telescopio: qué ventanas de lanzamiento están abiertas y cuándo abren las demás
+function textoTelescopio() {
+  const partes = ORDEN.filter(desbloqueado).map(id => {
+    const v = ventana(id), n = DATOS_PLANETAS[id].nombre;
+    return v.abierta ? `${n}: ✅ abierta (${v.quedan} d)` : `${n}: abre en ${v.abre} d`;
+  });
+  return `🔭 Ventanas de lanzamiento · ${partes.join(" · ")}. Los planetas se alinean cada cierto tiempo: fuera de la ventana el viaje cuesta más combustible.`;
 }
 
 // ----- Despegue -----

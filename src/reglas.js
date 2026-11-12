@@ -36,13 +36,14 @@ export const estado = {
   encargos: {}, // encargos del pueblo: "activo" o "hecho"
   logros: {},   // logros conseguidos
   descuento: 0, // descuento en el taller (por el encargo de Tomás)
+  museo: {},    // piezas donadas al Museo del Espacio
   mision: null,
   final: false,
   log: ["Bienvenido al granero. El cohete necesita reparaciones."],
 };
 
 // ----- Guardar y cargar -----
-const GUARDABLE = ["dia", "dinero", "combustible", "mejoras", "carga", "visitados", "misiones", "final", "log", "encargos", "logros", "descuento"];
+const GUARDABLE = ["dia", "dinero", "combustible", "mejoras", "carga", "visitados", "misiones", "final", "log", "encargos", "logros", "descuento", "museo"];
 
 export function exportarEstado() {
   return JSON.parse(JSON.stringify(Object.fromEntries(GUARDABLE.map(k => [k, estado[k]]))));
@@ -71,6 +72,7 @@ export function importarEstado(d) {
   }
   if (d.logros && typeof d.logros === "object") estado.logros = Object.fromEntries(Object.keys(LOGROS).filter(k => d.logros[k]).map(k => [k, true]));
   estado.descuento = d.descuento === 0.15 ? 0.15 : 0;
+  estado.museo = d.museo && typeof d.museo === "object" ? Object.fromEntries(PIEZAS_MUSEO.filter(n => d.museo[n]).map(n => [n, true])) : {};
   estado.dia = Math.max(1, Math.floor(num(d.dia, 1)));
   if (Array.isArray(d.log)) estado.log = d.log.filter(t => typeof t === "string").slice(0, 6);
   estado.combustible = Math.min(estado.combustible, capacidad());
@@ -420,6 +422,7 @@ export const LOGROS = {
   cometa:     { icono: "🌠", titulo: "Cazador de cometas", desc: "Atrapa hielo de la cola de un cometa." },
   fuga:       { icono: "🧯", titulo: "Mecánico en órbita", desc: "Sella una fuga de combustible en pleno vuelo." },
   meteorito:  { icono: "🌑", titulo: "Caído del cielo", desc: "Recoge un meteorito recién caído." },
+  curador:    { icono: "🏛️", titulo: "Curador del museo", desc: "Dona al museo una pieza de cada tipo." },
   contacto:   { icono: "🛸", titulo: "No estamos solos", desc: "Encuentra el origen de la señal de Europa." },
 };
 export const logrosNuevos = []; // la pantalla los muestra y vacía la lista
@@ -431,4 +434,26 @@ export function desbloquearLogro(id) {
   msg(`🏆 Logro: ${LOGROS[id].titulo}.`);
   cambio();
   return true;
+}
+
+// ----- Museo del Espacio (en el pueblo) -----
+// La primera pieza de cada tipo que dones se paga al 150 % de su valor y queda expuesta.
+export const PIEZAS_MUSEO = ["Chatarra espacial", "Hielo", "Mineral raro", "Cristal lunar", "Muestra biológica", "Sonda perdida", "Meteorito"];
+
+export function donarMuseo() {
+  const i = estado.carga.findIndex(o => PIEZAS_MUSEO.includes(o.nombre) && !estado.museo[o.nombre]);
+  if (i < 0) {
+    const faltan = PIEZAS_MUSEO.filter(n => !estado.museo[n]);
+    return faltan.length
+      ? msg(`🏛️ El museo busca: ${faltan.join(", ")}. Tráelo en tu carga.`)
+      : msg("🏛️ ¡La colección del museo está completa! Gracias por compartir tus hallazgos.");
+  }
+  const [o] = estado.carga.splice(i, 1);
+  const premio = Math.round(o.valor * 1.5);
+  estado.museo[o.nombre] = true;
+  estado.dinero += premio;
+  if (PIEZAS_MUSEO.every(n => estado.museo[n])) desbloquearLogro("curador");
+  const t = msg(`🏛️ Donaste ${o.nombre} al museo. Te pagan ${premio} 💰 (150 % de su valor). Piezas: ${Object.keys(estado.museo).length}/${PIEZAS_MUSEO.length}.`);
+  cambio();
+  return t;
 }

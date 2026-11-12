@@ -4,6 +4,7 @@ import { caja, cilindro, cono, esfera, etiqueta, toon } from "./estilo.js";
 import { crearCohete } from "./cohete.js";
 import { crearCientifico, NOMBRE } from "./cientifico.js";
 import { crearPueblo } from "./pueblo.js";
+import { crearGranja } from "./granja.js";
 import { crearTerreno } from "./terreno.js";
 import { fbm, ruido, paso, azarSemilla, distSegmento } from "./ruido.js";
 
@@ -120,7 +121,9 @@ export function crearGranero(scene, mejoras) {
     baseCohete.remove(cohete);
     cohete = crearCohete(m);
     baseCohete.add(cohete);
+    if (granja) granja.mostrarMejoras(m);
   }
+  let granja = null;
   poner(caja(0.5, 1.5, 2.2, MADERA), -1.3, 0.75, Z0);
   poner(caja(0.5, 1.0, 2.2, MADERA), 1.3, 0.5, Z0);
   col(0, Z0, 6.4, 2.4);
@@ -202,6 +205,10 @@ export function crearGranero(scene, mejoras) {
     puestos++;
   }
 
+  // ----- Alrededores: tablero, vitrina, telescopio, estación de tierra y detalles -----
+  granja = crearGranja({ poner, col, interactuables, altura, Z0 });
+  granja.mostrarMejoras(mejoras);
+
   // ----- Pueblo -----
   const pueblo = crearPueblo({ cx: PUEBLO.x, cz: PUEBLO.z, poner, col, interactuables });
 
@@ -268,6 +275,7 @@ export function crearGranero(scene, mejoras) {
     t += dt;
     cientifico.actualizar(dt, jugadorPos);
     pueblo.actualizar(dt, jugadorPos);
+    granja.actualizar(dt);
     // El sol sigue al jugador para que siempre haya sombras a su alrededor
     sol.position.set(jugadorPos.x + 14, jugadorPos.y + 22, jugadorPos.z + 12);
     sol.target.position.set(jugadorPos.x, jugadorPos.y - 1.7, jugadorPos.z);
@@ -286,5 +294,6 @@ export function crearGranero(scene, mejoras) {
     iniciarDespegue, actualizarDespegue, terminarDespegue,
     cientifico: { x: 3.9, z: Z0 + 2.6 },
     hablando(nombre) { cientifico.hablando = nombre === NOMBRE; pueblo.hablando(nombre); },
+    mostrarProgreso(estado) { granja.mostrarProgreso(estado); pueblo.mostrarMuseo(estado.museo); },
   };
 }
