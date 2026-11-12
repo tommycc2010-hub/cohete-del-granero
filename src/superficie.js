@@ -8,6 +8,8 @@ import { crearTerreno } from "./terreno.js";
 import { fbm, ruido, paso, azarSemilla } from "./ruido.js";
 import { DATOS_PLANETAS } from "./datos.js";
 import { crearMision } from "./misiones.js";
+import { crearAmbiente, colorPolvo } from "./ambiente.js";
+import { crearRafaga } from "./particulas.js";
 
 const TAM = 440;
 const RADIO_RECOGER = 2.4;
@@ -68,7 +70,8 @@ export function crearSuperficie() {
 
   const colisiones = [], interactuables = [];
   let altura = () => 0, objetos = [], zonas = [], piezas = [], senal = null, bioma = BIOMAS.mercurio, t = 0;
-  let cohete = null, baseCohete = 0, gravedad = 1, mision = null;
+  let cohete = null, baseCohete = 0, gravedad = 1, mision = null, ambiente = null, destino = "mercurio";
+  let rafagas = [];
   let patas = [], volando = [], tPolvo = 0, golpePolvo = 0;
   // Nube de polvo bajo el cohete al aterrizar
   const polvo = [];
@@ -89,6 +92,8 @@ export function crearSuperficie() {
     colisiones.length = 0;
     interactuables.length = 0;
     bioma = BIOMAS[dest];
+    destino = dest;
+    rafagas = [];
     gravedad = DATOS_PLANETAS[dest].gravedad;
     piezas = [];
     const azar = azarSemilla(bioma.semilla);
@@ -190,14 +195,21 @@ export function crearSuperficie() {
       const a = Math.random() * Math.PI * 2, r = 16 + i * 9 + Math.random() * 7;
       const x = Math.cos(a) * r, z = Math.sin(a) * r, y = altura(x, z);
       const mesh = crearObjeto(dato);
-      mesh.scale.setScalar(0.5);
-      mesh.position.set(x, y + 1.1, z);
+      mesh.scale.setScalar(0.75);
+      mesh.position.set(x, y + 1.0, z);
       mundo.add(mesh);
-      // Haz de luz para verlo desde lejos
-      const haz = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 14, 6),
-        new THREE.MeshBasicMaterial({ color: dato.color, transparent: true, opacity: 0.35, fog: false }));
-      haz.position.set(x, y + 8, z);
+      const color = mesh.userData.rareza.color;
+      // Aura en el suelo y haz de luz del color de su rareza, para verlo desde lejos
+      const aura = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.25, 28),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false }));
+      aura.rotation.x = -Math.PI / 2;
+      aura.position.set(x, y + 0.08, z);
+      mundo.add(aura);
+      const haz = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.25, 16, 8),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3, fog: false, depthWrite: false }));
+      haz.position.set(x, y + 8.5, z);
       mundo.add(haz);
+      haz.userData.aura = aura;
       return { dato, mesh, haz };
     });
 
@@ -223,6 +235,7 @@ export function crearSuperficie() {
 
     // ----- Misión del lugar (y su mecánica propia) -----
     mision = crearMision(dest, { grupo: mundo, altura, colisiones, interactuables, azar, ponerZona, senal }, misionHecha);
+    ambiente = crearAmbiente(dest, mundo, altura, azar);
   }
 
   // Durante el descenso: coloca el cohete a `h` metros del suelo, con la llama encendida o no.
@@ -281,6 +294,8 @@ export function crearSuperficie() {
     t += dt;
     sol.position.set(pos.x + 14, pos.y + 22, pos.z + 12);
     sol.target.position.set(pos.x, pos.y - 1.7, pos.z);
+    if (ambiente) ambiente.actualizar(dt, pos);
+    rafagas = rafagas.filter(r => r.actualizar(dt));
 
     // Lo recogido vuela hacia la mochila y se encoge
     volando = volando.filter(v => {
@@ -293,6 +308,9 @@ export function crearSuperficie() {
       return false;
     });
     const alVuelo = o => {
+      if (o.haz.userData.aura) mundo.remove(o.haz.userData.aura);
+      const c = o.mesh.userData.rareza ? o.mesh.userData.rareza.color : 0xff8a2a;
+      rafagas.push(crearRafaga(mundo, o.mesh.position.x, o.mesh.position.y, o.mesh.position.z, { color: c }));
       mundo.remove(o.haz);
       volando.push({ mesh: o.mesh, desde: o.mesh.position.clone(), escala: o.mesh.scale.x, t: 0 });
     };
@@ -305,7 +323,8 @@ export function crearSuperficie() {
 
     const recogidos = [];
     objetos = objetos.filter(o => {
-      o.mesh.rotation.y += dt * 1.2;
+      o.mesh.userData.animar(t);
+      o.haz.material.opacity = 0.22 + Math.sin(t * 2 + o.mesh.position.x) * 0.08;
       if (Math.hypot(o.mesh.position.x - pos.x, o.mesh.position.z - pos.z) < RADIO_RECOGER) {
         alVuelo(o);
         recogidos.push(o.dato);
@@ -347,6 +366,13 @@ export function crearSuperficie() {
 
   return {
     scene, colisiones, interactuables, iniciar, actualizar, moverCohete, inclinar, ponerPiezas, polvareda, limite: TAM / 2 - 22,
+    // Nube de polvo a los pies (al caminar, al caer de un salto)
+    polvoPaso(x, y, z, fuerte = false) {
+      rafagas.push(crearRafaga(mundo, x, y + 0.1, z, {
+        color: colorPolvo(destino), n: fuerte ? 22 : 8, vel: fuerte ? 3 : 1.2, duracion: fuerte ? 1 : 0.6,
+        tam: fuerte ? 0.9 : 0.55, gravedad: -0.5 * gravedad, aditivo: false,
+      }));
+    },
     get gravedad() { return gravedad; },
     get piezas() { return piezas; },
     get mision() { return mision; },

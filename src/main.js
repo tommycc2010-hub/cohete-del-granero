@@ -39,10 +39,14 @@ const superficie = crearSuperficie();
 const final = crearFinal();
 const manos = crearManos();
 const jugador = crearJugador(camera, renderer.domElement, {
-  alPaso: () => sonido.reproducir("paso"),
+  alPaso() {
+    sonido.reproducir("paso");
+    if (modo === "superficie") superficie.polvoPaso(camera.position.x, jugador.pie, camera.position.z);
+  },
   alSaltar: () => sonido.reproducir("salto"),
   alCaer(golpe) {
     if (golpe > 3) sonido.reproducir("paso");
+    if (modo === "superficie" && golpe > 2) superficie.polvoPaso(camera.position.x, jugador.pie, camera.position.z, true);
     if (modo === "superficie" && golpe > 11) { // una caída fuerte daña el traje
       traje = Math.max(0, traje - (golpe - 11) * 3 / resistenciaTraje());
       aviso("Caída fuerte: el traje se dañó.");

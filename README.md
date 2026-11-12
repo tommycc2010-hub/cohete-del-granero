@@ -64,6 +64,8 @@ En *Cohete del Granero* **el jugador siente cada trade-off en carne propia**. La
 - **Ío:** el cuerpo con más volcanes activos del sistema solar. Júpiter es un gigante de gas sin suelo, por eso se aterriza en su luna.
 - **Europa:** los datos indican un océano de agua salada bajo el hielo. La NASA envió la misión Europa Clipper a estudiar si podría ser habitable.
 
+- **Cada bioma tiene sus fenómenos:** remolinos de polvo y las lunas Fobos y Deimos en Marte, penachos volcánicos de azufre con forma de paraguas en Ío (como los que fotografió la sonda Voyager), y posibles géiseres de vapor de agua en Europa, de los que el telescopio Hubble vio indicios.
+
 > **Ficción y realidad:** el final con vida extraterrestre es ficción, y el propio juego lo aclara en la pantalla final. Hoy no hay evidencia de vida en Europa.
 
 Los datos de los planetas están en [`src/datos.js`](src/datos.js). Son conocimiento general de divulgación y se reemplazarán por la base de datos oficial de la NASA cuando se publique.

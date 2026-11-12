@@ -9,6 +9,7 @@
 //   usar(clave) -> { aviso, hecha } al pulsar E en algo de la misión
 import * as THREE from "three";
 import { caja, cilindro, cono, esfera } from "./estilo.js";
+import { crearParticulas } from "./particulas.js";
 
 const basico = (color, opacidad = 1) => new THREE.MeshBasicMaterial({ color, transparent: opacidad < 1, opacity: opacidad });
 const dentro = (pos, x, z, r) => Math.hypot(pos.x - x, pos.z - z) < r;
@@ -253,11 +254,11 @@ function io(api, hecha) {
       const boca = new THREE.Mesh(new THREE.SphereGeometry(RADIO, 12, 6), basico(0x5a2408, 0.9));
       boca.scale.y = 0.12;
       boca.position.set(x, y + 0.1, z);
-      const chorro = new THREE.Mesh(new THREE.CylinderGeometry(RADIO * 0.55, RADIO * 0.85, 14, 10), basico(0xffb02a, 0.75));
-      chorro.position.set(x, y + 7, z);
-      chorro.visible = false;
-      api.grupo.add(boca, chorro);
-      bocas.push({ x, z, boca, chorro });
+      // Chorro de lava: partículas que suben y caen como una fuente
+      const chorro = crearParticulas(55, { color: 0xffa020, tam: 0.9, aditivo: true, opacidad: 0.95 });
+      const gotas = Array.from({ length: 55 }, () => [Math.random(), Math.random() * Math.PI * 2, Math.random()]);
+      api.grupo.add(boca, chorro.puntos);
+      bocas.push({ x, z, y, boca, chorro, gotas });
     }
     return { bocas, desfase: i * 1.7 };
   });
@@ -289,8 +290,14 @@ function io(api, hecha) {
       for (const fila of filas) {
         const tt = (t + fila.desfase) % CICLO, activa = tt < ACTIVO, avisa = tt > CICLO - AVISO;
         for (const b of fila.bocas) {
-          b.chorro.visible = activa;
-          if (activa) b.chorro.scale.set(1, 0.8 + Math.random() * 0.4, 1);
+          b.chorro.puntos.visible = activa;
+          if (activa) {
+            b.gotas.forEach((g, n) => {
+              const f = (tt * 1.4 + g[0]) % 1, r = g[2] * RADIO * 0.8 * f;
+              b.chorro.poner(n, b.x + Math.cos(g[1]) * r, b.y + 15 * Math.sin(f * Math.PI) * (0.6 + g[2] * 0.5), b.z + Math.sin(g[1]) * r);
+            });
+            b.chorro.listo();
+          }
           b.boca.material.color.set(activa ? 0xffb02a : avisa ? 0xff6a1a : 0x5a2408); // se enciende antes de estallar
           if (activa && dentro(pos, b.x, b.z, RADIO)) dano = 60;
         }

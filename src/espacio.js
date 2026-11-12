@@ -55,23 +55,9 @@ export function crearPlaneta(tipo, radio) {
   return p;
 }
 
-// ----- Objetos recolectables: una forma distinta por tipo -----
-const FORMAS = {
-  "Chatarra espacial": () => new THREE.BoxGeometry(1.6, 1.1, 1.3),
-  "Hielo":             () => new THREE.OctahedronGeometry(1.2),
-  "Mineral raro":      () => new THREE.DodecahedronGeometry(1.2),
-  "Cristal lunar":     () => new THREE.OctahedronGeometry(1.3).scale(0.6, 1.5, 0.6),
-  "Muestra biológica": () => new THREE.IcosahedronGeometry(1.2, 1),
-};
-
-export function crearObjeto(dato) {
-  const geo = (FORMAS[dato.nombre] || FORMAS["Hielo"])();
-  const m = new THREE.Mesh(geo, toon(dato.color));
-  const borde = new THREE.Mesh(geo, matContorno);
-  borde.scale.setScalar(1.14);
-  m.add(borde);
-  return m;
-}
+// Los objetos recolectables viven en objetos.js; se reexportan para no cambiar quién los importa.
+export { crearObjeto } from "./objetos.js";
+import { crearObjeto } from "./objetos.js";
 
 export function crearEspacio() {
   const scene = new THREE.Scene();
@@ -148,6 +134,7 @@ export function crearEspacio() {
     objetos = campo.map((dato, i) => {
       const dir = new THREE.Vector3(THREE.MathUtils.randFloatSpread(1.5), THREE.MathUtils.randFloatSpread(0.8), -1).normalize();
       const mesh = crearObjeto(dato);
+      mesh.scale.setScalar(1.5);
       mesh.position.copy(dir.multiplyScalar(40 + i * 24 + Math.random() * 10));
       mesh.rotation.set(Math.random() * 6, Math.random() * 6, 0);
       mundo.add(mesh);
@@ -190,7 +177,7 @@ export function crearEspacio() {
 
     const recogidos = [];
     objetos = objetos.filter(o => {
-      o.mesh.rotation.y += dt * 0.8;
+      o.mesh.userData.animar(t);
       o.mesh.rotation.x += dt * 0.3;
       if (o.mesh.position.distanceTo(nave.position) < RADIO_RECOGER) {
         mundo.remove(o.mesh);
