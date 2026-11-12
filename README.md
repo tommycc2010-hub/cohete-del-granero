@@ -79,7 +79,7 @@ Los datos de los planetas están en [`src/datos.js`](src/datos.js). Son conocimi
 5. **Cumples la misión** del lugar, recoges muestras y vuelves a casa a venderlas. En el pueblo, Villa Siderense, el mercado paga un 20 % más.
 6. **Lees el reporte de misión:** combustible gastado en cada fase, cómo fue el aterrizaje, qué trajiste y la lección del viaje, es decir, el trade-off que más pesó.
 
-La partida se guarda sola en el navegador cada vez que estás en el granero.
+**Partidas guardadas:** hay **4 ranuras**, cada una con una partida distinta. El juego guarda solo cuando estás en el granero, y además puedes guardar **en cualquier momento**, incluso en órbita o explorando un planeta: desde la pausa (Esc → Guardar partida) o con la tecla **G** (guardado rápido). Al cargar una partida guardada en un planeta, apareces donde estabas, con el mismo oxígeno, traje, carga y averías. En la app de escritorio las partidas quedan en la propia app y se conservan al cerrarla.
 
 ### Más allá de la misión principal
 
@@ -110,6 +110,7 @@ La partida se guarda sola en el navegador cada vez que estás en el granero.
 | Tab | Teléfono: estado, taller, mapa, misiones, encargos, logros y diario |
 | 1 – 4 | Elegir una respuesta en las conversaciones |
 | R | Volver a casa desde la órbita |
+| G | Guardado rápido en la ranura actual |
 | M | Sonido sí / no |
 | F11 | Pantalla completa (app de escritorio) |
 
@@ -149,7 +150,7 @@ src/
   objetos.js, particulas.js, ambiente.js   modelos de las muestras, partículas y fenómenos de cada bioma
   telefono.js     menú del teléfono
   informe.js      reporte de misión y lección de cada viaje
-  guardado.js     guardado automático de la partida
+  guardado.js     4 ranuras de guardado, en casa o en plena misión
   menu.js         menú principal, pausa y opciones
   musica.js       música ambiental generada en el momento
   cohete.js, estilo.js, terreno.js, ruido.js, sonido.js, tutorial.js

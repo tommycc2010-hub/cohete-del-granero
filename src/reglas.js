@@ -457,3 +457,16 @@ export function donarMuseo() {
   cambio();
   return t;
 }
+
+// Recupera una misión en curso desde una partida guardada (si es válida).
+export function importarMision(m) {
+  if (!m || !ORDEN.includes(m.dest)) return false;
+  const num = (x, def) => (typeof x === "number" && isFinite(x) && x >= 0 ? x : def);
+  estado.mision = {
+    dest: m.dest, ida: num(m.ida, costoIda(m.dest)), hecho: num(m.hecho, 0), encuentros: num(m.encuentros, ENCUENTROS),
+    carga: (Array.isArray(m.carga) ? m.carga : []).filter(o => o && typeof o.nombre === "string" && typeof o.valor === "number")
+      .map(o => ({ nombre: o.nombre, valor: o.valor, color: String(o.color || "#ffffff"), origen: m.dest })),
+    ultimo: "", recargo: num(m.recargo, 0), dias: num(m.dias, DATOS_PLANETAS[m.dest].viaje),
+  };
+  return true;
+}

@@ -221,6 +221,21 @@
   .menu-botones button:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
   .menu-botones button.principal { background: var(--yellow); font-size: 22px; }
   .menu-botones button.peligro { background: var(--red); }
+  .menu-botones button.activo { background: #e8f4ff; }
+  /* Ranuras de guardado */
+  .ranuras { display: grid; gap: 10px; margin: 10px 0; }
+  .ranura { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 3px solid var(--ink); border-radius: 12px; background: #fff; }
+  .ranura.vacia { background: #f3efe6; }
+  .ranura.actual { box-shadow: 0 0 0 3px var(--yellow); }
+  .ranura-num { width: 36px; height: 36px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: bold; font-size: 18px; flex: none; }
+  .ranura-txt { flex: 1; min-width: 0; }
+  .ranura-txt b { display: block; }
+  .ranura-txt small { display: block; opacity: .75; }
+  .ranura-acciones { display: flex; gap: 6px; flex: none; }
+  .ranura-acciones button { font: inherit; font-weight: bold; padding: 7px 11px; border: 3px solid var(--ink); border-radius: 10px; background: #fff; cursor: pointer; box-shadow: 2px 2px 0 var(--ink); }
+  .ranura-acciones button.principal { background: var(--yellow); }
+  .ranura-acciones button.peligro { background: var(--red); }
+  .ranura-mensaje { font-weight: bold; }
   .menu-info { min-height: 1.2em; margin: 6px 0 0; color: #fff; font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 var(--ink); }
   .menu-panel { width: min(470px, 100%); max-height: calc(100vh - 64px); overflow-y: auto; padding: 18px 22px; }
   .menu-panel h3 { margin: 0 0 10px; font-size: 22px; }

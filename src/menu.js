@@ -42,6 +42,7 @@ const COMO_JUGAR = `
     <tr><td><kbd>Tab</kbd></td><td>Teléfono</td></tr>
     <tr><td><kbd>R</kbd></td><td>Volver a casa desde la órbita</td></tr>
     <tr><td><kbd>M</kbd> · <kbd>Esc</kbd></td><td>Silenciar · pausa</td></tr>
+    <tr><td><kbd>G</kbd></td><td>Guardado rápido en la ranura actual</td></tr>
   </table>`;
 
 const CREDITOS = `
@@ -51,10 +52,12 @@ const CREDITOS = `
   <p>Los datos científicos son de divulgación general y se reemplazarán por la base de datos de la NASA. El final con vida en Europa es ficción.</p>
   <p class="nota">Parte del trabajo se hizo con ayuda de Claude, un asistente de IA de Anthropic. NASA no respalda este proyecto.</p>`;
 
-// avisos: { alJugar(), alNuevaPartida(), alCambiarOpciones(opciones), infoPartida() -> texto o null }
+// avisos: { alJugar(), alCambiarOpciones(opciones), ranuras() -> [{ n, ocupada, actual, titulo, detalle }],
+//          alElegirRanura(n, nueva), alGuardarRanura(n) -> texto, alCargarRanura(n), alBorrarRanura(n), infoPartida() -> texto }
 export function crearMenu(raiz, avisos) {
   const opciones = cargarOpciones();
-  let enJuego = false, panel = null, confirmar = false;
+  const demo = new URLSearchParams(location.search).has("demo");
+  let enJuego = false, panel = null, confirmar = null, mensaje = "";
 
   raiz.innerHTML = `
     <div class="menu-lado">
@@ -71,19 +74,43 @@ export function crearMenu(raiz, avisos) {
 
   function pintar() {
     raiz.classList.toggle("pausa", enJuego);
-    const hay = avisos.infoPartida();
     const lista = enJuego
-      ? [["jugar", "▶ Reanudar"], ["opciones", "⚙ Opciones"], ["ayuda", "❔ Cómo jugar"]]
-      : [["jugar", hay ? "▶ Continuar" : "▶ Jugar"], ...(hay ? [["nueva", confirmar ? "¿Seguro? Se borra el progreso" : "✦ Nueva partida"]] : []),
-        ["opciones", "⚙ Opciones"], ["ayuda", "❔ Cómo jugar"], ["creditos", "★ Créditos"]];
+      ? [["jugar", "▶ Reanudar"], ...(demo ? [] : [["guardar", "💾 Guardar partida"], ["cargar", "📂 Cargar partida"]]), ["opciones", "⚙ Opciones"], ["ayuda", "❔ Cómo jugar"]]
+      : [["partidas", "▶ Jugar"], ["opciones", "⚙ Opciones"], ["ayuda", "❔ Cómo jugar"], ["creditos", "★ Créditos"]];
     botones.innerHTML = lista.map(([id, txt]) =>
-      `<button data-id="${id}" class="${id === "jugar" ? "principal" : ""} ${id === "nueva" && confirmar ? "peligro" : ""}">${txt}</button>`).join("");
-    const demo = new URLSearchParams(location.search).has("demo");
-    info.textContent = enJuego ? "Juego en pausa" : demo ? "Modo demo: todo desbloqueado, no se guarda el progreso" : hay || "";
+      `<button data-id="${id}" class="${id === "jugar" || id === "partidas" ? "principal" : ""} ${panel === id ? "activo" : ""}">${txt}</button>`).join("");
+    info.textContent = enJuego ? "Juego en pausa" : demo ? "Modo demo: todo desbloqueado, no se guarda el progreso" : avisos.infoPartida() || "";
     cajaPanel.style.display = panel ? "" : "none";
     if (panel === "ayuda") cajaPanel.innerHTML = COMO_JUGAR;
     else if (panel === "creditos") cajaPanel.innerHTML = CREDITOS;
     else if (panel === "opciones") pintarOpciones();
+    else if (panel === "partidas" || panel === "guardar" || panel === "cargar") pintarRanuras();
+  }
+
+  // Las 4 ranuras de guardado. Según el panel: empezar o continuar, guardar aquí, o cargar.
+  function pintarRanuras() {
+    const titulo = { partidas: "Elige una partida", guardar: "Guardar partida", cargar: "Cargar partida" }[panel];
+    const nota = {
+      partidas: "Cada ranura es una partida distinta. Se guarda sola en casa, y puedes guardar cuando quieras desde la pausa (Esc) o con la tecla G.",
+      guardar: "Puedes guardar en cualquier momento: en casa, en órbita o en un planeta.",
+      cargar: "Se perderá lo que no hayas guardado de la partida actual.",
+    }[panel];
+    const fila = r => {
+      const pide = (accion, txt, clase = "") => {
+        const seguro = confirmar === `${accion}:${r.n}`;
+        return `<button data-ranura="${r.n}" data-accion="${accion}" class="${clase} ${seguro ? "peligro" : ""}">${seguro ? "¿Seguro?" : txt}</button>`;
+      };
+      let acciones = "";
+      if (panel === "partidas") acciones = r.ocupada ? pide("jugar", "▶ Continuar", "principal") + pide("borrar", "🗑") : pide("nueva", "✦ Nueva partida", "principal");
+      else if (panel === "guardar") acciones = pide("guardar", r.actual || !r.ocupada ? "💾 Guardar aquí" : "💾 Sobrescribir", "principal");
+      else acciones = r.ocupada ? pide("cargar", "📂 Cargar", "principal") + pide("borrar", "🗑") : "";
+      return `<div class="ranura ${r.ocupada ? "" : "vacia"} ${r.actual ? "actual" : ""}">
+        <div class="ranura-num">${r.n}</div>
+        <div class="ranura-txt"><b>${r.ocupada ? r.titulo : "Ranura vacía"}</b><small>${r.ocupada ? r.detalle : "Sin partida guardada"}</small></div>
+        <div class="ranura-acciones">${acciones}</div></div>`;
+    };
+    cajaPanel.innerHTML = `<h3>${titulo}</h3><div class="ranuras">${avisos.ranuras().map(fila).join("")}</div>
+      ${mensaje ? `<p class="ranura-mensaje">${mensaje}</p>` : ""}<p class="nota">${nota}</p>`;
   }
 
   const deslizador = (id, nombre, min, max, paso, valor, texto) => `
@@ -114,13 +141,29 @@ export function crearMenu(raiz, avisos) {
       avisos.alCambiarOpciones(opciones);
       return pintarOpciones();
     }
-    const id = b.dataset.id;
-    if (id === "jugar") { panel = null; confirmar = false; enJuego = true; pintar(); return avisos.alJugar(); }
-    if (id === "nueva") {
-      if (!confirmar) { confirmar = true; return pintar(); }
-      return avisos.alNuevaPartida();
+    if (b.dataset.ranura) {
+      const n = Number(b.dataset.ranura), accion = b.dataset.accion, r = avisos.ranuras()[n - 1];
+      // Lo que borra o sobrescribe algo pide un segundo clic
+      const peligroso = accion === "borrar" || (accion === "guardar" && r.ocupada && !r.actual);
+      if (peligroso && confirmar !== `${accion}:${n}`) { confirmar = `${accion}:${n}`; return pintar(); }
+      confirmar = null;
+      mensaje = "";
+      if (accion === "jugar" || accion === "nueva") {
+        panel = null; enJuego = true; pintar();
+        return avisos.alElegirRanura(n, accion === "nueva");
+      }
+      if (accion === "guardar") mensaje = avisos.alGuardarRanura(n);
+      else if (accion === "cargar") return avisos.alCargarRanura(n);
+      else if (accion === "borrar") { avisos.alBorrarRanura(n); mensaje = `🗑 Ranura ${n} borrada.`; }
+      return pintar();
     }
-    confirmar = false;
+    const id = b.dataset.id;
+    if (id === "jugar" || (id === "partidas" && demo)) {
+      panel = null; confirmar = null; enJuego = true; pintar();
+      return id === "partidas" ? avisos.alElegirRanura(0, false) : avisos.alJugar();
+    }
+    confirmar = null;
+    mensaje = "";
     panel = panel === id ? null : id;
     pintar();
   });
@@ -141,7 +184,9 @@ export function crearMenu(raiz, avisos) {
   return {
     opciones,
     get enJuego() { return enJuego; },
-    refrescar: pintar,
+    refrescar() { mensaje = ""; confirmar = null; pintar(); },
+    // Tras recargar para cargar otra partida, el menú abre directamente las ranuras
+    mostrarPartidas() { panel = "partidas"; pintar(); },
     // La calidad automática la baja si el juego va lento; queda guardada como si la eligiera el jugador.
     cambiarCalidad(c) {
       opciones.calidad = c;

@@ -10,7 +10,7 @@ import { crearTutorial } from "./tutorial.js";
 import { sonido } from "./sonido.js";
 import { NOMBRE, TEXTO_CONFIANZA, yaPresentado, marcarPresentado } from "./cientifico.js";
 import { conversacionNova, conversacionVecino } from "./dialogos.js";
-import { guardar, cargar, borrar } from "./guardado.js";
+import { guardarRanura, cargarRanura, borrarRanura, listarRanuras, elegirParaRecargar, ranuraElegida } from "./guardado.js";
 import { crearInforme, htmlInforme } from "./informe.js";
 import { crearMenu } from "./menu.js";
 import { renderizarPista } from "./musica.js";
@@ -23,7 +23,7 @@ import {
   oxigenoMax, resistenciaTraje, desgasteTraje, puedeAterrizar, aterrizar, COSTO_ATERRIZAR, perderRecolectado,
   BONO_PUEBLO, VALOR_ORBITA, FUGA_POR_SEGUNDO, completarMision, exportarEstado, importarEstado, factorMasa,
   energiaMax, generacion, consumoSistemas, ENERGIA_RECARGA_OXI, retrasoSenal,
-  LOGROS, logrosNuevos, desbloquearLogro, donarMuseo, ventana, desbloqueado, ORDEN,
+  LOGROS, logrosNuevos, desbloquearLogro, donarMuseo, ventana, desbloqueado, ORDEN, importarMision,
 } from "./reglas.js";
 
 // ----- Render -----
@@ -127,15 +127,55 @@ addEventListener("keydown", () => sonido.iniciar(), { once: true });
 const tutorial = crearTutorial($("objetivo"), () => guardarPartida());
 const informe = crearInforme();
 
-// ----- Guardado automático: solo en casa, nunca en plena misión -----
+// ----- Guardado: 4 ranuras. Se guarda solo en casa, y a mano en cualquier momento (pausa o tecla G). -----
 let cargando = false;
-// Modo demo (?demo en la dirección): todo desbloqueado para grabar o presentar, sin tocar la partida guardada.
+// Modo demo (?demo en la dirección): todo desbloqueado para grabar o presentar, sin tocar las partidas guardadas.
 const DEMO = new URLSearchParams(location.search).has("demo");
-function guardarPartida() {
-  if (cargando || estado.mision || DEMO) return;
-  guardar({ estado: exportarEstado(), tutorial: tutorial.hechos(), presentado: yaPresentado() });
+let ranuraActual = 0;   // 0 = todavía no se eligió partida
+let reanudar = null;    // misión guardada a medias, que se retoma al empezar a jugar
+
+// Todo lo necesario para volver a este momento: el estado, y si hay misión, dónde estabas.
+function datosPartida() {
+  const d = { estado: exportarEstado(), tutorial: tutorial.hechos(), presentado: yaPresentado(), donde: "granero" };
+  const m = estado.mision;
+  if (m) {
+    d.mision = JSON.parse(JSON.stringify(m));
+    d.informe = informe.datos;
+    d.energia = energia;
+    if (modo === "superficie") {
+      d.donde = "superficie";
+      d.suelo = { oxi, traje, averias: { ...averias }, piezasNecesarias, piezasEnMano, x: camera.position.x, z: camera.position.z };
+    } else d.donde = "espacio"; // en órbita o aterrizando: se retoma en órbita
+  }
+  return d;
 }
-const partida = DEMO ? null : cargar();
+// Guardado automático (solo en casa y si ya hay una ranura elegida)
+function guardarPartida() {
+  if (cargando || estado.mision || DEMO || !ranuraActual) return;
+  guardarRanura(ranuraActual, datosPartida());
+}
+// Guardado a mano: devuelve el texto para mostrar
+function guardarEn(n) {
+  if (DEMO) return "Modo demo: no se guarda el progreso.";
+  if (["despegue", "transicion", "final"].includes(modo)) return "⏳ Espera un momento: no se puede guardar en plena transición.";
+  ranuraActual = n;
+  const ok = guardarRanura(n, datosPartida());
+  return ok ? `✔ Partida guardada en la ranura ${n}${estado.mision ? " (en plena misión)" : ""}.` : "⚠ No se pudo guardar: el almacenamiento está bloqueado o lleno.";
+}
+function aplicarPartida(p) {
+  cargando = true;
+  importarEstado(p.estado);
+  tutorial.restaurar(p.tutorial);
+  marcarPresentado(p.presentado);
+  if (p.donde !== "granero" && importarMision(p.mision)) reanudar = p;
+  granero.reconstruirCohete(estado.mejoras);
+  granero.mostrarProgreso(estado);
+  pintarHud();
+  cargando = false;
+}
+// Si se pidió cargar una ranura (desde la pausa), la página se recargó y la partida se carga aquí.
+const elegida = DEMO ? 0 : ranuraElegida();
+const partida = elegida ? cargarRanura(elegida) : null;
 if (DEMO) {
   cargando = true;
   importarEstado({
@@ -149,13 +189,8 @@ if (DEMO) {
   granero.reconstruirCohete(estado.mejoras);
   cargando = false;
 }
-if (partida) {
-  cargando = true;
-  importarEstado(partida.estado);
-  tutorial.restaurar(partida.tutorial);
-  marcarPresentado(partida.presentado);
-  cargando = false;
-}
+if (partida) { ranuraActual = elegida; aplicarPartida(partida); }
+let ranuraImportada = !!partida; // si ya hay una partida cargada en memoria, cambiar a otra obliga a recargar
 
 // ----- HUD del granero -----
 function pintarHud() {
@@ -261,15 +296,47 @@ let calidadActual = null;
 const menu = crearMenu($("inicio"), {
   alJugar() {
     sonido.iniciar();
-    if (!empezado) { empezado = true; alGranero(); document.body.classList.remove("en-menu"); }
+    if (!empezado) {
+      empezado = true;
+      alGranero();
+      document.body.classList.remove("en-menu");
+      if (reanudar) { const p = reanudar; reanudar = null; reanudarMision(p); }
+    }
     actualizarMusica();
     jugador.controls.lock();
   },
-  alNuevaPartida() { borrar(); location.reload(); },
-  infoPartida() {
-    if (!partida) return null;
-    return `Partida guardada: ${estado.dinero} 💰 · ${Object.keys(estado.misiones).length}/5 misiones`;
+  infoPartida() { return partida ? `Partida de la ranura ${elegida} lista: pulsa Continuar.` : ""; },
+  ranuras() {
+    return listarRanuras().map(({ n, datos }) => {
+      const r = { n, ocupada: !!datos, actual: n === ranuraActual };
+      if (!datos) return r;
+      const e = datos.estado, m = datos.mision && DATOS_PLANETAS[datos.mision.dest];
+      const donde = datos.donde === "superficie" && m ? `📍 en ${m.lugar}` : datos.donde === "espacio" && m ? `🚀 rumbo a ${m.nombre}` : "🏠 en el granero";
+      const fecha = new Date(datos.fecha).toLocaleString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+      r.titulo = `${Object.keys(e.misiones || {}).length}/5 misiones · ${e.dinero} 💰 · día ${e.dia}`;
+      r.detalle = `${donde} · guardada el ${fecha}`;
+      return r;
+    });
   },
+  alElegirRanura(n, nueva) {
+    if (n && (ranuraImportada && n !== ranuraActual || (ranuraImportada && nueva))) {
+      // Ya hay otra partida en memoria: se recarga la página para empezar limpio
+      if (nueva) borrarRanura(n);
+      elegirParaRecargar(n);
+      return location.reload();
+    }
+    if (n && !ranuraImportada) {
+      const datos = nueva ? null : cargarRanura(n);
+      if (datos) aplicarPartida(datos);
+      ranuraActual = n;
+      ranuraImportada = true;
+      if (!datos) guardarPartida(); // la ranura nueva queda ocupada desde el principio
+    }
+    this.alJugar();
+  },
+  alGuardarRanura: guardarEn,
+  alCargarRanura(n) { elegirParaRecargar(n); location.reload(); },
+  alBorrarRanura(n) { borrarRanura(n); if (n === ranuraActual) ranuraActual = 0; },
   alCambiarOpciones(o) {
     sonido.volumen(o.volumen, o.musica);
     jugador.controls.pointerSpeed = o.sensibilidad;
@@ -290,6 +357,7 @@ const menu = crearMenu($("inicio"), {
   },
 });
 let empezado = false;
+if (partida) menu.mostrarPartidas(); // venimos de "Cargar partida": el menú abre las ranuras
 document.body.classList.add("en-menu"); // el HUD se oculta hasta empezar a jugar
 jugador.controls.addEventListener("lock", () => $("inicio").classList.add("oculto"));
 jugador.controls.addEventListener("unlock", () => {
@@ -326,6 +394,10 @@ addEventListener("keydown", e => {
   else if (e.code === "KeyE" && !e.repeat && (modo === "granero" || modo === "superficie")) interactuar();
   else if (e.code === "KeyE" && !e.repeat && modo === "final") tFinal = Math.max(tFinal, DURACION); // saltar la escena
   else if (e.code === "KeyR" && !e.repeat && modo === "espacio") volver();
+  else if (e.code === "KeyG" && !e.repeat && empezado && !telefono.abierto) {
+    aviso(ranuraActual || DEMO ? guardarEn(ranuraActual) : "Elige una ranura: pausa (Esc) → Guardar partida.");
+    sonido.reproducir("clic");
+  }
   else if (e.code === "KeyM" && !e.repeat) aviso(sonido.alternarMudo() ? "🔇 Sonido apagado" : "🔊 Sonido encendido");
 });
 
@@ -901,6 +973,53 @@ function desmayo() {
     soltarCercano();
     ponerModo("superficie");
     aviso(`${texto} Despertaste junto al cohete, con el traje más gastado.`);
+  });
+}
+
+// ----- Retomar una partida guardada en plena misión -----
+function reanudarMision(p) {
+  const m = estado.mision;
+  if (p.informe) informe.restaurar(p.informe);
+  if (!informe.activo) {
+    informe.empezar({ dest: m.dest, combustible: estado.combustible + m.ida, capacidad: capacidad(), ida: m.ida,
+      masa: factorMasa(), misionHecha: !!estado.misiones[m.dest], recargo: m.recargo, dias: m.dias, dia: estado.dia });
+  }
+  energia = Math.min(energiaMax(), typeof p.energia === "number" ? p.energia : energiaMax());
+  avisoEnergia = false;
+  if (p.donde === "superficie") reanudarSuelo(p.suelo || {});
+  else entrarAlEspacio();
+}
+
+function reanudarSuelo(s) {
+  ponerModo("transicion");
+  const dest = estado.mision.dest, d = DATOS_PLANETAS[dest];
+  const num = (x, def, max) => (typeof x === "number" && isFinite(x) ? Math.max(0, Math.min(max, x)) : def);
+  superficie.iniciar(dest, estado.mejoras, generarCampo(dest, 12), !!estado.misiones[dest]);
+  mundo = superficie;
+  const a = s.averias || {};
+  averias = {};
+  for (const k of ["pata", "fuga", "antena"]) if (a[k]) averias[k] = true;
+  piezasNecesarias = Math.round(num(s.piezasNecesarias, 0, 3));
+  piezasEnMano = Math.round(num(s.piezasEnMano, 0, piezasNecesarias));
+  superficie.ponerPiezas(piezasNecesarias - piezasEnMano);
+  superficie.moverCohete(0, false);
+  superficie.inclinar(!!averias.pata);
+  tormenta = null;
+  fundido(() => {
+    const lim = superficie.limite;
+    const dentro = (v, def) => (typeof v === "number" && isFinite(v) ? Math.max(-lim, Math.min(lim, v)) : def);
+    jugador.colocar(superficie, dentro(s.x, 2.4), dentro(s.z, 4), 12, 30);
+    oxi = num(s.oxi, oxigenoMax(), oxigenoMax());
+    traje = num(s.traje, 100, 100);
+    cargaSegura = estado.mision.carga.length;
+    soltarCercano();
+    crearMarcadores(superficie.objetos.concat(superficie.piezas));
+    $("lugar").textContent = `📍 ${d.lugar} · ${d.gravedad.toFixed(2)} g`;
+    ponerModo("superficie");
+    sonido.viento(dest === "venus" || dest === "marte" ? 1 : 0.25);
+    $("senal-suelo").textContent = `📡 ${retrasoSenal(dest)} min`;
+    aviso(`💾 Partida cargada: sigues en ${d.lugar}. Los objetos del suelo y la misión del lugar empiezan de nuevo.`);
+    eventosSuelo.iniciar(dest, false);
   });
 }
 

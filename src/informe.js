@@ -7,6 +7,8 @@ export function crearInforme() {
 
   return {
     get activo() { return !!v; },
+    get datos() { return v && JSON.parse(JSON.stringify(v)); },
+    restaurar(d) { v = d && typeof d === "object" && d.gasto ? d : null; },
 
     // Al despegar. `combustible` es el que había antes de restar el viaje de ida.
     empezar({ dest, combustible, capacidad, ida, masa, misionHecha, recargo = 0, dias = 0, dia = 1 }) {
