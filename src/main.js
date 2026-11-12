@@ -115,11 +115,26 @@ const informe = crearInforme();
 
 // ----- Guardado automático: solo en casa, nunca en plena misión -----
 let cargando = false;
+// Modo demo (?demo en la dirección): todo desbloqueado para grabar o presentar, sin tocar la partida guardada.
+const DEMO = new URLSearchParams(location.search).has("demo");
 function guardarPartida() {
-  if (cargando || estado.mision) return;
+  if (cargando || estado.mision || DEMO) return;
   guardar({ estado: exportarEstado(), tutorial: tutorial.hechos(), presentado: yaPresentado() });
 }
-const partida = cargar();
+const partida = DEMO ? null : cargar();
+if (DEMO) {
+  cargando = true;
+  importarEstado({
+    dinero: 3000, combustible: 140, dia: 15,
+    mejoras: { motor: 3, tanque: 4, escudo: 2, sensor: 2, antena: 2, traje: 2, oxigeno: 2, paneles: 1, bateria: 1, rtg: 1 },
+    visitados: { mercurio: true, venus: true, marte: true, jupiter: true },
+    misiones: { mercurio: true, venus: true, marte: true, jupiter: true },
+  });
+  ["hablo", "despego", "aterrizo", "recogio", "regreso", "vendio", "mejoro"].forEach(k => tutorial.marcar(k));
+  marcarPresentado(true);
+  granero.reconstruirCohete(estado.mejoras);
+  cargando = false;
+}
 if (partida) {
   cargando = true;
   importarEstado(partida.estado);
@@ -919,6 +934,7 @@ renderer.setAnimationLoop(bucle);
 window.__juego = {
   camera, jugador, granero, espacio, superficie, estado, telefono, interactuar, despegar, volver,
   get modo() { return modo; },
+  refrescarHud: pintarHud,
   menu,
   get reporteAbierto() { return reporteAbierto; },
   get suelo() { return { oxi, traje, cargaSegura, averias, piezasNecesarias, piezasEnMano }; },

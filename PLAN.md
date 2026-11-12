@@ -175,7 +175,7 @@ Juego 3D en primera persona con estilo tipo Schedule I: modelos low-poly, colore
 3. ✅ **Hecho.** Sistema de energía (batería, paneles con luz solar real, generador RTG).
 3b. ✅ **Hecho.** Menú principal con escena 3D, pausa, opciones guardadas y música ambiental generada.
 4. ✅ **Hecho.** Calendario, ventanas de lanzamiento con recargo de combustible, esperar con mantenimiento y retraso real de la señal.
-5. Capturas y video demo.
+5. ✅ **Hecho.** Capturas automáticas (`npm run capturas`), guion del video en `docs/guion-video.md` y modo demo (`?demo`). Falta grabar el video.
 
 ## Otras ideas si sobra tiempo
 - Eventos aleatorios: tormenta solar, fallo de componente, fuga de combustible.

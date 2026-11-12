@@ -78,7 +78,8 @@ export function crearMenu(raiz, avisos) {
         ["opciones", "⚙ Opciones"], ["ayuda", "❔ Cómo jugar"], ["creditos", "★ Créditos"]];
     botones.innerHTML = lista.map(([id, txt]) =>
       `<button data-id="${id}" class="${id === "jugar" ? "principal" : ""} ${id === "nueva" && confirmar ? "peligro" : ""}">${txt}</button>`).join("");
-    info.textContent = enJuego ? "Juego en pausa" : hay || "";
+    const demo = new URLSearchParams(location.search).has("demo");
+    info.textContent = enJuego ? "Juego en pausa" : demo ? "Modo demo: todo desbloqueado, no se guarda el progreso" : hay || "";
     cajaPanel.style.display = panel ? "" : "none";
     if (panel === "ayuda") cajaPanel.innerHTML = COMO_JUGAR;
     else if (panel === "creditos") cajaPanel.innerHTML = CREDITOS;

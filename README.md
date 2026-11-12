@@ -6,6 +6,8 @@
 
 **Equipo:** Siderense Rocket Labs
 
+![Menú principal](docs/capturas/01-menu-principal.png)
+
 ---
 
 ## La idea
@@ -32,6 +34,21 @@ En *Cohete del Granero* **el jugador siente cada trade-off en carne propia**. La
 | **Energía** | Una batería que los sistemas gastan durante el viaje. Los paneles solares rinden según la luz real de cada lugar (6.7 veces la de la Tierra en Mercurio, 27 veces menos en Júpiter); lejos del Sol hace falta un generador de radioisótopos (RTG). Sin energía se apagan los instrumentos y el cohete no recarga el oxígeno. Además, la misión de Marte consiste en devolverle la energía a un rover cubierto de polvo. |
 | **Comunicaciones** | La antena: sin el nivel suficiente no se puede llegar a Europa, y si se avería al aterrizar los sensores no identifican nada. Los mensajes del Dr. Nova llegan con el retraso real de la señal (de 3 a 22 minutos de luz en Marte, de 33 a 53 en Júpiter), así que el aterrizaje es autónomo. |
 | **Restricciones del viaje** | Ventanas de lanzamiento: cada destino se alinea cada cierto tiempo (el periodo real dividido por 10) y fuera de la ventana el viaje gasta hasta un 60 % más; esperar cuesta mantenimiento. Además: combustible de ida y vuelta, una reserva para volver, el aterrizaje contra la gravedad real de cada lugar y averías si se toca suelo demasiado rápido. |
+
+## Capturas
+
+| | |
+|---|---|
+| ![El Dr. Nova en el granero](docs/capturas/02-granero-dr-nova.png) | ![Mapa con ventanas de lanzamiento](docs/capturas/03-telefono-mapa.png) |
+| El Dr. Nova aconseja según tu partida | Ventanas de lanzamiento, luz solar y retraso de la señal |
+| ![Vuelo hacia Júpiter](docs/capturas/04-vuelo-jupiter.png) | ![Descenso en Ío](docs/capturas/05-descenso.png) |
+| Vuelo con paneles solares hacia Júpiter | Descenso autónomo en Ío, frenando contra su gravedad |
+| ![Rover de Marte](docs/capturas/07-marte-rover.png) | ![Reporte de misión](docs/capturas/06-reporte-mision.png) |
+| Misión en Marte: reactivar un rover cubierto de polvo | Reporte de misión con la lección del viaje |
+| ![Antenas en Europa](docs/capturas/08-europa-antenas.png) | ![Final en Europa](docs/capturas/09-final-europa.png) |
+| Tres antenas triangulan la señal de Europa | El final bajo el hielo |
+| ![Villa Siderense](docs/capturas/10-pueblo.png) | |
+| El pueblo y su mercado | |
 
 ## La ciencia detrás del juego
 
@@ -106,6 +123,7 @@ src/
   musica.js       música ambiental generada en el momento
   cohete.js, estilo.js, terreno.js, ruido.js, sonido.js, tutorial.js
 herramientas/simular.mjs   simulador de balance
+herramientas/capturas.cjs  genera las capturas del README
 electron/main.cjs          app de escritorio
 prototipo-2d/              primer prototipo del juego, en 2D
 ```
@@ -124,6 +142,10 @@ npm run simular      # simular partidas para revisar el balance
 ```
 
 Cada cambio que se sube a la rama `main` se publica solo en GitHub Pages.
+
+**Modo demo:** agregando `?demo` a la dirección (https://tommycc2010-hub.github.io/cohete-del-granero/?demo) el juego empieza con todo desbloqueado y no guarda el progreso. Sirve para presentar o grabar sin jugar desde el principio. El guion del video está en [`docs/guion-video.md`](docs/guion-video.md).
+
+`npm run capturas` vuelve a generar las capturas de `docs/capturas`.
 
 ## Próximos pasos
 
