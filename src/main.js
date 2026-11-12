@@ -16,7 +16,8 @@ import { crearMenu } from "./menu.js";
 import { renderizarPista } from "./musica.js";
 import { crearPostpro } from "./postpro.js";
 import { crearEventosEspacio, crearEventosSuelo } from "./eventos.js";
-import { DATOS_PLANETAS } from "./datos.js";
+import { crearExtrasSuelo } from "./secundarias.js";
+import { DATOS_PLANETAS, SECUNDARIAS } from "./datos.js";
 import {
   estado, capacidad, comprarCombustible, vender, suscribir, regresar,
   generarCampo, consumoImpulso, alcanceSensor, gastar, recolectar, detectarSenal,
@@ -24,6 +25,7 @@ import {
   BONO_PUEBLO, VALOR_ORBITA, FUGA_POR_SEGUNDO, completarMision, exportarEstado, importarEstado, factorMasa,
   energiaMax, generacion, consumoSistemas, ENERGIA_RECARGA_OXI, retrasoSenal,
   LOGROS, logrosNuevos, desbloquearLogro, donarMuseo, ventana, desbloqueado, ORDEN, importarMision,
+  soltarRecolectado, recuperarMochila, marcarPunto, revisarAterrizaje, avisosSecundarias, progresoSecundaria, secundariasHechas,
 } from "./reglas.js";
 
 // ----- Render -----
@@ -40,6 +42,7 @@ const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 2400);
 const granero = crearGranero(scene, estado.mejoras);
 const espacio = crearEspacio();
 const superficie = crearSuperficie();
+const extras = crearExtrasSuelo(superficie); // puntos de las misiones secundarias y mochilas
 const final = crearFinal();
 const manos = crearManos();
 const postpro = crearPostpro(renderer);
@@ -144,7 +147,7 @@ function datosPartida() {
     d.energia = energia;
     if (modo === "superficie") {
       d.donde = "superficie";
-      d.suelo = { oxi, traje, averias: { ...averias }, piezasNecesarias, piezasEnMano, x: camera.position.x, z: camera.position.z };
+      d.suelo = { oxi, traje, averias: { ...averias }, piezasNecesarias, piezasEnMano, x: camera.position.x, z: camera.position.z, mochilas: extras.mochilasGuardables() };
     } else d.donde = "espacio"; // en órbita o aterrizando: se retoma en órbita
   }
   return d;
@@ -675,7 +678,7 @@ function pintarBaliza(el, pos, camara, ref, texto) {
   if (!pos) return;
   proy.copy(pos).project(camara);
   if (proy.z > 1) { proy.x = -proy.x; proy.y = -1; } // detrás de la cámara: apunta hacia abajo
-  const x = THREE.MathUtils.clamp(proy.x, -0.85, 0.85), y = THREE.MathUtils.clamp(proy.y, -0.7, 0.72);
+  const x = THREE.MathUtils.clamp(proy.x, -0.85, 0.85), y = THREE.MathUtils.clamp(proy.y, -0.45, 0.72); // sin tapar el panel de abajo
   el.style.transform = `translate(${(x + 1) / 2 * innerWidth}px, ${(1 - y) / 2 * innerHeight}px)`;
   el.textContent = `${texto} · ${Math.round(pos.distanceTo(ref))} m`;
 }
@@ -698,6 +701,7 @@ function empezarDescenso() {
   const dest = estado.mision.dest, d = DATOS_PLANETAS[dest];
   fundido(() => {
     superficie.iniciar(dest, estado.mejoras, generarCampo(dest, 12), !!estado.misiones[dest]);
+    extras.iniciar(dest, estado.secundarias);
     mundo = superficie;
     desc = { h: 150, v: -8, g: 9.8 * d.gravedad, arrastre: d.arrastre };
     $("marcadores").innerHTML = "";
@@ -752,6 +756,7 @@ function tocarSuelo(vel) {
   superficie.ponerPiezas(piezasNecesarias);
   informe.aterrizaje(vel, Object.keys(averias));
   if (vel < 1) desbloquearLogro("seda");
+  revisarAterrizaje(dest, vel);
   if (lluviaActiva && impactosLluvia === 0) desbloquearLogro("esquiva");
   lluviaActiva = false;
   // Tormenta solar: en Mercurio y Marte, sin una atmósfera gruesa que proteja, puede llegar una
@@ -878,12 +883,19 @@ function pasoSuperficie(dt) {
   if (!enNave && oxi < oxigenoMax() * 0.25 && esperaAlarma <= 0) { esperaAlarma = 1.2; sonido.reproducir("alarma"); }
 
   pasoTormenta(dt, enNave);
+  const ex = extras.actualizar(dt, p);
+  for (const { tipo, i } of ex.puntos) {
+    const sx = SECUNDARIAS[m.dest].find(x => x.tipo === tipo), n = marcarPunto(m.dest, tipo, i);
+    if (n < 3) aviso(tipo === "foto" ? `📸 Foto tomada: ${sx.objetivo.toLowerCase()} ${n}/3.` : `${sx.icono} ${sx.objetivo} instalado ${n}/3.`);
+    sonido.reproducir(tipo === "foto" ? "clic" : "comprar");
+  }
+  if (ex.mochila) { aviso(recuperarMochila(ex.mochila)); sonido.reproducir("recoger"); manos.recoger("#e5843b"); }
   eventosSuelo.actualizar(dt, p, camera.getWorldDirection(new THREE.Vector3()));
   pintarHudSuelo(enNave);
   pintarMarcadores(camera, p);
   pintarBaliza($("marcador-pista"), posCohete, camera, p, "🚀 Cohete");
   pintarBaliza($("marcador-senal"), superficie.senal && superficie.senal.visible && superficie.senal.position, camera, p, "📡 Señal");
-  pintarBalizasMision(mi.balizas, p);
+  pintarBalizasMision(mi.balizas.concat(extras.balizas(p)), p);
   $("mision").style.display = mi.objetivo ? "" : "none";
   if (mi.objetivo) $("mision").innerHTML = `<b>🎯 Misión</b>${mi.objetivo}`;
   const med = mi.medidor;
@@ -932,8 +944,20 @@ function pasoTormenta(dt, enNave) {
   }
 }
 
+// Tarjeta con las misiones secundarias del lugar (solo se repinta si cambia)
+let textoSecundarias = "";
+function pintarSecundarias(dest) {
+  const lista = SECUNDARIAS[dest] || [];
+  const html = `<b>⭐ Secundarias ${secundariasHechas(dest)}/${lista.length}</b>` + lista.map(sx => {
+    const pr = progresoSecundaria(dest, sx), hecha = pr === "✅";
+    return `<div class="sec-fila ${hecha ? "hecha" : ""}"><span>${hecha ? "✅" : sx.icono}</span>${sx.titulo}${!hecha && pr ? ` <i>${pr}</i>` : ""}</div>`;
+  }).join("");
+  if (html !== textoSecundarias) { textoSecundarias = html; $("secundarias").innerHTML = html; }
+}
+
 function pintarHudSuelo(enNave) {
   const m = estado.mision, max = oxigenoMax();
+  pintarSecundarias(m.dest);
   $("oxi-relleno").style.width = `${100 * Math.max(0, oxi) / max}%`;
   $("oxi-txt").textContent = `Oxígeno ${Math.ceil(Math.max(0, oxi))} s`;
   $("traje-relleno").style.width = `${traje}%`;
@@ -964,7 +988,9 @@ function pintarHudSuelo(enNave) {
 function desmayo() {
   ponerModo("transicion");
   sonido.reproducir("error");
-  const texto = perderRecolectado(cargaSegura);
+  const caida = camera.position.clone();
+  const { texto, objetos } = soltarRecolectado(cargaSegura);
+  if (objetos.length) extras.soltarMochila(caida.x, caida.z, objetos);
   informe.desmayo();
   fundido(() => {
     jugador.colocar(superficie, 2.4, 4, 12, 30);
@@ -973,6 +999,7 @@ function desmayo() {
     soltarCercano();
     ponerModo("superficie");
     aviso(`${texto} Despertaste junto al cohete, con el traje más gastado.`);
+    crearMarcadores(superficie.objetos.concat(superficie.piezas));
   });
 }
 
@@ -995,6 +1022,7 @@ function reanudarSuelo(s) {
   const dest = estado.mision.dest, d = DATOS_PLANETAS[dest];
   const num = (x, def, max) => (typeof x === "number" && isFinite(x) ? Math.max(0, Math.min(max, x)) : def);
   superficie.iniciar(dest, estado.mejoras, generarCampo(dest, 12), !!estado.misiones[dest]);
+  extras.iniciar(dest, estado.secundarias);
   mundo = superficie;
   const a = s.averias || {};
   averias = {};
@@ -1002,6 +1030,10 @@ function reanudarSuelo(s) {
   piezasNecesarias = Math.round(num(s.piezasNecesarias, 0, 3));
   piezasEnMano = Math.round(num(s.piezasEnMano, 0, piezasNecesarias));
   superficie.ponerPiezas(piezasNecesarias - piezasEnMano);
+  for (const mo of Array.isArray(s.mochilas) ? s.mochilas : []) {
+    const objetos = (Array.isArray(mo.objetos) ? mo.objetos : []).filter(o => o && typeof o.nombre === "string" && typeof o.valor === "number");
+    if (objetos.length && isFinite(mo.x) && isFinite(mo.z)) extras.soltarMochila(mo.x, mo.z, objetos);
+  }
   superficie.moverCohete(0, false);
   superficie.inclinar(!!averias.pata);
   tormenta = null;
@@ -1144,8 +1176,12 @@ $("informe").addEventListener("click", cerrarReporte);
 
 // ----- Bucle -----
 let tMenu = 0;
+let relojSecundarias = 0;
 function paso(dt) {
   revisarLogros();
+  // Misiones secundarias cumplidas: se anuncian una a una, con su dato real
+  relojSecundarias -= dt;
+  if (avisosSecundarias.length && relojSecundarias <= 0) { aviso(avisosSecundarias.shift()); sonido.reproducir("vender"); relojSecundarias = 7; }
   if (relojLogro > 0 && (relojLogro -= dt) <= 0) $("logro").classList.remove("visible");
   if (!empezado && pausado() && modo === "granero") { // vista del menú principal: la cámara gira alrededor del granero
     tMenu += dt;

@@ -1,5 +1,5 @@
 // Reglas del juego, sin nada visual. La parte 3D y el HUD leen `estado` y llaman a estas funciones.
-import { DATOS_PLANETAS, OBJETOS, MISIONES } from "./datos.js";
+import { DATOS_PLANETAS, OBJETOS, MISIONES, SECUNDARIAS } from "./datos.js";
 
 export const ORDEN = ["mercurio", "venus", "marte", "jupiter", "europa"];
 export const MEJORAS = {
@@ -37,13 +37,14 @@ export const estado = {
   logros: {},   // logros conseguidos
   descuento: 0, // descuento en el taller (por el encargo de Tomás)
   museo: {},    // piezas donadas al Museo del Espacio
+  secundarias: {}, // misiones secundarias: true si está cumplida, o su progreso (número o puntos visitados)
   mision: null,
   final: false,
   log: ["Bienvenido al granero. El cohete necesita reparaciones."],
 };
 
 // ----- Guardar y cargar -----
-const GUARDABLE = ["dia", "dinero", "combustible", "mejoras", "carga", "visitados", "misiones", "final", "log", "encargos", "logros", "descuento", "museo"];
+const GUARDABLE = ["dia", "dinero", "combustible", "mejoras", "carga", "visitados", "misiones", "final", "log", "encargos", "logros", "descuento", "museo", "secundarias"];
 
 export function exportarEstado() {
   return JSON.parse(JSON.stringify(Object.fromEntries(GUARDABLE.map(k => [k, estado[k]]))));
@@ -72,6 +73,13 @@ export function importarEstado(d) {
   }
   if (d.logros && typeof d.logros === "object") estado.logros = Object.fromEntries(Object.keys(LOGROS).filter(k => d.logros[k]).map(k => [k, true]));
   estado.descuento = d.descuento === 0.15 ? 0.15 : 0;
+  estado.secundarias = {};
+  if (d.secundarias && typeof d.secundarias === "object") {
+    for (const dest of ORDEN) for (const sx of SECUNDARIAS[dest]) {
+      const v = d.secundarias[`${dest}.${sx.tipo}`];
+      if (v === true || (typeof v === "number" && v >= 0) || (Array.isArray(v) && v.length === 3)) estado.secundarias[`${dest}.${sx.tipo}`] = Array.isArray(v) ? v.map(Boolean) : v;
+    }
+  }
   estado.museo = d.museo && typeof d.museo === "object" ? Object.fromEntries(PIEZAS_MUSEO.filter(n => d.museo[n]).map(n => [n, true])) : {};
   estado.dia = Math.max(1, Math.floor(num(d.dia, 1)));
   if (Array.isArray(d.log)) estado.log = d.log.filter(t => typeof t === "string").slice(0, 6);
@@ -296,6 +304,7 @@ export function recolectar(o) {
   if (o.nombre === "Muestra biológica") desbloquearLogro("legendario");
   if (o.nombre === "Sonda perdida") desbloquearLogro("sonda");
   if (o.nombre === "Meteorito") desbloquearLogro("meteorito");
+  anotarRecogida(o, m.dest);
   const t = msg(`Recogiste ${o.nombre} (valor ${o.valor}).`);
   cambio();
   return t;
@@ -364,6 +373,7 @@ export function regresar() {
     }
   }
   estado.carga.push(...carga);
+  if (estado.combustible >= 0 && carga.length) revisarCarga(m.dest, carga);
   estado.dia += m.dias || 0;
   estado.mision = null;
   cambio();
@@ -422,6 +432,7 @@ export const LOGROS = {
   cometa:     { icono: "🌠", titulo: "Cazador de cometas", desc: "Atrapa hielo de la cola de un cometa." },
   fuga:       { icono: "🧯", titulo: "Mecánico en órbita", desc: "Sella una fuga de combustible en pleno vuelo." },
   meteorito:  { icono: "🌑", titulo: "Caído del cielo", desc: "Recoge un meteorito recién caído." },
+  cientifico: { icono: "🔬", titulo: "Científico de campo", desc: "Cumple las 5 misiones secundarias de un mismo lugar." },
   curador:    { icono: "🏛️", titulo: "Curador del museo", desc: "Dona al museo una pieza de cada tipo." },
   contacto:   { icono: "🛸", titulo: "No estamos solos", desc: "Encuentra el origen de la señal de Europa." },
 };
@@ -469,4 +480,77 @@ export function importarMision(m) {
     ultimo: "", recargo: num(m.recargo, 0), dias: num(m.dias, DATOS_PLANETAS[m.dest].viaje),
   };
   return true;
+}
+
+// ----- Misiones secundarias (5 por destino) -----
+export const avisosSecundarias = []; // textos que la pantalla muestra uno a uno
+const idSec = (dest, tipo) => `${dest}.${tipo}`;
+const buscarSec = (dest, tipo) => (SECUNDARIAS[dest] || []).find(x => x.tipo === tipo);
+export function secundariaHecha(dest, tipo) { return estado.secundarias[idSec(dest, tipo)] === true; }
+
+// Texto del progreso: "✅", "2/3", "1/2"…
+export function progresoSecundaria(dest, sx) {
+  const v = estado.secundarias[idSec(dest, sx.tipo)];
+  if (v === true) return "✅";
+  if (sx.tipo === "foto" || sx.tipo === "sensores") return `${Array.isArray(v) ? v.filter(Boolean).length : 0}/3`;
+  if (sx.tipo === "recoger") return `${typeof v === "number" ? v : 0}/${sx.cantidad}`;
+  return "";
+}
+export function secundariasHechas(dest) { return (SECUNDARIAS[dest] || []).filter(x => secundariaHecha(dest, x.tipo)).length; }
+
+function completarSecundaria(dest, sx) {
+  if (secundariaHecha(dest, sx.tipo)) return;
+  estado.secundarias[idSec(dest, sx.tipo)] = true;
+  estado.dinero += sx.recompensa;
+  const t = msg(`⭐ Misión secundaria cumplida: ${sx.titulo}. +${sx.recompensa} 💰`);
+  avisosSecundarias.push(`${t} Dato real: ${sx.dato}`);
+  if (secundariasHechas(dest) === SECUNDARIAS[dest].length) desbloquearLogro("cientifico");
+  cambio();
+}
+
+// Foto tomada o sensor instalado en el punto i (0 a 2). Devuelve cuántos lleva.
+export function marcarPunto(dest, tipo, i) {
+  const sx = buscarSec(dest, tipo);
+  if (!sx || secundariaHecha(dest, tipo)) return 3;
+  const v = Array.isArray(estado.secundarias[idSec(dest, tipo)]) ? estado.secundarias[idSec(dest, tipo)] : [false, false, false];
+  v[i] = true;
+  estado.secundarias[idSec(dest, tipo)] = v;
+  const n = v.filter(Boolean).length;
+  if (n >= 3) completarSecundaria(dest, sx); else cambio();
+  return n;
+}
+function anotarRecogida(o, dest) {
+  const sx = buscarSec(dest, "recoger");
+  if (!sx || secundariaHecha(dest, "recoger") || o.nombre !== sx.objeto) return;
+  const v = estado.secundarias[idSec(dest, "recoger")];
+  const n = (typeof v === "number" ? v : 0) + 1;
+  estado.secundarias[idSec(dest, "recoger")] = n;
+  if (n >= sx.cantidad) completarSecundaria(dest, sx);
+}
+export function revisarAterrizaje(dest, vel) {
+  const sx = buscarSec(dest, "aterrizaje");
+  if (sx && vel < sx.vel) completarSecundaria(dest, sx);
+}
+function revisarCarga(dest, carga) {
+  const sx = buscarSec(dest, "carga");
+  if (sx && carga.reduce((t, o) => t + o.valor, 0) >= sx.valor) completarSecundaria(dest, sx);
+}
+
+// ----- Mochila: al quedarte sin oxígeno, lo que llevabas encima queda donde caíste -----
+export function soltarRecolectado(desde) {
+  const m = estado.mision;
+  const objetos = m.carga.splice(desde);
+  const texto = msg(objetos.length
+    ? `Te quedaste sin oxígeno. ${objetos.length === 1 ? "El objeto que llevabas quedó" : `Los ${objetos.length} objetos que llevabas quedaron`} en tu mochila 🎒, donde caíste. Ve a buscarla.`
+    : "Te quedaste sin oxígeno. Por suerte no llevabas nada encima.");
+  cambio();
+  return { texto, objetos };
+}
+export function recuperarMochila(objetos) {
+  const m = estado.mision;
+  if (!m) return "";
+  m.carga.push(...objetos);
+  const t = msg(`🎒 Recuperaste tu mochila: ${objetos.length === 1 ? "1 objeto" : objetos.length + " objetos"}.`);
+  cambio();
+  return t;
 }

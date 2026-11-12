@@ -46,6 +46,19 @@
   .ayuda[data-en~="superficie"], .ayuda[data-en~="espacio"] { animation: desvanecer .8s 9s forwards; }
   .ayuda[data-en~="superficie"] { left: 322px; }
   @keyframes desvanecer { to { opacity: 0; visibility: hidden; } }
+  #secundarias { padding: 8px 12px; font-size: 13px; line-height: 1.35; background: #fff3c4; }
+  #secundarias > b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #9a6a00; margin-bottom: 2px; }
+  .sec-fila span { display: inline-block; width: 20px; }
+  .sec-fila i { font-style: normal; font-weight: bold; color: #9a6a00; }
+  .sec-fila.hecha { opacity: .55; text-decoration: line-through; }
+  .tel-secundarias { margin: -4px 0 10px 14px; padding: 6px 8px; border-left: 3px solid #ffd23f; font-size: 12px; }
+  .tel-secundarias > b { display: block; margin-bottom: 4px; }
+  .tel-secundarias > div { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 5px; }
+  .tel-secundarias > div > div { flex: 1; }
+  .tel-secundarias small { display: block; opacity: .8; }
+  .tel-secundarias i { font-style: normal; font-weight: bold; color: #9a6a00; }
+  .tel-secundarias em { font-style: normal; font-weight: bold; white-space: nowrap; }
+  .tel-secundarias .hecha { opacity: .65; }
   #mision b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #8a3fb5; }
   .marcador.mision { background: #6a2f8f; border-color: #e28bff; }
   .tel-mision { align-items: flex-start; }
@@ -273,6 +286,7 @@
 <div id="columna-derecha">
   <div id="objetivo" class="tarjeta" data-en="granero espacio descenso superficie"></div>
   <div id="mision" class="tarjeta" data-en="superficie"></div>
+  <div id="secundarias" class="tarjeta" data-en="superficie"></div>
 </div>
 <div id="mira" data-en="granero superficie"></div>
 <div id="accion" class="tarjeta" data-en="granero superficie"></div>

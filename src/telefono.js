@@ -2,9 +2,8 @@
 import {
   estado, MEJORAS, ORDEN, COSTO_EXPLORAR, capacidad, factorMasa, costoIda, costoMejora,
   desbloqueado, comprarMejora, iniciarMision, explorar, regresar, energiaMax, generacion, consumoSistemas,
-  ventana, retrasoSenal, esperar, COSTO_DIA, ENCARGOS, LOGROS, tieneParaEncargo,
-} from "./reglas.js";
-import { DATOS_PLANETAS, MISIONES } from "./datos.js";
+  ventana, retrasoSenal, esperar, COSTO_DIA, ENCARGOS, LOGROS, tieneParaEncargo, progresoSecundaria, secundariasHechas } from "./reglas.js";
+import { DATOS_PLANETAS, MISIONES, SECUNDARIAS } from "./datos.js";
 
 const APPS = {
   estado: { icono: "📊", nombre: "Estado", color: "#4aa3e8" },
@@ -94,7 +93,11 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
         <div><b>${marca} ${DATOS_PLANETAS[id].lugar}: ${M.titulo}</b>
           <small>${abierta || hecha ? M.desc : "Cumple la misión anterior para verla."}</small>
           ${hecha ? `<small class="tel-dato">Dato real: ${M.dato}</small>` : ""}</div>
-        <span class="tel-precio">${M.recompensa} 💰</span></div>`;
+        <span class="tel-precio">${M.recompensa} 💰</span></div>
+        ${abierta || hecha ? `<div class="tel-secundarias"><b>⭐ Secundarias ${secundariasHechas(id)}/5</b>` + SECUNDARIAS[id].map(sx => {
+          const pr = progresoSecundaria(id, sx), ok = pr === "✅";
+          return `<div class="${ok ? "hecha" : ""}"><span>${ok ? "✅" : sx.icono}</span><div><b>${sx.titulo}</b> <i>${ok ? "" : pr}</i><small>${ok ? "Dato real: " + sx.dato : sx.desc}</small></div><em>${sx.recompensa} 💰</em></div>`;
+        }).join("") + `</div>` : ""}`;
     }).join("");
   }
 

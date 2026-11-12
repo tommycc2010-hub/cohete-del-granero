@@ -85,6 +85,14 @@ Los datos de los planetas están en [`src/datos.js`](src/datos.js). Son conocimi
 
 ### Más allá de la misión principal
 
+- **1 misión principal y 5 secundarias en cada lugar** (25 secundarias en total), cada una con su recompensa y un dato real al cumplirla:
+  - 📸 **Fotografiar** 3 sitios marcados, como cráteres, volcanes o lagos de lava.
+  - **Instalar 3 sensores**, por ejemplo termómetros, medidores de radiación o sondas de hielo, que quedan funcionando en el planeta.
+  - 🧺 **Traer** ciertos objetos de ese lugar, en uno o varios viajes.
+  - 🪶 **Aterrizar** a menos de 2 m/s.
+  - 📦 **Volver** con carga de cierto valor en un solo viaje.
+- **Mochila 🎒:** si te quedas sin oxígeno, lo que llevabas encima queda en una mochila donde caíste, marcada en pantalla. Despiertas junto al cohete y tienes que volver a por ella.
+
 - **Conversaciones con opciones:** con el Dr. Nova eliges de qué hablar (qué hacer, datos del próximo destino o su historia con la señal de Europa). Los vecinos cambian lo que dicen según avanzas.
 - **Encargos del pueblo:** cada vecino te pide algo del espacio (hielo, chatarra, un cristal lunar, una piedra de Marte) a cambio de dinero o de un descuento en el taller.
 - **Imprevistos con base real:** lluvias de micrometeoritos en la ruta de aterrizaje (cada impacto cuesta combustible) y tormentas solares en Mercurio y Marte, con 15 segundos de aviso para refugiarte en el cohete, igual que los astronautas se protegen de la radiación.
@@ -98,7 +106,7 @@ Los datos de los planetas están en [`src/datos.js`](src/datos.js). Son conocimi
 - **Eventos en la superficie:** un meteorito cae cerca y deja una muestra en su cráter (en Venus no, porque la atmósfera espesa frena las rocas pequeñas). También puede haber sismos que dejan al descubierto un mineral; la sonda InSight registró más de 1300 en Marte.
 - **El granero cuenta tu progreso:** un tablero con una tarjeta por destino que recibe un sello verde al cumplir la misión, una vitrina con una copa por logro, un telescopio que muestra qué ventanas de lanzamiento están abiertas y una estación de tierra cuya antena, paneles y tanques crecen con las mejoras del cohete.
 - **Villa Siderense tiene vida:** el Museo del Espacio paga el 150 % por la primera pieza de cada tipo y la expone en su pedestal. También hay un tablón de encargos, el Café Estelar, banderines y una fuente con agua.
-- **16 logros** que se ven en el teléfono, como aterrizar a menos de 1 m/s, saltar con menos de 0.2 g o atrapar hielo de un cometa.
+- **17 logros** que se ven en el teléfono, como aterrizar a menos de 1 m/s, saltar con menos de 0.2 g o atrapar hielo de un cometa.
 
 ### Controles
 
@@ -147,6 +155,7 @@ src/
   cientifico.js   personajes y consejos del Dr. Nova
   dialogos.js     conversaciones con opciones, encargos y saludos de los vecinos
   eventos.js      eventos aleatorios en el espacio y en la superficie
+  secundarias.js  puntos de las misiones secundarias y mochilas en el suelo
   granja.js       alrededores del granero: tablero, vitrina, telescopio y estación de tierra
   postpro.js      resplandor y viñeteado (calidad alta)
   objetos.js, particulas.js, ambiente.js   modelos de las muestras, partículas y fenómenos de cada bioma

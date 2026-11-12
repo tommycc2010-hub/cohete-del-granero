@@ -42,6 +42,74 @@ export const MISIONES = {
     dato: "Con varios receptores separados se ubica una fuente de radio viendo dónde se cruzan sus lecturas." },
 };
 
+// Misiones secundarias: 5 por destino, además de la principal. Todas pagan y enseñan un dato real.
+// Tipos: foto (visitar 3 puntos 📸), sensores (instalar 3 aparatos), recoger (traer objetos de ese lugar),
+// aterrizaje (tocar suelo muy suave) y carga (volver con carga de cierto valor en un solo viaje).
+const sec = (foto, sensores, recoger, aterrizaje, carga) => [
+  { tipo: "foto", icono: "📸", ...foto },
+  { tipo: "sensores", ...sensores },
+  { tipo: "recoger", icono: "🧺", ...recoger },
+  { tipo: "aterrizaje", icono: "🪶", vel: 2, ...aterrizaje },
+  { tipo: "carga", icono: "📦", ...carga },
+];
+export const SECUNDARIAS = {
+  mercurio: sec(
+    { titulo: "Cráteres con nombre", objetivo: "Cráter", desc: "Fotografía los 3 cráteres marcados.", recompensa: 150,
+      dato: "Los cráteres de Mercurio llevan nombres de artistas, músicos y escritores." },
+    { icono: "🌡", titulo: "Del horno al congelador", objetivo: "Termómetro", desc: "Instala 3 termómetros en los puntos marcados.", recompensa: 180,
+      dato: "Entre el día y la noche, el suelo de Mercurio cambia unos 600 °C." },
+    { titulo: "Planeta de hierro", objeto: "Mineral raro", cantidad: 2, desc: "Recoge 2 minerales raros en Mercurio (en uno o varios viajes).", recompensa: 200,
+      dato: "El núcleo de hierro de Mercurio ocupa cerca del 85 % de su radio." },
+    { titulo: "Aterrizaje de pluma", desc: "Toca el suelo de Mercurio a menos de 2 m/s.", recompensa: 150,
+      dato: "La sonda MESSENGER terminó su misión en 2015 estrellándose a propósito contra Mercurio." },
+    { titulo: "Viaje productivo", valor: 300, desc: "Vuelve de Mercurio con carga que valga al menos 300 💰 en un solo viaje.", recompensa: 200,
+      dato: "BepiColombo, una misión europea y japonesa, viaja para orbitar Mercurio." }),
+  venus: sec(
+    { titulo: "Mil volcanes", objetivo: "Volcán", desc: "Fotografía los 3 volcanes marcados.", recompensa: 220,
+      dato: "Venus tiene más volcanes que ningún otro planeta: se han contado más de 1600 grandes." },
+    { icono: "🧭", titulo: "Bajo presión", objetivo: "Sensor de presión", desc: "Instala 3 sensores de presión en los puntos marcados.", recompensa: 250,
+      dato: "La presión en el suelo de Venus es como la que hay a 900 m bajo el mar." },
+    { titulo: "Escarcha de metal", objeto: "Mineral raro", cantidad: 2, desc: "Recoge 2 minerales raros en Venus.", recompensa: 260,
+      dato: "En las montañas de Venus el radar ve un brillo extraño: podría ser una 'escarcha' de metales." },
+    { titulo: "Como la Venera 7", desc: "Toca el suelo de Venus a menos de 2 m/s.", recompensa: 200,
+      dato: "La soviética Venera 7 fue en 1970 la primera nave que envió datos desde el suelo de otro planeta." },
+    { titulo: "Carga de horno", valor: 400, desc: "Vuelve de Venus con carga que valga al menos 400 💰 en un solo viaje.", recompensa: 250,
+      dato: "Un día en Venus dura más que su año: gira sobre sí mismo muy despacio." }),
+  marte: sec(
+    { titulo: "Gigantes rojos", objetivo: "Meseta", desc: "Fotografía las 3 mesetas marcadas.", recompensa: 280,
+      dato: "El Olympus Mons de Marte es el volcán más alto del sistema solar: unas 2.5 veces el Everest." },
+    { icono: "🌪", titulo: "Parte del tiempo marciano", objetivo: "Estación meteorológica", desc: "Instala 3 estaciones meteorológicas.", recompensa: 300,
+      dato: "En Marte hay tormentas de polvo que pueden cubrir todo el planeta durante semanas." },
+    { titulo: "Agua congelada", objeto: "Hielo", cantidad: 2, desc: "Recoge 2 bloques de hielo en Marte.", recompensa: 320,
+      dato: "Bajo el suelo de Marte hay grandes capas de hielo de agua." },
+    { titulo: "Grúa del cielo", desc: "Toca el suelo de Marte a menos de 2 m/s.", recompensa: 260,
+      dato: "El rover Perseverance aterrizó en 2021 colgado de cables desde una 'grúa del cielo'." },
+    { titulo: "Muestras para la Tierra", valor: 500, desc: "Vuelve de Marte con carga que valga al menos 500 💰 en un solo viaje.", recompensa: 320,
+      dato: "Perseverance guarda muestras de roca en tubos para que algún día las traigan a la Tierra." }),
+  jupiter: sec(
+    { titulo: "Lagos de lava", objetivo: "Lago de lava", desc: "Fotografía los 3 lagos de lava marcados en Ío.", recompensa: 320,
+      dato: "Loki, en Ío, es un lago de lava de unos 200 km de ancho." },
+    { icono: "☢", titulo: "Radiación de Júpiter", objetivo: "Medidor de radiación", desc: "Instala 3 medidores de radiación.", recompensa: 360,
+      dato: "La radiación cerca de Júpiter es tan fuerte que la sonda Juno lleva su electrónica en una caja de titanio." },
+    { titulo: "Joya de azufre", objeto: "Cristal lunar", cantidad: 1, desc: "Recoge 1 cristal lunar en Ío.", recompensa: 380,
+      dato: "El azufre de sus volcanes da a Ío sus colores amarillos, naranjas y rojos." },
+    { titulo: "Más fino que Galileo", desc: "Toca el suelo de Ío a menos de 2 m/s.", recompensa: 300,
+      dato: "La sonda Galileo pasó tan cerca de Ío que la radiación le provocó fallos." },
+    { titulo: "Botín volcánico", valor: 600, desc: "Vuelve de Ío con carga que valga al menos 600 💰 en un solo viaje.", recompensa: 380,
+      dato: "Ío tarda unas 42 horas en dar una vuelta a Júpiter." }),
+  europa: sec(
+    { titulo: "Grietas rojizas", objetivo: "Grieta", desc: "Fotografía las 3 grietas marcadas.", recompensa: 400,
+      dato: "Las líneas rojizas de Europa podrían ser sales del océano que suben por las grietas." },
+    { icono: "📏", titulo: "¿Cuánto hielo hay?", objetivo: "Sonda de hielo", desc: "Instala 3 sondas que miden el espesor del hielo.", recompensa: 450,
+      dato: "Se calcula que la corteza de hielo de Europa tiene entre 15 y 25 km de espesor." },
+    { titulo: "Hielo para estudiar", objeto: "Hielo", cantidad: 3, desc: "Recoge 3 bloques de hielo en Europa.", recompensa: 450,
+      dato: "La sonda Europa Clipper llegará a Júpiter en 2030 para estudiar Europa." },
+    { titulo: "Sin paracaídas", desc: "Toca el suelo de Europa a menos de 2 m/s.", recompensa: 350,
+      dato: "Europa casi no tiene atmósfera: una nave no puede frenar con paracaídas, solo con motores." },
+    { titulo: "Tesoro helado", valor: 700, desc: "Vuelve de Europa con carga que valga al menos 700 💰 en un solo viaje.", recompensa: 450,
+      dato: "Europa es un poco más pequeña que la Luna de la Tierra." }),
+};
+
 // Objetos recolectables: prob = peso base de aparición, valor = precio base de venta.
 export const OBJETOS = [
   { nombre: "Chatarra espacial", valor: 30,   prob: 0.50, color: "#9aa3a8" },
