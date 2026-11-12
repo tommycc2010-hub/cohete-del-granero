@@ -4,6 +4,8 @@
 
 **▶ Jugar en el navegador:** https://tommycc2010-hub.github.io/cohete-del-granero/
 
+**🎬 Ver el tráiler (1:20):** https://tommycc2010-hub.github.io/cohete-del-granero/trailer-cohete-del-granero.mp4
+
 **Equipo:** Siderense Rocket Labs
 
 ![Menú principal](docs/capturas/01-menu-principal.png)
