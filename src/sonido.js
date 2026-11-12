@@ -1,6 +1,9 @@
 // Sonido generado con Web Audio: no usa archivos, todo se sintetiza.
 // El navegador solo permite sonido después de la primera interacción del jugador.
-let ctx = null, salida = null, motorGan = null, vientoGan = null, mudo = false;
+import { crearMusica } from "./musica.js";
+
+let ctx = null, salida = null, motorGan = null, vientoGan = null, mudo = false, musica = null;
+let volGeneral = 0.5, volMusica = 0.5, estiloPedido = null;
 
 function iniciar() {
   if (ctx) return;
@@ -8,8 +11,11 @@ function iniciar() {
   if (!AC) return;
   ctx = new AC();
   salida = ctx.createGain();
-  salida.gain.value = 0.5;
+  salida.gain.value = volGeneral;
   salida.connect(ctx.destination);
+  musica = crearMusica(ctx, salida);
+  musica.volumen(volMusica);
+  if (estiloPedido) musica.poner(estiloPedido);
 
   // Ruido blanco en bucle: base del motor y del viento
   const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
@@ -75,6 +81,20 @@ export const sonido = {
   alternarMudo() {
     mudo = !mudo;
     if (mudo) { this.motor(0); this.viento(0); }
+    if (ctx) salida.gain.setTargetAtTime(mudo ? 0 : volGeneral, ctx.currentTime, 0.1);
     return mudo;
+  },
+  // Música de fondo según el lugar: "granero", "espacio", el id de un planeta, o null.
+  musica(estilo) {
+    estiloPedido = estilo;
+    if (musica) musica.poner(estilo);
+  },
+  // Volúmenes de 0 a 1.
+  volumen(general, deMusica) {
+    volGeneral = general;
+    volMusica = deMusica * 0.6;
+    if (!ctx) return;
+    if (!mudo) salida.gain.setTargetAtTime(volGeneral, ctx.currentTime, 0.1);
+    musica.volumen(volMusica);
   },
 };

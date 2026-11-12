@@ -11,12 +11,14 @@ import { sonido } from "./sonido.js";
 import { consejos, NOMBRE, TEXTO_CONFIANZA, yaPresentado, marcarPresentado } from "./cientifico.js";
 import { guardar, cargar, borrar } from "./guardado.js";
 import { crearInforme, htmlInforme } from "./informe.js";
+import { crearMenu } from "./menu.js";
 import { DATOS_PLANETAS } from "./datos.js";
 import {
   estado, capacidad, comprarCombustible, vender, suscribir, regresar,
   generarCampo, consumoImpulso, alcanceSensor, gastar, recolectar, detectarSenal,
   oxigenoMax, resistenciaTraje, desgasteTraje, puedeAterrizar, aterrizar, perderRecolectado,
   BONO_PUEBLO, VALOR_ORBITA, FUGA_POR_SEGUNDO, completarMision, exportarEstado, importarEstado, factorMasa,
+  energiaMax, generacion, consumoSistemas, ENERGIA_RECARGA_OXI,
 } from "./reglas.js";
 
 // ----- Render -----
@@ -83,8 +85,15 @@ const VISTAS = {
 const $ = id => document.getElementById(id);
 const pausado = () => !$("inicio").classList.contains("oculto");
 
+function actualizarMusica() {
+  if (modo === "granero" || modo === "despegue") sonido.musica("granero");
+  else if (modo === "espacio" || modo === "descenso") sonido.musica("espacio");
+  else if (modo === "superficie" && estado.mision) sonido.musica(estado.mision.dest);
+  else if (modo === "final") sonido.musica(null);
+}
 function ponerModo(m) {
   modo = m;
+  if (m !== "transicion") actualizarMusica();
   document.body.dataset.modo = m;
   $("aviso").classList.remove("visible"); // los avisos del modo anterior no se arrastran al nuevo
   if (VISTAS[m]) vista = VISTAS[m]();
@@ -117,18 +126,7 @@ if (partida) {
   tutorial.restaurar(partida.tutorial);
   marcarPresentado(partida.presentado);
   cargando = false;
-  const hechas = Object.keys(estado.misiones).length;
-  $("partida-info").textContent = `Partida guardada: ${estado.dinero} 💰 · ${hechas}/5 misiones`;
-  $("partida").style.display = "";
 }
-// "Nueva partida" pide confirmar con un segundo clic (sin ventanas del navegador).
-$("nueva-partida").addEventListener("click", e => {
-  e.stopPropagation();
-  const b = e.currentTarget;
-  if (b.dataset.confirmar) { borrar(); location.reload(); return; }
-  b.dataset.confirmar = "1";
-  b.textContent = "¿Seguro? Se borra el progreso · clic otra vez";
-});
 
 // ----- HUD del granero -----
 function pintarHud() {
@@ -194,10 +192,44 @@ function cerrarDialogo() {
 }
 
 // ----- Pantalla de inicio / pausa y captura del mouse -----
-$("inicio").addEventListener("click", () => jugador.controls.lock());
+// ----- Menú principal / pausa -----
+const CALIDAD = { alta: { pr: 2, sombras: true }, media: { pr: 1, sombras: true }, baja: { pr: 0.75, sombras: false } };
+let calidadActual = null;
+const menu = crearMenu($("inicio"), {
+  alJugar() {
+    sonido.iniciar();
+    if (!empezado) { empezado = true; alGranero(); document.body.classList.remove("en-menu"); }
+    actualizarMusica();
+    jugador.controls.lock();
+  },
+  alNuevaPartida() { borrar(); location.reload(); },
+  infoPartida() {
+    if (!partida) return null;
+    return `Partida guardada: ${estado.dinero} 💰 · ${Object.keys(estado.misiones).length}/5 misiones`;
+  },
+  alCambiarOpciones(o) {
+    sonido.volumen(o.volumen, o.musica);
+    jugador.controls.pointerSpeed = o.sensibilidad;
+    camera.fov = o.fov;
+    camera.updateProjectionMatrix();
+    if (calidadActual !== o.calidad) {
+      calidadActual = o.calidad;
+      const c = CALIDAD[o.calidad];
+      renderer.setPixelRatio(Math.min(devicePixelRatio, c.pr));
+      renderer.shadowMap.enabled = c.sombras;
+      // los materiales deben recompilarse al activar o quitar las sombras
+      for (const esc of [scene, espacio.scene, superficie.scene, final.scene]) {
+        esc.traverse(obj => { if (obj.material) [].concat(obj.material).forEach(m => { m.needsUpdate = true; }); });
+      }
+      ajustar();
+    }
+  },
+});
+let empezado = false;
+document.body.classList.add("en-menu"); // el HUD se oculta hasta empezar a jugar
 jugador.controls.addEventListener("lock", () => $("inicio").classList.add("oculto"));
 jugador.controls.addEventListener("unlock", () => {
-  if (!telefono.abierto && !tarjetaFinal) $("inicio").classList.remove("oculto");
+  if (!telefono.abierto && !tarjetaFinal) { menu.refrescar(); $("inicio").classList.remove("oculto"); }
 });
 
 // ----- Teléfono (Tab) -----
@@ -289,6 +321,8 @@ function despegar() {
   soltarCercano();
   granero.iniciarDespegue(estado.mejoras);
   const m = estado.mision;
+  energia = energiaMax();
+  avisoEnergia = false;
   informe.empezar({
     dest: m.dest, combustible: estado.combustible + m.ida, capacidad: capacidad(), ida: m.ida,
     masa: factorMasa(), misionHecha: !!estado.misiones[m.dest],
@@ -313,6 +347,32 @@ function entrarAlEspacio() {
   });
 }
 
+// ----- Energía del viaje -----
+let energia = 0, avisoEnergia = false;
+const sinEnergia = () => energia <= 0;
+// extra: consumo adicional (por ejemplo, recargar oxígeno). Devuelve true si hubo energía para todo.
+function pasoEnergia(dt, enSuelo, extra = 0) {
+  const dest = estado.mision.dest;
+  const pedia = extra * dt;
+  energia += (generacion(dest, enSuelo) - consumoSistemas() - extra) * dt;
+  const alcanzo = energia > 0 || pedia === 0;
+  energia = Math.max(0, Math.min(energiaMax(), energia));
+  informe.energia(energia / energiaMax());
+  if (sinEnergia() && !avisoEnergia) {
+    avisoEnergia = true;
+    sonido.reproducir("alarma");
+    aviso("🔋 ¡Sin energía! Los instrumentos se apagan y el cohete no puede recargar tu oxígeno.");
+  }
+  if (energia > energiaMax() * 0.1) avisoEnergia = false;
+  const gen = generacion(dest, enSuelo), neto = gen - consumoSistemas();
+  for (const id of ["en-esp", "en-desc", "en-suelo"]) {
+    $(id + "-relleno").style.width = `${100 * energia / energiaMax()}%`;
+    $(id + "-txt").textContent = `🔋 ${Math.floor(energia)} ${neto >= 0 ? "▲" : "▼"} ${Math.abs(neto).toFixed(1)}/s`;
+    $(id).classList.toggle("alerta", energia < energiaMax() * 0.2);
+  }
+  return alcanzo;
+}
+
 // ----- Vuelo -----
 addEventListener("mousemove", e => {
   if (modo === "espacio" && document.pointerLockElement && !pausado()) espacio.girar(e.movementX * 0.0022, e.movementY * 0.0022);
@@ -325,6 +385,7 @@ function volar(dt) {
   const giroPitch = (k.ArrowDown ? 1 : 0) - (k.ArrowUp ? 1 : 0);
   if (giroYaw || giroPitch) espacio.girar(giroYaw * 1.4 * dt, giroPitch * 1.1 * dt);
 
+  pasoEnergia(dt, false);
   let impulso = (k.KeyW ? 1 : 0) - (k.KeyS ? 1 : 0);
   if (estado.combustible <= 0) impulso = 0;
   const r = espacio.actualizar(dt, impulso);
@@ -382,7 +443,7 @@ function pintarMarcadores(camara, ref) {
   const enSuelo = modo === "superficie";
   const lista = enSuelo ? superficie.objetos.concat(superficie.piezas) : espacio.objetos;
   const vivos = new Set(lista);
-  const alcance = enSuelo && averias.antena ? 0 : alcanceSensor(); // con la antena desalineada no se identifica nada
+  const alcance = (enSuelo && averias.antena) || sinEnergia() ? 0 : alcanceSensor(); // antena averiada o sin energía: nada se identifica
   marcadores = marcadores.filter(m => {
     if (vivos.has(m.o)) return true;
     m.el.remove();
@@ -454,8 +515,10 @@ function pasoDescenso(dt) {
   sonido.motor(empuje ? 0.8 : 0);
 
   const vel = Math.max(0, -desc.v);
-  $("desc-altura").textContent = `Altura ${Math.max(0, desc.h).toFixed(0)} m`;
-  $("desc-vel").textContent = `${vel.toFixed(1)} m/s`;
+  if (dt > 0) pasoEnergia(dt, false);
+  const ciego = sinEnergia(); // sin energía no hay instrumentos: aterrizas a ojo
+  $("desc-altura").textContent = ciego ? "Altura ¿?" : `Altura ${Math.max(0, desc.h).toFixed(0)} m`;
+  $("desc-vel").textContent = ciego ? "⚠ Sin instrumentos" : `${vel.toFixed(1)} m/s`;
   $("m-vel").classList.toggle("aviso", vel > V_SUAVE && vel <= V_DURO);
   $("m-vel").classList.toggle("alerta", vel > V_DURO);
   $("vel-relleno").style.width = `${Math.min(100, vel / 30 * 100)}%`;
@@ -565,7 +628,13 @@ function pasoSuperficie(dt) {
   superficie.interactuables[0].texto = textoCohete();
 
   const enNave = Math.hypot(p.x, p.z) < ZONA_NAVE;
-  if (enNave) {
+  const recargando = enNave && oxi < oxigenoMax() && !sinEnergia();
+  pasoEnergia(dt, true, recargando ? ENERGIA_RECARGA_OXI : 0);
+  if (enNave && sinEnergia() && oxi < oxigenoMax() && esperaPeligro <= 0) {
+    esperaPeligro = 3;
+    aviso("🔋 Sin energía, el cohete no puede recargar tu oxígeno. Despega antes de que se acabe.");
+  }
+  if (recargando) {
     oxi = Math.min(oxigenoMax(), oxi + oxigenoMax() * dt / 3);
     cargaSegura = m.carga.length;
   } else {
@@ -754,7 +823,16 @@ function cerrarReporte() {
 $("informe").addEventListener("click", cerrarReporte);
 
 // ----- Bucle -----
+let tMenu = 0;
 function paso(dt) {
+  if (!empezado && pausado() && modo === "granero") { // vista del menú principal: la cámara gira alrededor del granero
+    tMenu += dt;
+    const a = 0.6 + tMenu * 0.05; // por encima de los árboles cercanos
+    camera.position.set(Math.sin(a) * 25, 12 + Math.sin(tMenu * 0.2) * 1.5, -6 + Math.cos(a) * 25);
+    camera.lookAt(0, 2.5, -6);
+    granero.actualizar(dt, estado.mejoras.motor === 0, camera.position);
+    return;
+  }
   if (["espacio", "descenso", "superficie"].includes(modo) && !pausado()) informe.tiempo(dt);
   if (modo === "granero" && reporteAbierto) {
     granero.actualizar(dt, estado.mejoras.motor === 0, camera.position);
@@ -790,6 +868,7 @@ function leerEscaner() {
       const dd = Math.hypot(o.mesh.position.x - p.x, o.mesh.position.z - p.z);
       if (dd < d) { d = dd; cerca = o; }
     }
+    if (sinEnergia()) return manos.escribir("SIN ENERGÍA", "🔋 0", "#f3a59e");
     if (!cerca) return manos.escribir("ESCÁNER", "Zona limpia");
     if (cerca.pieza) return manos.escribir("🔧 Pieza", `${Math.round(d)} m`, "#ff8a2a");
     const conocido = !averias.antena && d <= alcanceSensor();
@@ -809,7 +888,7 @@ function bucle() {
   renderer.clear();
   renderer.render(vista.escena, vista.camara);
   // Brazos en primera persona: solo caminando, y no con el teléfono abierto
-  if ((modo === "granero" || modo === "superficie") && !telefono.abierto) {
+  if ((modo === "granero" || modo === "superficie") && !telefono.abierto && (empezado || !pausado())) {
     manos.vestir(modo === "superficie");
     manos.actualizar(dt, jugador.mov, jugador.enSuelo, camera);
     if ((relojEscaner -= dt) <= 0) { relojEscaner = 0.25; leerEscaner(); }
@@ -823,9 +902,12 @@ renderer.setAnimationLoop(bucle);
 window.__juego = {
   camera, jugador, granero, espacio, superficie, estado, telefono, interactuar, despegar, volver,
   get modo() { return modo; },
+  menu,
   get reporteAbierto() { return reporteAbierto; },
   get suelo() { return { oxi, traje, cargaSegura, averias, piezasNecesarias, piezasEnMano }; },
   get desc() { return desc; },
+  get energia() { return energia; },
+  set energia(v) { energia = v; },
   set suelo(v) { if (v.oxi !== undefined) oxi = v.oxi; if (v.traje !== undefined) traje = v.traje; },
   avanzar(segundos) { for (let i = 0; i < segundos / 0.05; i++) paso(0.05); },
 };

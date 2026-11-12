@@ -1,7 +1,7 @@
 // Teléfono: el menú del juego. Se abre con Tab y tiene apps de Estado, Taller, Mapa y Diario.
 import {
   estado, MEJORAS, ORDEN, COSTO_EXPLORAR, capacidad, factorMasa, costoIda, costoMejora,
-  desbloqueado, comprarMejora, iniciarMision, explorar, regresar,
+  desbloqueado, comprarMejora, iniciarMision, explorar, regresar, energiaMax, generacion, consumoSistemas,
 } from "./reglas.js";
 import { DATOS_PLANETAS, MISIONES } from "./datos.js";
 
@@ -32,6 +32,7 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
     return fila("Dinero", `${estado.dinero} 💰`)
       + fila("Combustible", `${Math.floor(estado.combustible)} / ${capacidad()} ⛽`)
       + fila("Masa del cohete", `x${factorMasa().toFixed(2)}`)
+      + fila("Batería", `${energiaMax()} 🔋`)
       + `<p class="tel-nota">Más masa = más combustible por viaje.</p>`
       + `<h3>Carga (${estado.carga.length})</h3>${carga}`;
   }
@@ -57,7 +58,8 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
       return `<button class="tel-item" data-acc="lanzar:${id}" ${ok ? "" : "disabled"}>
         <b>${ok ? "" : "🔒 "}${d.nombre}</b>${estado.visitados[id] ? " <em>visitado</em>" : ""}
         <span class="tel-precio ${ok && estado.combustible < ida * 2 ? "caro" : ""}">${ida * 2} ⛽ ida y vuelta</span>
-        <small>${nota}</small></button>`;
+        <small>${nota}</small>
+        <small>☀ Luz solar ${d.luz >= 1 ? d.luz.toFixed(1) + "×" : "1/" + Math.round(1 / d.luz)} la de la Tierra · 🔋 ${(generacion(id, true) - consumoSistemas()) >= 0 ? "energía de sobra" : "la batería se gasta"}</small></button>`;
     }).join("");
   }
 

@@ -172,7 +172,8 @@ Juego 3D en primera persona con estilo tipo Schedule I: modelos low-poly, colore
 ## Fase 3: de miércoles a viernes
 1. ✅ **Hecho.** Guardado automático en el navegador y botón de partida nueva.
 2. ✅ **Hecho.** Reporte de misión al volver de cada viaje, con la lección del Dr. Nova.
-3. Sistema de energía para la nave.
+3. ✅ **Hecho.** Sistema de energía (batería, paneles con luz solar real, generador RTG).
+3b. ✅ **Hecho.** Menú principal con escena 3D, pausa, opciones guardadas y música ambiental generada.
 4. Ventanas de lanzamiento y retraso de las comunicaciones.
 5. Capturas y video demo.
 

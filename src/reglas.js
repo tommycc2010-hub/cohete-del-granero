@@ -10,6 +10,9 @@ export const MEJORAS = {
   antena: { nombre: "Antena",         base: 250, max: 3, desc: "Nivel 2 necesario para la señal de Europa." },
   traje:  { nombre: "Traje espacial", base: 160, max: 5, desc: "Resiste más el ambiente al explorar a pie. Añade algo de masa." },
   oxigeno:{ nombre: "Tanque de oxígeno", base: 140, max: 5, desc: "+25 s de oxígeno para explorar a pie. Añade algo de masa." },
+  paneles:{ nombre: "Paneles solares", base: 140, max: 4, desc: "Generan energía con la luz del Sol. Rinden mucho menos lejos del Sol." },
+  bateria:{ nombre: "Batería",         base: 130, max: 5, desc: "+40 de energía guardada para los sistemas y para recargar oxígeno." },
+  rtg:    { nombre: "Generador RTG",   base: 500, max: 2, desc: "Energía nuclear constante, sin importar la luz. Muy pesado y caro." },
 };
 export const COMBUSTIBLE_PRECIO = 2;
 export const COSTO_EXPLORAR = 3;
@@ -22,7 +25,7 @@ export const VALOR_ORBITA = 0.35;   // lo que flota en órbita vale poco: lo bue
 export const estado = {
   dinero: 100,
   combustible: 60,
-  mejoras: { motor: 0, tanque: 0, escudo: 0, sensor: 0, antena: 0, traje: 0, oxigeno: 0 },
+  mejoras: { motor: 0, tanque: 0, escudo: 0, sensor: 0, antena: 0, traje: 0, oxigeno: 0, paneles: 0, bateria: 0, rtg: 0 },
   carga: [],
   visitados: {},
   misiones: {}, // misiones principales cumplidas, por destino
@@ -76,8 +79,20 @@ export function capacidad() { return 60 + 20 * estado.mejoras.tanque; }
 
 export function factorMasa() {
   const m = estado.mejoras;
-  return 1 + 0.1 * m.motor + 0.08 * (m.tanque + m.escudo + m.sensor + m.antena) + 0.04 * (m.traje + m.oxigeno);
+  return 1 + 0.1 * m.motor + 0.08 * (m.tanque + m.escudo + m.sensor + m.antena) + 0.04 * (m.traje + m.oxigeno)
+    + 0.04 * m.paneles + 0.05 * m.bateria + 0.15 * m.rtg;
 }
+
+// ----- Energía -----
+// La batería se carga en el granero; en el viaje los sistemas la gastan y los paneles y el RTG la reponen.
+export const ENERGIA_RECARGA_OXI = 2.5; // energía por segundo mientras el cohete recarga el oxígeno del traje
+export function energiaMax() { return 80 + 40 * estado.mejoras.bateria; }
+export function consumoSistemas() { return 0.35 + 0.06 * (estado.mejoras.sensor + estado.mejoras.antena); }
+export function generacionSolar(id, enSuelo) {
+  const d = DATOS_PLANETAS[id];
+  return Math.min(4, 0.35 * (1 + 0.8 * estado.mejoras.paneles) * d.luz * (enSuelo ? d.suelo_luz : 1));
+}
+export function generacion(id, enSuelo) { return generacionSolar(id, enSuelo) + 0.9 * estado.mejoras.rtg; }
 
 export function costoIda(id) {
   return Math.ceil(DATOS_PLANETAS[id].distancia * 12 * factorMasa() / (1 + 0.25 * estado.mejoras.motor));

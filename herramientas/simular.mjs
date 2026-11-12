@@ -10,6 +10,7 @@ import {
   estado, MEJORAS, ORDEN, capacidad, costoIda, costoMejora, comprarMejora, comprarCombustible,
   iniciarMision, gastar, recolectar, regresar, vender, completarMision, generarCampo, consumoImpulso,
   oxigenoMax, desgasteTraje, desbloqueado, COMBUSTIBLE_PRECIO, FUGA_POR_SEGUNDO, VALOR_ORBITA,
+  energiaMax, generacion, consumoSistemas, ENERGIA_RECARGA_OXI,
 } from "../src/reglas.js";
 import { DATOS_PLANETAS, MISIONES } from "../src/datos.js";
 
@@ -27,7 +28,7 @@ const J = {
   segPorPieza: 12,           // buscar una pieza de repuesto
   segGranero: 70,            // vender, comprar, hablar
   segVuelo: 45,              // despegue, órbita y descenso
-  ordenCompras: ["oxigeno", "traje", "sensor", "escudo", "motor", "tanque"], // en qué gasta el dinero que le sobra
+  ordenCompras: ["oxigeno", "traje", "bateria", "sensor", "escudo", "motor", "tanque"], // en qué gasta el dinero que le sobra
 };
 
 // Lo que exige cada misión: segundos fuera del cohete y oxígeno de la salida más larga.
@@ -42,7 +43,7 @@ const NECESITA = {
 function reiniciar() {
   Object.assign(estado, {
     dinero: 100, combustible: 60, carga: [], visitados: {}, misiones: {}, mision: null, final: false, log: [],
-    mejoras: { motor: 0, tanque: 0, escudo: 0, sensor: 0, antena: 0, traje: 0, oxigeno: 0 },
+    mejoras: { motor: 0, tanque: 0, escudo: 0, sensor: 0, antena: 0, traje: 0, oxigeno: 0, paneles: 0, bateria: 0, rtg: 0 },
   });
 }
 
@@ -56,9 +57,20 @@ function combustibleManiobras(dest) {
 const combustibleViaje = dest => costoIda(dest) * 2 + combustibleManiobras(dest) + 3;
 const segundosTraje = dest => 100 / desgasteTraje(dest) * J.margenTraje;
 
+// Segundos que la batería deja estar en la superficie, tras gastar en el vuelo (unos 45 s) y en recargar oxígeno.
+function segundosEnergia(dest) {
+  const vuelo = Math.max(0, consumoSistemas() - generacion(dest, false)) * 45;
+  const recargas = 2 * ENERGIA_RECARGA_OXI * 3;
+  const neto = consumoSistemas() - generacion(dest, true);
+  const queda = energiaMax() - vuelo - recargas;
+  if (neto <= 0) return Infinity;
+  return Math.max(0, queda / neto * 0.85);
+}
+
 function puedeMision(dest) {
   if (!desbloqueado(dest) || capacidad() < combustibleViaje(dest)) return false;
-  return segundosTraje(dest) >= NECESITA[dest].seg && oxigenoMax() * J.margenOxigeno >= NECESITA[dest].oxi;
+  return segundosTraje(dest) >= NECESITA[dest].seg && oxigenoMax() * J.margenOxigeno >= NECESITA[dest].oxi
+    && segundosEnergia(dest) >= NECESITA[dest].seg + 25;
 }
 
 // Compra lo que hace falta para la siguiente misión; si no alcanza, devuelve false.
@@ -71,6 +83,12 @@ function comprarLoNecesario(dest) {
     }
     if (segundosTraje(dest) < NECESITA[dest].seg) return "traje";
     if (oxigenoMax() * J.margenOxigeno < NECESITA[dest].oxi) return "oxigeno";
+    if (segundosEnergia(dest) < NECESITA[dest].seg + 25) {
+      // Lejos del Sol conviene el RTG; cerca, batería o paneles.
+      if (DATOS_PLANETAS[dest].luz < 0.1 && estado.mejoras.rtg < MEJORAS.rtg.max) return "rtg";
+      const opciones = ["bateria", "paneles"].filter(k => estado.mejoras[k] < MEJORAS[k].max);
+      return opciones.sort((a, b) => costoMejora(a) - costoMejora(b))[0] || "rtg";
+    }
     return null;
   };
   for (let k; (k = quiere());) {
@@ -110,7 +128,7 @@ function viaje(dest, registro) {
   // Aterrizaje
   const r = Math.random();
   const piezas = r < J.aterrizaje.suave ? 0 : r < J.aterrizaje.suave + J.aterrizaje.medio ? 1 : 3;
-  let seg = 0, traje = segundosTraje(dest);
+  let seg = 0, traje = Math.min(segundosTraje(dest), segundosEnergia(dest));
   if (piezas) {
     const t = piezas * J.segPorPieza;
     seg += t; traje -= t;

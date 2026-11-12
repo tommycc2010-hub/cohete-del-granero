@@ -1,21 +1,23 @@
 // Datos de EJEMPLO. Se reemplazan por la base de datos oficial de la NASA cuando se libere.
 export const DATOS_PLANETAS = {
-  mercurio: { nombre: "Mercurio", lugar: "Mercurio", gravedad: 0.38, arrastre: 0, distancia: 1.0, peligro: 0.6, nota: "Calor extremo, sin atmósfera",
+  mercurio: { nombre: "Mercurio", lugar: "Mercurio", luz: 6.67, suelo_luz: 1, gravedad: 0.38, arrastre: 0, distancia: 1.0, peligro: 0.6, nota: "Calor extremo, sin atmósfera",
     suelo: "Aterrizamos en una llanura de cráteres. Sin atmósfera, el cielo es negro aunque sea de día. Al sol el traje se calienta: avanza de sombra en sombra.",
     dato: "Casi no tiene atmósfera que guarde el calor: de día ronda los 430 °C y de noche baja a unos -180 °C." },
-  venus:    { nombre: "Venus", lugar: "Venus", gravedad: 0.90, arrastre: 0.02, distancia: 1.6, peligro: 0.8, nota: "Presión y calor enormes",
+  venus:    { nombre: "Venus", lugar: "Venus", luz: 1.91, suelo_luz: 0.15, gravedad: 0.90, arrastre: 0.02, distancia: 1.6, peligro: 0.8, nota: "Presión y calor enormes",
     suelo: "Bienvenido al horno: nubes de ácido sulfúrico, volcanes y charcos de lava. El traje va a sufrir, no te alejes demasiado.",
     dato: "Su superficie ronda los 465 °C y la presión es unas 90 veces la de la Tierra. Un escudo térmico es obligatorio." },
-  marte:    { nombre: "Marte", lugar: "Marte", gravedad: 0.38, arrastre: 0.002, distancia: 2.4, peligro: 0.5, nota: "Agua antigua",
+  marte:    { nombre: "Marte", lugar: "Marte", luz: 0.43, suelo_luz: 1, gravedad: 0.38, arrastre: 0.002, distancia: 2.4, peligro: 0.5, nota: "Agua antigua",
     suelo: "Marte: polvo rojo, mesetas y remolinos de polvo. El aire es tan fino que no sirve para respirar. Vigila tu oxígeno.",
     dato: "Tiene hielo de agua en los polos y cauces secos de ríos y lagos antiguos. Donde hubo agua, pudo haber vida." },
-  jupiter:  { nombre: "Júpiter", lugar: "Ío, luna de Júpiter", gravedad: 0.18, arrastre: 0, distancia: 3.6, peligro: 1.0, nota: "Radiación intensa; se aterriza en su luna Ío",
+  jupiter:  { nombre: "Júpiter", lugar: "Ío, luna de Júpiter", luz: 0.037, suelo_luz: 1, gravedad: 0.18, arrastre: 0, distancia: 3.6, peligro: 1.0, nota: "Radiación intensa; se aterriza en su luna Ío",
     suelo: "Júpiter es puro gas, no hay dónde posarse. Por eso bajamos en Ío, su luna: el lugar con más volcanes activos del sistema solar.",
     dato: "Es un gigante gaseoso sin suelo donde aterrizar, y sus cinturones de radiación dañan la electrónica." },
-  europa:   { nombre: "Europa", lugar: "Europa", gravedad: 0.13, arrastre: 0, distancia: 3.8, peligro: 0.9, nota: "Océano bajo el hielo (final)",
+  europa:   { nombre: "Europa", lugar: "Europa", luz: 0.037, suelo_luz: 1, gravedad: 0.13, arrastre: 0, distancia: 3.8, peligro: 0.9, nota: "Océano bajo el hielo (final)",
     suelo: "Estamos sobre el hielo de Europa. La antena marca el origen de la señal 📡: camina hasta allí y cuidado con los géiseres.",
     dato: "Bajo su corteza de hielo los datos indican un océano de agua salada, con más agua que todos los océanos de la Tierra." },
 };
+// `luz` es la luz solar comparada con la de la Tierra (cae con el cuadrado de la distancia al Sol);
+// `suelo_luz` es la parte que llega a la superficie (las nubes de Venus dejan pasar poca).
 // `gravedad` es la del lugar donde se aterriza (Tierra = 1); `arrastre` es el freno de su atmósfera.
 // `dato` es conocimiento general de divulgación; hay que contrastarlo con la base de datos de la NASA.
 

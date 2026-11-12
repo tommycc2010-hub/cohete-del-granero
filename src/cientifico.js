@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { caja, etiqueta } from "./estilo.js";
 import { DATOS_PLANETAS, MISIONES } from "./datos.js";
-import { estado, ORDEN, capacidad, costoIda, alcanceSensor, oxigenoMax, COSTO_ATERRIZAR } from "./reglas.js";
+import { estado, ORDEN, capacidad, costoIda, alcanceSensor, oxigenoMax, COSTO_ATERRIZAR, energiaMax, generacion, consumoSistemas } from "./reglas.js";
 
 export const NOMBRE = "Dr. Nova";
 
@@ -174,6 +174,14 @@ export function consejos() {
     di(`Carga combustible: ${p.nombre} pide ${necesita} para ir, aterrizar y volver, más lo que gastes maniobrando.`, "alta");
   } else {
     di(`Estamos listos para ${p.nombre}. Recuerda: solo el impulso gasta combustible. Acelera, suelta y déjate llevar.`);
+  }
+
+  const balance = generacion(objetivo, true) - consumoSistemas();
+  if (balance < 0 && energiaMax() / -balance < 140) {
+    const veces = Math.round(1 / p.luz);
+    di(p.luz < 0.1
+      ? `En ${p.lugar} la luz del Sol es unas ${veces} veces más débil que en la Tierra: los paneles casi no sirven. Las sondas que van tan lejos suelen llevar un generador de radioisótopos (RTG); la misión Juno llegó a Júpiter con paneles solares enormes.`
+      : `Con tu energía actual los sistemas aguantan unos ${Math.round(energiaMax() / -balance)} s en ${p.lugar}. Sin energía el cohete no recarga tu oxígeno. Más batería, paneles o un RTG lo resuelven.`, "alta");
   }
 
   if (yaVolo && m.oxigeno === 0) {

@@ -13,7 +13,7 @@ export function crearInforme() {
       v = {
         dest, combustible, capacidad, ida, masa, misionHecha,
         gasto: { orbita: 0, descenso: 0, fuga: 0 },
-        tiempo: 0, aterrizo: false, velAterrizaje: 0, averias: [], desmayos: 0, trajeMin: 100, oxiMin: 1,
+        tiempo: 0, aterrizo: false, velAterrizaje: 0, averias: [], desmayos: 0, trajeMin: 100, oxiMin: 1, energiaMin: 1, sinEnergia: false,
       };
     },
     gasto(tipo, cantidad) { if (v) v.gasto[tipo] += cantidad; },
@@ -24,6 +24,11 @@ export function crearInforme() {
       if (!v) return;
       v.trajeMin = Math.min(v.trajeMin, traje);
       v.oxiMin = Math.min(v.oxiMin, oxiFraccion);
+    },
+    energia(fraccion) {
+      if (!v) return;
+      v.energiaMin = Math.min(v.energiaMin, fraccion);
+      if (fraccion <= 0) v.sinEnergia = true;
     },
     cancelar() { v = null; },
 
@@ -47,6 +52,7 @@ function leccion(r) {
   const lugar = DATOS_PLANETAS[r.dest].lugar;
   if (r.rescate) return "Te quedaste sin combustible para volver y hubo que rescatarte. En una misión real la reserva de regreso se calcula antes de despegar: vigila la línea punteada de la barra de combustible.";
   if (r.desmayos) return "Te quedaste sin oxígeno lejos del cohete. En una caminata espacial real el aire limita cada salida: planea salidas más cortas o mejora el tanque de oxígeno.";
+  if (r.sinEnergia) return `Te quedaste sin energía en ${lugar}, donde llega ${DATOS_PLANETAS[r.dest].luz >= 1 ? "mucha" : "muy poca"} luz del Sol. Sin energía el cohete no recarga el oxígeno ni funcionan los instrumentos: más batería, paneles o un generador RTG.`;
   if (r.averias.includes("pata")) return `Tocaste suelo a ${r.velAterrizaje.toFixed(1)} m/s y rompiste una pata. Frenar antes cuesta un poco más de combustible, pero ahorra tiempo, oxígeno y piezas.`;
   if (r.averias.length) return `Tocaste suelo a ${r.velAterrizaje.toFixed(1)} m/s y el cohete se averió. Por debajo de 3 m/s el aterrizaje es limpio.`;
   if (r.perdidos) return `La reentrada dañó ${r.perdidos === 1 ? "1 objeto" : r.perdidos + " objetos"}. El escudo térmico protege la carga: las cápsulas reales superan los 1.500 °C al volver a la atmósfera.`;
@@ -86,6 +92,7 @@ export function htmlInforme(r) {
     ${fila("🎯 Misión", mision)}
     ${fila("📦 Carga", carga)}
     ${r.aterrizo ? fila("🛡 Traje", traje) : ""}
+    ${fila("🔋 Energía", r.sinEnergia ? "Se agotó" : `${Math.round(r.energiaMin * 100)} % mínimo`)}
     <div class="inf-leccion"><b>📻 Lección del Dr. Nova</b>${r.leccion}</div>
     <p class="inf-cerrar"><kbd>E</kbd> continuar</p>`;
 }
