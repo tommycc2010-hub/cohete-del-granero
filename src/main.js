@@ -15,6 +15,7 @@ import { crearInforme, htmlInforme } from "./informe.js";
 import { crearMenu } from "./menu.js";
 import { renderizarPista } from "./musica.js";
 import { crearPostpro } from "./postpro.js";
+import { crearEventosEspacio, crearEventosSuelo } from "./eventos.js";
 import { DATOS_PLANETAS } from "./datos.js";
 import {
   estado, capacidad, comprarCombustible, vender, suscribir, regresar,
@@ -406,6 +407,7 @@ function entrarAlEspacio() {
     lluviaActiva = Math.random() < (["marte", "jupiter", "europa"].includes(dest) ? 0.5 : 0.25);
     impactosLluvia = 0;
     espacio.iniciarLluvia(lluviaActiva);
+    eventosEsp.iniciar(dest, lluviaActiva);
     crearMarcadores(espacio.objetos);
     $("destino").textContent = `🪐 ${DATOS_PLANETAS[dest].nombre}`;
     ponerModo("espacio");
@@ -455,6 +457,28 @@ function pasoEnergia(dt, enSuelo, extra = 0) {
 
 // ----- Eventos -----
 let lluviaActiva = false, impactosLluvia = 0, tormenta = null;
+let alertaEvento = null, sensoresApagados = false, sacudidaSuelo = 0;
+const offSacudida = new THREE.Vector3();
+const apiEventos = {
+  aviso, radio, nombre: NOMBRE, estado, teclas: jugador.teclas,
+  sonido: id => sonido.reproducir(id),
+  logro: id => desbloquearLogro(id),
+  alerta: t => { alertaEvento = t; },
+  sensores: si => { sensoresApagados = !si; },
+  // Gasta combustible de sobra, nunca la reserva para aterrizar y volver. Devuelve lo gastado.
+  gastarSobrante(c) {
+    const reserva = estado.mision ? estado.mision.ida + COSTO_ATERRIZAR : 0;
+    const g = Math.max(0, Math.min(c, estado.combustible - reserva));
+    if (g > 0) { gastar(g); informe.gasto("fuga", g); }
+    return g;
+  },
+  recolectar(dato) { recolectar(dato); sonido.reproducir("recoger"); },
+  nuevosMarcadores() { crearMarcadores(modo === "superficie" ? superficie.objetos.concat(superficie.piezas) : espacio.objetos); },
+  sacudir(s) { sacudidaSuelo = Math.max(sacudidaSuelo, s); },
+};
+const eventosEsp = crearEventosEspacio(espacio, apiEventos);
+const eventosSuelo = crearEventosSuelo(superficie, apiEventos);
+function quitarSacudida() { camera.position.sub(offSacudida); offSacudida.set(0, 0, 0); }
 
 // ----- Vuelo -----
 addEventListener("mousemove", e => {
@@ -472,6 +496,7 @@ function volar(dt) {
   let impulso = (k.KeyW ? 1 : 0) - (k.KeyS ? 1 : 0);
   if (estado.combustible <= 0) impulso = 0;
   const r = espacio.actualizar(dt, impulso);
+  eventosEsp.actualizar(dt);
   if (impulso) { gastar(consumoImpulso() * dt); informe.gasto("orbita", consumoImpulso() * dt); }
   sonido.motor(impulso > 0 ? 0.6 : 0);
   r.recogidos.forEach(o => { aviso(recolectar(o)); sonido.reproducir("recoger"); });
@@ -515,8 +540,8 @@ function pintarHudVuelo(velocidad) {
   $("velocidad").textContent = `${Math.round(velocidad)} m/s`;
   const justo = estado.combustible <= m.ida + 2;
   $("barra").classList.toggle("alerta", justo);
-  $("alerta").classList.toggle("visible", justo);
-  $("alerta").textContent = estado.combustible < m.ida
+  $("alerta").classList.toggle("visible", justo || !!alertaEvento);
+  $("alerta").textContent = !justo && alertaEvento ? alertaEvento : estado.combustible < m.ida
     ? "⚠ Ya no alcanza para volver: habrá rescate y perderás la carga. Pulsa R."
     : "⚠ Combustible justo para volver. Pulsa R para regresar.";
 }
@@ -538,7 +563,7 @@ function pintarMarcadores(camara, ref) {
   const enSuelo = modo === "superficie";
   const lista = enSuelo ? superficie.objetos.concat(superficie.piezas) : espacio.objetos;
   const vivos = new Set(lista);
-  const alcance = (enSuelo && averias.antena) || sinEnergia() ? 0 : alcanceSensor(); // antena averiada o sin energía: nada se identifica
+  const alcance = (enSuelo && averias.antena) || sinEnergia() || (!enSuelo && sensoresApagados) ? 0 : alcanceSensor(); // antena averiada o sin energía: nada se identifica
   marcadores = marcadores.filter(m => {
     if (vivos.has(m.o)) return true;
     m.el.remove();
@@ -580,6 +605,7 @@ let desc = null;
 let averias = {}, piezasNecesarias = 0, piezasEnMano = 0;
 
 function empezarDescenso() {
+  eventosEsp.limpiar();
   ponerModo("transicion");
   sonido.motor(0);
   const dest = estado.mision.dest, d = DATOS_PLANETAS[dest];
@@ -663,6 +689,7 @@ function tocarSuelo(vel) {
     $("senal-suelo").textContent = `📡 ${retrasoSenal(dest)} min`;
     radio(texto);
     tutorial.marcar("aterrizo");
+    eventosSuelo.iniciar(dest, !!tormenta);
   });
 }
 
@@ -715,6 +742,7 @@ function textoCohete() {
 }
 
 function pasoSuperficie(dt) {
+  quitarSacudida();
   jugador.actualizar(dt);
   buscarCercano();
   const p = camera.position, m = estado.mision;
@@ -763,6 +791,7 @@ function pasoSuperficie(dt) {
   if (!enNave && oxi < oxigenoMax() * 0.25 && esperaAlarma <= 0) { esperaAlarma = 1.2; sonido.reproducir("alarma"); }
 
   pasoTormenta(dt, enNave);
+  eventosSuelo.actualizar(dt, p, camera.getWorldDirection(new THREE.Vector3()));
   pintarHudSuelo(enNave);
   pintarMarcadores(camera, p);
   pintarBaliza($("marcador-pista"), posCohete, camera, p, "🚀 Cohete");
@@ -778,6 +807,11 @@ function pasoSuperficie(dt) {
     $("m-mision").classList.toggle("alerta", !!med.alerta);
   }
 
+  if (sacudidaSuelo > 0) { // temblor o impacto: la cámara se sacude (se deshace al empezar el siguiente paso)
+    offSacudida.set((Math.random() - 0.5) * sacudidaSuelo, (Math.random() - 0.5) * sacudidaSuelo * 0.6, (Math.random() - 0.5) * sacudidaSuelo);
+    camera.position.add(offSacudida);
+    sacudidaSuelo = Math.max(0, sacudidaSuelo - dt * 0.5);
+  }
   if (r.enSenal) return empezarFinal();
   if (oxi <= 0) desmayo();
 }
@@ -871,6 +905,12 @@ function limpiarMision() {
   piezasNecesarias = 0;
   tormenta = null;
   lluviaActiva = false;
+  eventosEsp.limpiar();
+  eventosSuelo.limpiar();
+  quitarSacudida();
+  sacudidaSuelo = 0;
+  alertaEvento = null;
+  sensoresApagados = false;
   superficie.tormenta(0);
   jugador.mov.sinCorrer = false;
   $("balizas-mision").innerHTML = "";
@@ -1031,10 +1071,30 @@ let grabando = false, manosVisibles = true;
 function bucle() {
   if (grabando) return;
   const ahora = performance.now();
+  medirRendimiento(ahora - antes);
   const dt = Math.min((ahora - antes) / 1000, 0.05);
   paso(dt);
   antes = ahora;
   dibujar(dt);
+}
+
+// Calidad automática: si en dos tandas seguidas de 4 s el juego va a menos de 32 imágenes por segundo,
+// baja un nivel la calidad gráfica (alta → media → baja). Solo mientras se juega con la pestaña visible.
+const medida = { tiempo: 0, cuadros: 0, lentas: 0 };
+function medirRendimiento(ms) {
+  if (!empezado || pausado() || document.hidden || modo === "transicion" || ms > 250) { medida.tiempo = medida.cuadros = 0; return; }
+  medida.tiempo += ms;
+  medida.cuadros++;
+  if (medida.tiempo < 4000) return;
+  const fps = medida.cuadros * 1000 / medida.tiempo;
+  medida.tiempo = medida.cuadros = 0;
+  medida.lentas = fps < 32 ? medida.lentas + 1 : 0;
+  const siguiente = { alta: "media", media: "baja" }[menu.opciones.calidad];
+  if (medida.lentas >= 2 && siguiente) {
+    medida.lentas = 0;
+    menu.cambiarCalidad(siguiente);
+    aviso(`⚙️ El juego iba lento (${Math.round(fps)} imágenes por segundo): bajé la calidad gráfica a ${siguiente}. Puedes cambiarla en Opciones.`);
+  }
 }
 
 function dibujar(dt) {
@@ -1061,7 +1121,8 @@ renderer.setAnimationLoop(bucle);
 window.__juego = {
   camera, jugador, granero, espacio, superficie, estado, telefono, interactuar, despegar, volver,
   get modo() { return modo; },
-  get eventos() { return { lluviaActiva, impactosLluvia, tormenta }; },
+  get eventos() { return { lluviaActiva, impactosLluvia, tormenta, espacio: eventosEsp.actual, suelo: eventosSuelo.actual, sensoresApagados }; },
+  eventosEsp, eventosSuelo,
   set tormenta(v) { tormenta = v; },
   refrescarHud: pintarHud,
   grabar: {

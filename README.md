@@ -86,7 +86,15 @@ La partida se guarda sola en el navegador cada vez que estás en el granero.
 - **Conversaciones con opciones:** con el Dr. Nova eliges de qué hablar (qué hacer, datos del próximo destino o su historia con la señal de Europa). Los vecinos cambian lo que dicen según avanzas.
 - **Encargos del pueblo:** cada vecino te pide algo del espacio (hielo, chatarra, un cristal lunar, una piedra de Marte) a cambio de dinero o de un descuento en el taller.
 - **Imprevistos con base real:** lluvias de micrometeoritos en la ruta de aterrizaje (cada impacto cuesta combustible) y tormentas solares en Mercurio y Marte, con 15 segundos de aviso para refugiarte en el cohete, igual que los astronautas se protegen de la radiación.
-- **11 logros** que se ven en el teléfono, como aterrizar a menos de 1 m/s o saltar con menos de 0.2 g.
+- **Eventos aleatorios en el espacio**, uno como mucho por viaje:
+  - 🛰️ **Sonda perdida** fuera de la ruta: desviarte cuesta combustible, pero vale mucho.
+  - 🌠 **Cometa:** su cola apunta siempre lejos del Sol. Si la atraviesas, el colector atrapa hielo.
+  - ⛽ **Fuga de combustible:** mantén E para sellarla, como el agujero de 2 mm que sellaron en la Estación Espacial en 2018.
+  - ☀️ **Tormenta de partículas:** los sensores entran en modo seguro, como en las sondas reales, y la nave se desvía.
+  - 🧭 **Giroscopio averiado:** la nave gira sola y hay que corregir el rumbo. El telescopio Hubble trabaja con un solo giroscopio desde 2024.
+  - 📡 **El eco de Europa:** después de Marte, la antena capta el pulso que oyó el Dr. Nova hace treinta años.
+- **Eventos en la superficie:** un meteorito cae cerca y deja una muestra en su cráter (en Venus no, porque la atmósfera espesa frena las rocas pequeñas). También puede haber sismos que dejan al descubierto un mineral; la sonda InSight registró más de 1300 en Marte.
+- **15 logros** que se ven en el teléfono, como aterrizar a menos de 1 m/s, saltar con menos de 0.2 g o atrapar hielo de un cometa.
 
 ### Controles
 
@@ -110,6 +118,7 @@ La partida se guarda sola en el navegador cada vez que estás en el granero.
 - **[Electron](https://www.electronjs.org/)** para la app de escritorio de Windows.
 - **Todo se genera con código:** modelos 3D, terrenos, texturas de planetas, sonidos y música (una pieza distinta para el granero, el espacio y cada planeta). El juego no usa archivos externos de arte ni audio.
 - **Postprocesado:** resplandor (bloom) ajustado a cada escena, para que brillen la lava, los cristales y las llamas, y un viñeteado suave. Se activa con la calidad gráfica alta.
+- **Calidad automática:** si el juego va a menos de 32 imágenes por segundo durante 8 segundos, baja solo la calidad gráfica un nivel y avisa.
 - **Menú principal y opciones:** volumen, música, sensibilidad del mouse, campo de visión y tres niveles de calidad gráfica para computadoras modestas.
 - **Simulador de balance:** un script que juega miles de partidas con las reglas reales y mide cuántos viajes y minutos toma terminar. Hoy da unos 9 viajes y 35 minutos de media.
 
@@ -130,6 +139,7 @@ src/
   manos.js        brazos y escáner en primera persona
   cientifico.js   personajes y consejos del Dr. Nova
   dialogos.js     conversaciones con opciones, encargos y saludos de los vecinos
+  eventos.js      eventos aleatorios en el espacio y en la superficie
   postpro.js      resplandor y viñeteado (calidad alta)
   objetos.js, particulas.js, ambiente.js   modelos de las muestras, partículas y fenómenos de cada bioma
   telefono.js     menú del teléfono

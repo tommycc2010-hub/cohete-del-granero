@@ -181,5 +181,7 @@ Juego 3D en primera persona con estilo tipo Schedule I: modelos low-poly, colore
 7. ✅ **Hecho.** Modelos propios para cada muestra, partículas y fenómenos en cada bioma.
 8. ✅ **Hecho.** Postprocesado (bloom y viñeteado), conversaciones con opciones, encargos del pueblo, 11 logros, lluvias de micrometeoritos y tormentas solares.
 
+9. ✅ **Hecho.** Eventos aleatorios: sonda perdida, cometa, fuga, tormenta de partículas, giroscopio, eco de Europa, meteoritos y sismos. Calidad gráfica automática.
+
 ## Otras ideas si sobra tiempo
-- Más eventos aleatorios: fallo de componente, fuga de combustible.
+- Más eventos de superficie: tormenta de polvo en Marte que tapa los paneles.

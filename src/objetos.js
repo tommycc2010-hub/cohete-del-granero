@@ -10,6 +10,9 @@ export const RAREZA = {
   "Mineral raro": { nivel: "Raro", color: 0xffc94a, brillo: 0.55 },
   "Cristal lunar": { nivel: "Épico", color: 0xe28bff, brillo: 0.8 },
   "Muestra biológica": { nivel: "Legendario", color: 0x6ee37a, brillo: 1 },
+  // Solo aparecen con eventos aleatorios
+  "Sonda perdida": { nivel: "Épico", color: 0xffd23f, brillo: 0.7 },
+  "Meteorito": { nivel: "Raro", color: 0xff7a3a, brillo: 0.6 },
 };
 
 const brillante = (color, emisivo, intensidad = 0.6) => {
@@ -153,7 +156,64 @@ function muestra(g) {
   };
 }
 
-const MODELOS = { "Chatarra espacial": chatarra, "Hielo": hielo, "Mineral raro": mineral, "Cristal lunar": cristal, "Muestra biológica": muestra };
+// Sonda vieja a la deriva: cuerpo con lámina dorada, antena parabólica, paneles y una luz que aún parpadea.
+function sonda(g) {
+  const cuerpo = caja(0.7, 0.55, 0.7, 0xd9a53a);
+  g.add(cuerpo);
+  const franja = caja(0.72, 0.1, 0.72, 0x5b4a2a, false);
+  franja.position.y = 0.12;
+  g.add(franja);
+  const plato = cono(0.75, 0.28, 0xe8e8e8, 16);
+  plato.rotation.x = Math.PI;
+  plato.position.y = 0.5;
+  g.add(plato);
+  const mastil = cilindro(0.03, 0.03, 0.45, 0xbbbbbb, 5, false);
+  mastil.position.y = 0.5;
+  g.add(mastil);
+  for (const lado of [-1, 1]) {
+    const brazo = cilindro(0.03, 0.03, 0.5, 0x888888, 5, false);
+    brazo.rotation.z = Math.PI / 2;
+    brazo.position.set(lado * 0.6, -0.05, 0);
+    g.add(brazo);
+    const panel = caja(0.75, 0.05, 0.45, 0x2f5fb3);
+    panel.position.set(lado * 1.2, -0.05, 0);
+    panel.rotation.x = 0.4 * lado;
+    g.add(panel);
+  }
+  const boom = cilindro(0.02, 0.02, 1.4, 0xcccccc, 4, false); // brazo del magnetómetro
+  boom.rotation.set(0.6, 0, 0.9);
+  boom.position.set(-0.4, -0.45, 0.3);
+  g.add(boom);
+  const luz = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3b3b }));
+  luz.position.set(0.3, 0.3, 0.36);
+  g.add(luz);
+  return t => {
+    luz.visible = (t * 1.3) % 1 < 0.25;
+    g.rotation.z = Math.sin(t * 0.6) * 0.25;
+  };
+}
+
+// Meteorito: roca oscura con costra de fusión y vetas de metal que todavía brillan por el calor.
+function meteorito(g) {
+  const roca = new THREE.Mesh(new THREE.DodecahedronGeometry(0.55, 0), toon(0x3b302a));
+  roca.scale.set(1.15, 0.85, 1);
+  g.add(roca);
+  const contorno = new THREE.Mesh(roca.geometry, new THREE.MeshBasicMaterial({ color: TINTA, side: THREE.BackSide }));
+  contorno.scale.setScalar(1.08);
+  roca.add(contorno);
+  const vetas = [];
+  for (let i = 0; i < 6; i++) {
+    const v = new THREE.Mesh(new THREE.TetrahedronGeometry(0.14), brillante(0xffb070, 0xff5a1f, 1.1));
+    const d = new THREE.Vector3().randomDirection().multiplyScalar(0.5);
+    v.position.copy(d);
+    v.rotation.set(Math.random() * 6, Math.random() * 6, 0);
+    roca.add(v);
+    vetas.push(v);
+  }
+  return t => { vetas.forEach((v, i) => { v.material.emissiveIntensity = 0.7 + Math.sin(t * 3 + i) * 0.4; }); };
+}
+
+const MODELOS = { "Sonda perdida": sonda, "Meteorito": meteorito, "Chatarra espacial": chatarra, "Hielo": hielo, "Mineral raro": mineral, "Cristal lunar": cristal, "Muestra biológica": muestra };
 
 // Crea el objeto. El grupo raíz lo coloca quien llama; dentro, el cuerpo flota y gira solo.
 export function crearObjeto(dato) {

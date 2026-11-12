@@ -48,7 +48,8 @@ window.T = (() => {
   }
   function volarHacia(segundos) {
     const e = j.espacio; j.jugador.teclas.KeyW = true;
-    if (e.lluvia) e.iniciarLluvia(false); // sin meteoritos al azar: capturas repetibles
+    if (e.lluvia) e.iniciarLluvia(false); // sin meteoritos ni eventos al azar: capturas repetibles
+    j.eventosEsp.limpiar();
     j.estado.combustible = Math.max(j.estado.combustible, j.estado.mision.ida + 60); // margen para no quedarse sin reserva
     for (let n = 0; n < segundos / 0.05 && j.modo === "espacio"; n++) {
       ocultar();
@@ -66,7 +67,7 @@ window.T = (() => {
       j.avanzar(0.05);
     }
   }
-  async function aterrizar() { bajarHasta(-1); j.jugador.teclas.KeyW = false; await pausa(1300); ocultar(); j.avanzar(0.3); }
+  async function aterrizar() { bajarHasta(-1); j.jugador.teclas.KeyW = false; await pausa(1300); ocultar(); j.eventosSuelo.limpiar(); j.avanzar(0.3); }
   return { j, ocultar, pausa, despegar, volarHacia, bajarHasta, aterrizar };
 })(); "ok";`;
 

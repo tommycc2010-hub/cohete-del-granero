@@ -68,6 +68,9 @@ const EFECTOS = {
   telefono: () => tono(740, 0.07, "sine", 0.14, 980),
   aterrizar: () => tono(220, 0.7, "sawtooth", 0.16, 55),
   senal: () => [1200, 1200, 1600].forEach((f, i) => tono(f, 0.14, "sine", 0.16, null, i * 0.2)),
+  temblor: () => { tono(48, 1.4, "sawtooth", 0.2, 28); tono(62, 1.0, "square", 0.08, 35, 0.3); },
+  impacto: () => { tono(90, 0.9, "sawtooth", 0.26, 30); tono(1400, 0.3, "sine", 0.1, 200); },
+  eco: () => [0, 0.9, 1.8].forEach(d => tono(1046, 0.18, "sine", 0.14, 980, d)),
   final: () => [261.6, 329.6, 392, 523.3, 659.3].forEach((f, i) => tono(f, 5, "sine", 0.1, null, i * 0.5)),
 };
 

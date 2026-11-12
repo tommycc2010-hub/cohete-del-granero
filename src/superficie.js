@@ -193,24 +193,7 @@ export function crearSuperficie() {
     // ----- Objetos: los más valiosos quedan más lejos del cohete -----
     objetos = campo.map((dato, i) => {
       const a = Math.random() * Math.PI * 2, r = 16 + i * 9 + Math.random() * 7;
-      const x = Math.cos(a) * r, z = Math.sin(a) * r, y = altura(x, z);
-      const mesh = crearObjeto(dato);
-      mesh.scale.setScalar(0.75);
-      mesh.position.set(x, y + 1.0, z);
-      mundo.add(mesh);
-      const color = mesh.userData.rareza.color;
-      // Aura en el suelo y haz de luz del color de su rareza, para verlo desde lejos
-      const aura = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.25, 28),
-        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false }));
-      aura.rotation.x = -Math.PI / 2;
-      aura.position.set(x, y + 0.08, z);
-      mundo.add(aura);
-      const haz = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.25, 16, 8),
-        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3, fog: false, depthWrite: false }));
-      haz.position.set(x, y + 8.5, z);
-      mundo.add(haz);
-      haz.userData.aura = aura;
-      return { dato, mesh, haz };
+      return ponerObjeto(dato, Math.cos(a) * r, Math.sin(a) * r);
     });
 
     // ----- Europa: el origen de la señal, lejos del cohete -----
@@ -290,6 +273,28 @@ export function crearSuperficie() {
   }
 
   // Devuelve lo recogido en este paso y si el jugador pisa una zona peligrosa.
+  // Coloca un objeto recolectable con su aura en el suelo y un haz de luz del color de su rareza.
+  function ponerObjeto(dato, x, z) {
+    const y = altura(x, z);
+    const mesh = crearObjeto(dato);
+    mesh.scale.setScalar(0.75);
+    mesh.position.set(x, y + 1.0, z);
+    mundo.add(mesh);
+    const color = mesh.userData.rareza.color;
+    // Aura en el suelo y haz de luz del color de su rareza, para verlo desde lejos
+    const aura = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.25, 28),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false }));
+    aura.rotation.x = -Math.PI / 2;
+    aura.position.set(x, y + 0.08, z);
+    mundo.add(aura);
+    const haz = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.25, 16, 8),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3, fog: false, depthWrite: false }));
+    haz.position.set(x, y + 8.5, z);
+    mundo.add(haz);
+    haz.userData.aura = aura;
+    return { dato, mesh, haz };
+  }
+
   function actualizar(dt, pos) {
     t += dt;
     sol.position.set(pos.x + 14, pos.y + 22, pos.z + 12);
@@ -381,6 +386,12 @@ export function crearSuperficie() {
       }));
     },
     get gravedad() { return gravedad; },
+    // Para los eventos: añadir un objeto nuevo, efectos y piezas al mundo del planeta
+    agregarObjeto(dato, x, z) { const o = ponerObjeto(dato, x, z); objetos.push(o); return o; },
+    rafaga(x, y, z, opts) { rafagas.push(crearRafaga(mundo, x, y, z, opts)); },
+    agregar(obj) { mundo.add(obj); },
+    quitar(obj) { mundo.remove(obj); },
+    get destino() { return destino; },
     get piezas() { return piezas; },
     get mision() { return mision; },
     altura: (x, z) => altura(x, z),

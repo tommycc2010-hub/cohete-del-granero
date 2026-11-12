@@ -250,6 +250,20 @@ export function crearEspacio() {
   return {
     scene, camera, nave, iniciar, girar, actualizar, iniciarLluvia,
     get lluvia() { return rocas.length > 0; },
+    // Para los eventos
+    agregarObjeto(dato, pos) {
+      const mesh = crearObjeto(dato);
+      mesh.scale.setScalar(1.5);
+      mesh.position.copy(pos);
+      mundo.add(mesh);
+      const o = { dato, mesh };
+      objetos.push(o);
+      return o;
+    },
+    empujar(v) { vel.add(v); },
+    sacudir(s) { sacudida = Math.max(sacudida, s); },
+    dirSol: sol.position.clone().normalize(),
+    get t() { return t; },
     get objetos() { return objetos; },
     get pista() { return pista; },
   };

@@ -292,6 +292,8 @@ export function recolectar(o) {
   m.carga.push(o);
   m.hecho++;
   if (o.nombre === "Muestra biológica") desbloquearLogro("legendario");
+  if (o.nombre === "Sonda perdida") desbloquearLogro("sonda");
+  if (o.nombre === "Meteorito") desbloquearLogro("meteorito");
   const t = msg(`Recogiste ${o.nombre} (valor ${o.valor}).`);
   cambio();
   return t;
@@ -414,6 +416,10 @@ export const LOGROS = {
   refugio:    { icono: "☀️", titulo: "A salvo de la tormenta", desc: "Pasa una tormenta solar dentro del cohete." },
   explorador: { icono: "🗺️", titulo: "Explorador", desc: "Visita los cinco destinos." },
   vecino:     { icono: "🤝", titulo: "Vecino del año", desc: "Cumple los cuatro encargos del pueblo." },
+  sonda:      { icono: "🛰️", titulo: "Arqueología espacial", desc: "Recupera una sonda perdida a la deriva." },
+  cometa:     { icono: "🌠", titulo: "Cazador de cometas", desc: "Atrapa hielo de la cola de un cometa." },
+  fuga:       { icono: "🧯", titulo: "Mecánico en órbita", desc: "Sella una fuga de combustible en pleno vuelo." },
+  meteorito:  { icono: "🌑", titulo: "Caído del cielo", desc: "Recoge un meteorito recién caído." },
   contacto:   { icono: "🛸", titulo: "No estamos solos", desc: "Encuentra el origen de la señal de Europa." },
 };
 export const logrosNuevos = []; // la pantalla los muestra y vacía la lista

@@ -142,5 +142,11 @@ export function crearMenu(raiz, avisos) {
     opciones,
     get enJuego() { return enJuego; },
     refrescar: pintar,
+    // La calidad automática la baja si el juego va lento; queda guardada como si la eligiera el jugador.
+    cambiarCalidad(c) {
+      opciones.calidad = c;
+      guardarOpciones(opciones);
+      avisos.alCambiarOpciones(opciones);
+    },
   };
 }
