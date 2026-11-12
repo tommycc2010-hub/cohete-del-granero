@@ -108,7 +108,7 @@ export function crearGranero(scene, mejoras) {
     h.castShadow = true;
     poner(h, 0, 5, z);
   });
-  poner(etiqueta("MI GRANERO", { fondo: "#fff6e5", ancho: 4 }), 0, 5.9, Z0 + 5.4);
+  poner(etiqueta("MI GRANERO", { fondo: "#fff6e5", ancho: 4 }), 0, 5.75, Z0 + 5.65);
 
   // ----- Cohete averiado dentro del granero -----
   const baseCohete = new THREE.Group();

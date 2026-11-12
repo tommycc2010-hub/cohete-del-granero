@@ -1,10 +1,34 @@
 // Villa Siderense: un pueblo pequeño al que se llega caminando desde el granero.
 import * as THREE from "three";
-import { caja, cilindro, cono, esfera, etiqueta } from "./estilo.js";
+import { caja, cilindro, cono, esfera, etiqueta, toon, cuerda } from "./estilo.js";
 import { crearPersona } from "./cientifico.js";
 import { crearObjeto } from "./objetos.js";
 import { crearParticulas } from "./particulas.js";
 import { PIEZAS_MUSEO } from "./reglas.js";
+
+// Sombrilla a gajos de dos colores (colores por cara: sin piezas superpuestas que parpadeen)
+function sombrilla(color) {
+  const geo = new THREE.ConeGeometry(1.5, 0.6, 8, 1, true).toNonIndexed();
+  const pos = geo.attributes.position, colores = [], a = new THREE.Color(color), b = new THREE.Color(0xffffff);
+  for (let i = 0; i < pos.count; i += 3) {
+    const cx = (pos.getX(i) + pos.getX(i + 1) + pos.getX(i + 2)) / 3, cz = (pos.getZ(i) + pos.getZ(i + 1) + pos.getZ(i + 2)) / 3;
+    const gajo = Math.floor(((Math.atan2(cz, cx) + Math.PI) / (Math.PI * 2)) * 8) % 2;
+    const c = gajo ? a : b;
+    for (let k = 0; k < 3; k++) colores.push(c.r, c.g, c.b);
+  }
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(colores, 3));
+  geo.computeVertexNormals();
+  const mat = toon(0xffffff);
+  mat.vertexColors = true;
+  mat.side = THREE.DoubleSide;
+  const m = new THREE.Mesh(geo, mat);
+  m.castShadow = true;
+  const borde = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.03, 4, 8), new THREE.MeshBasicMaterial({ color: 0x1d1d1d }));
+  borde.rotation.x = Math.PI / 2;
+  borde.position.y = -0.3;
+  m.add(borde);
+  return m;
+}
 
 const brilla = (m, color, fuerza = 1.4) => { m.material.emissive = new THREE.Color(color); m.material.emissiveIntensity = fuerza; return m; };
 
@@ -104,12 +128,17 @@ export function crearPueblo({ cx, cz, poner, col, interactuables }) {
   // ----- Banderines entre los faroles -----
   const COLORES = [0xe5483b, 0xffd23f, 0x4aa3e8, 0x5cc46b, 0xe28bff];
   const banderines = [];
+  const altoCuerda = f => 3.05 - Math.sin(f * Math.PI) * 0.7;
   [[-8, -8, 8, -8], [8, -8, 8, 8], [8, 8, -8, 8], [-8, 8, -8, -8]].forEach(([x0, z0, x1, z1]) => {
+    const puntos = [];
+    for (let i = 0; i <= 10; i++) { const f = i / 10; puntos.push(new THREE.Vector3(cx + x0 + (x1 - x0) * f, altoCuerda(f), cz + z0 + (z1 - z0) * f)); }
+    poner(cuerda(puntos, 0.02, 0xfff6e5), 0, 0, 0);
     for (let i = 1; i < 10; i++) {
       const f = i / 10;
       const b = cono(0.15, 0.3, COLORES[i % 5], 3, false);
       b.rotation.x = Math.PI;
-      P(b, x0 + (x1 - x0) * f, 2.95 - Math.sin(f * Math.PI) * 0.7, z0 + (z1 - z0) * f);
+      b.geometry.translate(0, 0.15, 0); // gira desde la cuerda, no desde el centro
+      P(b, x0 + (x1 - x0) * f, altoCuerda(f) - 0.02, z0 + (z1 - z0) * f);
       banderines.push(b);
     }
   });
@@ -120,29 +149,43 @@ export function crearPueblo({ cx, cz, poner, col, interactuables }) {
   const ux = -26, uz = 20;
   P(caja(6, 0.4, 10.4, 0xd9d2c4), ux, 0.2, uz);                   // escalinata
   P(caja(5.4, 4.2, 9.6, 0xf3ecdc), ux - 0.4, 2.5, uz);             // edificio
-  P(caja(6.2, 0.5, 10.6, 0xe0d6c0), ux, 4.85, uz);                 // cornisa
-  const fronton = cono(3.9, 1.6, 0xc93a2e, 4);
-  fronton.scale.set(0.85, 1, 1.6);
-  fronton.rotation.y = Math.PI / 4;
-  P(fronton, ux, 5.9, uz);
+  P(caja(6.4, 0.5, 10.8, 0xe0d6c0), ux, 4.85, uz);                 // cornisa
+  {
+    const ala = Math.hypot(5.5, 1.7), angulo = Math.atan2(1.7, 5.5);
+    for (const lado of [-1, 1]) { // tejado a dos aguas; la cumbrera va de delante hacia atrás
+      const t = caja(6.6, 0.25, ala + 0.2, 0xc93a2e);
+      t.rotation.x = lado * angulo;
+      P(t, ux, 5.1 + 0.85, uz + lado * 2.75);
+    }
+    const tri = new THREE.Shape();
+    tri.moveTo(-5.4, 0); tri.lineTo(5.4, 0); tri.lineTo(0, 1.65); tri.closePath();
+    const geo = new THREE.ExtrudeGeometry(tri, { depth: 6.2, bevelEnabled: false });
+    geo.translate(0, 0, -3.1);
+    const fronton = new THREE.Mesh(geo, toon(0xf3ecdc));
+    fronton.rotation.y = Math.PI / 2;
+    fronton.castShadow = true;
+    P(fronton, ux, 5.1, uz);
+    const circulo = esfera(0.4, 0xd9a441, 10); // rosetón dorado en el frontón
+    circulo.scale.x = 0.3;
+    P(circulo, ux + 3.12, 5.65, uz);
+  }
   for (let i = 0; i < 5; i++) P(cilindro(0.28, 0.32, 4.1, 0xffffff, 10), ux + 2.6, 2.45, uz - 4 + i * 2); // columnas
   P(caja(0.15, 2.4, 1.8, MADERA_OSC), ux + 2.36, 1.6, uz);       // puerta
-  P(etiqueta("MUSEO DEL ESPACIO", { fondo: "#fff6e5", ancho: 4.6 }), ux + 3, 6.2, uz);
+  P(etiqueta("MUSEO DEL ESPACIO", { fondo: "#fff6e5", ancho: 4.6 }), ux + 4.6, 4.2, uz);
   C(ux, uz, 6, 10.4);
   const vitrinas = PIEZAS_MUSEO.map((nombre, i) => {
     const vz = uz - 5.4 + i * 1.8, vx = ux + 6.4;
-    P(cilindro(0.42, 0.5, 1, 0xfff6e5, 10), vx, 0.5, vz);
-    P(cilindro(0.5, 0.5, 0.1, 0xd9a441, 10), vx, 1.03, vz);
+    P(caja(0.8, 0.12, 0.8, 0xe0d6c0), vx, 0.06, vz);
+    P(caja(0.62, 0.9, 0.62, 0xfff6e5), vx, 0.57, vz);
+    P(caja(0.78, 0.1, 0.78, 0xd9a441), vx, 1.07, vz);
     const pieza = crearObjeto({ nombre });
     pieza.scale.setScalar(0.42);
     pieza.visible = false;
-    P(pieza, vx, 1.45, vz);
-    const vacio = esfera(0.16, 0x666666, 6, false);
-    vacio.material.transparent = true;
-    vacio.material.opacity = 0.35;
-    P(vacio, vx, 1.3, vz);
+    P(pieza, vx, 1.5, vz);
+    const placa = caja(0.03, 0.2, 0.42, 0x8a8a8a, false); // placa: gris si falta la pieza, del color de su rareza si está
+    P(placa, vx + 0.33, 0.7, vz);
     C(vx, vz, 0.9, 0.9);
-    return { nombre, pieza, vacio };
+    return { nombre, pieza, placa, color: pieza.userData.rareza.color };
   });
   let tm = 0;
   anim.push(dt => { tm += dt; vitrinas.forEach(v => { if (v.pieza.visible) v.pieza.userData.animar(tm); }); });
@@ -172,12 +215,12 @@ export function crearPueblo({ cx, cz, poner, col, interactuables }) {
     P(cilindro(0.6, 0.6, 0.08, 0xffffff, 10), x, 0.8, z);
     P(cilindro(0.06, 0.06, 0.8, 0x555555, 6), x, 0.4, z);
     P(cilindro(0.04, 0.04, 2.2, 0x555555, 6), x, 1.6, z);
-    const sombrilla = cono(1.5, 0.6, color, 8);
-    P(sombrilla, x, 2.75, z);
-    P(cono(1.52, 0.6, 0xffffff, 8, false), x, 2.73, z).rotation.y = Math.PI / 8; // gajos blancos
+    P(sombrilla(color), x, 2.75, z);
     [[-0.9, 0], [0.9, 0]].forEach(([dx, dz]) => {
+      const s = Math.sign(dx);
       P(caja(0.45, 0.08, 0.45, MADERA), x + dx, 0.5, z + dz);
-      P(caja(0.08, 0.5, 0.45, MADERA_OSC), x + dx * 1.25, 0.75, z + dz);
+      P(caja(0.07, 0.5, 0.45, MADERA_OSC), x + dx + s * 0.2, 0.78, z + dz);
+      P(cilindro(0.03, 0.03, 0.46, 0x555555, 5, false), x + dx, 0.23, z + dz);
     });
     C(x, z, 2.4, 1.2);
   });
@@ -223,7 +266,7 @@ export function crearPueblo({ cx, cz, poner, col, interactuables }) {
 
   return {
     // Muestra en el museo las piezas donadas
-    mostrarMuseo(museo) { vitrinas.forEach(v => { v.pieza.visible = !!museo[v.nombre]; v.vacio.visible = !museo[v.nombre]; }); },
+    mostrarMuseo(museo) { vitrinas.forEach(v => { v.pieza.visible = !!museo[v.nombre]; v.placa.material.color.set(museo[v.nombre] ? v.color : 0x8a8a8a); }); },
     actualizar(dt, pos) {
       anim.forEach(f => f(dt));
       personas.forEach(p => {

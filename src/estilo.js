@@ -42,6 +42,23 @@ export function esfera(r, color, seg = 12, contorno = true) {
   return malla(new THREE.SphereGeometry(r, seg, filas), color, contorno && new THREE.SphereGeometry(r + T / 2, seg, filas));
 }
 
+// Palo (cilindro) que va de un punto `a` a otro `b`: patas, cables, tirantes…
+const ARRIBA = new THREE.Vector3(0, 1, 0);
+export function palo(a, b, r, color, contorno = true) {
+  const dir = new THREE.Vector3().subVectors(b, a);
+  const m = cilindro(r, r, dir.length(), color, 6, contorno);
+  m.position.copy(a).add(b).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(ARRIBA, dir.normalize());
+  return m;
+}
+
+// Cuerda que une varios puntos con tramos rectos (guirnaldas, banderines)
+export function cuerda(puntos, r = 0.018, color = 0x2a2a2a) {
+  const g = new THREE.Group();
+  for (let i = 0; i < puntos.length - 1; i++) g.add(palo(puntos[i], puntos[i + 1], r, color, false));
+  return g;
+}
+
 // Cartel con texto que siempre mira a la cámara.
 export function etiqueta(texto, { fondo = "#ffd23f", ancho = 2.4 } = {}) {
   const c = document.createElement("canvas");
@@ -52,7 +69,8 @@ export function etiqueta(texto, { fondo = "#ffd23f", ancho = 2.4 } = {}) {
   g.lineWidth = 10;
   g.beginPath(); g.roundRect(8, 8, 496, 112, 28); g.fill(); g.stroke();
   g.fillStyle = "#1d1d1d";
-  g.font = "bold 56px Trebuchet MS, sans-serif";
+  let tam = 56; // el texto largo se achica para que no se corte
+  do { g.font = `bold ${tam}px Trebuchet MS, sans-serif`; tam -= 2; } while (g.measureText(texto).width > 450 && tam > 24);
   g.textAlign = "center"; g.textBaseline = "middle";
   g.fillText(texto, 256, 68);
   const tex = new THREE.CanvasTexture(c);
