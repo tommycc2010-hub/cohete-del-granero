@@ -155,6 +155,24 @@
   #inicio .tarjeta { padding: 24px 28px; max-width: 470px; text-align: center; }
   #inicio h1 { margin: 0 0 8px; font-size: 30px; }
   #inicio p { margin: 6px 0; }
+  #partida { margin-top: 12px; padding-top: 10px; border-top: 2px dashed rgba(29, 29, 29, .3); font-size: 14px; }
+  #nueva-partida { font: inherit; font-size: 13px; font-weight: bold; margin-top: 6px; padding: 5px 10px; cursor: pointer;
+    background: #fff; color: var(--ink); border: 2px solid var(--ink); border-radius: 10px; }
+  #nueva-partida[data-confirmar] { background: var(--red); }
+
+  /* ----- Reporte de misión ----- */
+  #informe { position: fixed; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center;
+    padding: 16px; background: rgba(20, 30, 50, .4); cursor: pointer; }
+  #informe.visible { display: flex; }
+  #informe .tarjeta { width: min(520px, 100%); padding: 18px 20px; }
+  #informe h2 { margin: 0; font-size: 24px; }
+  .inf-destino { margin: 2px 0 12px; font-weight: bold; opacity: .7; }
+  .inf-fila { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 2px solid rgba(29, 29, 29, .12); }
+  .inf-fila b { text-align: right; }
+  .inf-leccion { margin-top: 12px; padding: 10px 12px; line-height: 1.4; background: #e9f4ff; border: 3px solid var(--ink); border-radius: 12px; }
+  .inf-leccion b { display: block; margin-bottom: 4px; color: #1c6fb5; }
+  .inf-cerrar { margin: 10px 0 0; text-align: right; font-size: 13px; font-weight: bold; opacity: .8; }
+
   #inicio .boton { display: inline-block; margin-top: 12px; padding: 10px 18px; font-weight: bold;
     background: var(--yellow); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); }
 </style>
@@ -236,6 +254,7 @@
   </div>
 </div>
 
+<div id="informe"><div class="tarjeta" id="informe-cuerpo"></div></div>
 <div id="fundido"></div>
 <div id="telefono"><div class="tel-pantalla"></div></div>
 
@@ -246,6 +265,10 @@
     <p><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> caminar · <kbd>Espacio</kbd> saltar · <kbd>Shift</kbd> correr · <kbd>E</kbd> usar</p>
     <p><kbd>Tab</kbd> teléfono · <kbd>M</kbd> sonido · <kbd>Esc</kbd> pausa</p>
     <div class="boton">Haz clic para jugar</div>
+    <div id="partida" style="display:none">
+      <div id="partida-info"></div>
+      <button id="nueva-partida" type="button">Empezar una partida nueva</button>
+    </div>
   </div>
 </div>
 

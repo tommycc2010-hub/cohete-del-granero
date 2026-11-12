@@ -169,6 +169,13 @@ Juego 3D en primera persona con estilo tipo Schedule I: modelos low-poly, colore
 
 **Línea de corte:** si el viernes en la noche no está todo, se recortan primero las misiones secundarias, el escáner espectral y las animaciones de vecinos.
 
+## Fase 3: de miércoles a viernes
+1. ✅ **Hecho.** Guardado automático en el navegador y botón de partida nueva.
+2. ✅ **Hecho.** Reporte de misión al volver de cada viaje, con la lección del Dr. Nova.
+3. Sistema de energía para la nave.
+4. Ventanas de lanzamiento y retraso de las comunicaciones.
+5. Capturas y video demo.
+
 ## Otras ideas si sobra tiempo
 - Eventos aleatorios: tormenta solar, fallo de componente, fuga de combustible.
 - Ventanas de lanzamiento y retraso de comunicaciones.

@@ -8,13 +8,15 @@ import { crearManos } from "./manos.js";
 import { crearTelefono } from "./telefono.js";
 import { crearTutorial } from "./tutorial.js";
 import { sonido } from "./sonido.js";
-import { consejos, NOMBRE, TEXTO_CONFIANZA } from "./cientifico.js";
+import { consejos, NOMBRE, TEXTO_CONFIANZA, yaPresentado, marcarPresentado } from "./cientifico.js";
+import { guardar, cargar, borrar } from "./guardado.js";
+import { crearInforme, htmlInforme } from "./informe.js";
 import { DATOS_PLANETAS } from "./datos.js";
 import {
   estado, capacidad, comprarCombustible, vender, suscribir, regresar,
   generarCampo, consumoImpulso, alcanceSensor, gastar, recolectar, detectarSenal,
   oxigenoMax, resistenciaTraje, desgasteTraje, puedeAterrizar, aterrizar, perderRecolectado,
-  BONO_PUEBLO, VALOR_ORBITA, FUGA_POR_SEGUNDO, completarMision,
+  BONO_PUEBLO, VALOR_ORBITA, FUGA_POR_SEGUNDO, completarMision, exportarEstado, importarEstado, factorMasa,
 } from "./reglas.js";
 
 // ----- Render -----
@@ -99,7 +101,34 @@ function fundido(fn) {
 addEventListener("pointerdown", () => sonido.iniciar(), { once: true });
 addEventListener("keydown", () => sonido.iniciar(), { once: true });
 
-const tutorial = crearTutorial($("objetivo"));
+const tutorial = crearTutorial($("objetivo"), () => guardarPartida());
+const informe = crearInforme();
+
+// ----- Guardado automático: solo en casa, nunca en plena misión -----
+let cargando = false;
+function guardarPartida() {
+  if (cargando || estado.mision) return;
+  guardar({ estado: exportarEstado(), tutorial: tutorial.hechos(), presentado: yaPresentado() });
+}
+const partida = cargar();
+if (partida) {
+  cargando = true;
+  importarEstado(partida.estado);
+  tutorial.restaurar(partida.tutorial);
+  marcarPresentado(partida.presentado);
+  cargando = false;
+  const hechas = Object.keys(estado.misiones).length;
+  $("partida-info").textContent = `Partida guardada: ${estado.dinero} 💰 · ${hechas}/5 misiones`;
+  $("partida").style.display = "";
+}
+// "Nueva partida" pide confirmar con un segundo clic (sin ventanas del navegador).
+$("nueva-partida").addEventListener("click", e => {
+  e.stopPropagation();
+  const b = e.currentTarget;
+  if (b.dataset.confirmar) { borrar(); location.reload(); return; }
+  b.dataset.confirmar = "1";
+  b.textContent = "¿Seguro? Se borra el progreso · clic otra vez";
+});
 
 // ----- HUD del granero -----
 function pintarHud() {
@@ -112,6 +141,7 @@ function pintarHud() {
 let firmaMejoras = JSON.stringify(estado.mejoras);
 suscribir(() => {
   pintarHud();
+  guardarPartida();
   const firma = JSON.stringify(estado.mejoras);
   if (firma !== firmaMejoras) {
     firmaMejoras = firma;
@@ -188,6 +218,10 @@ const telefono = crearTelefono({
 });
 
 addEventListener("keydown", e => {
+  if (reporteAbierto) {
+    if (["KeyE", "Enter", "Escape", "Space"].includes(e.code) && !e.repeat) { e.preventDefault(); cerrarReporte(); }
+    return;
+  }
   if (e.code === "Tab") {
     e.preventDefault();
     if (!e.repeat && modo === "granero") telefono.alternar();
@@ -241,7 +275,7 @@ function interactuar() {
   else if (c.id === "mercado") venderCarga(BONO_PUEBLO);
   else if (c.id === "taller") telefono.abrir("taller");
   else if (c.id === "cohete") telefono.abrir("mapa");
-  else if (c.id === "cientifico") { hablar(NOMBRE, consejos(), c.x, c.z); tutorial.marcar("hablo"); }
+  else if (c.id === "cientifico") { hablar(NOMBRE, consejos(), c.x, c.z); tutorial.marcar("hablo"); guardarPartida(); }
   else if (c.id === "vecino") hablar(c.nombre, c.lineas.map(texto => ({ texto })), c.x, c.z);
   else if (c.id === "despegar") usarCohete();
   else if (c.id === "mision") usarMision(c.clave);
@@ -254,6 +288,11 @@ function despegar() {
   cerrarDialogo();
   soltarCercano();
   granero.iniciarDespegue(estado.mejoras);
+  const m = estado.mision;
+  informe.empezar({
+    dest: m.dest, combustible: estado.combustible + m.ida, capacidad: capacidad(), ida: m.ida,
+    masa: factorMasa(), misionHecha: !!estado.misiones[m.dest],
+  });
   camera.position.set(11, 1.6, 17);
   ponerModo("despegue");
   tutorial.marcar("despego");
@@ -289,7 +328,7 @@ function volar(dt) {
   let impulso = (k.KeyW ? 1 : 0) - (k.KeyS ? 1 : 0);
   if (estado.combustible <= 0) impulso = 0;
   const r = espacio.actualizar(dt, impulso);
-  if (impulso) gastar(consumoImpulso() * dt);
+  if (impulso) { gastar(consumoImpulso() * dt); informe.gasto("orbita", consumoImpulso() * dt); }
   sonido.motor(impulso > 0 ? 0.6 : 0);
   r.recogidos.forEach(o => { aviso(recolectar(o)); sonido.reproducir("recoger"); });
   if (r.enLimite) aviso("Te alejas demasiado. Vuelve hacia el planeta.");
@@ -405,7 +444,7 @@ function pasoDescenso(dt) {
   const k = jugador.teclas;
   const empuje = !!(k.KeyW || k.Space || k.ArrowUp) && estado.combustible > 0;
   let a = -desc.g - desc.arrastre * desc.v * Math.abs(desc.v); // gravedad y freno de la atmósfera
-  if (empuje) { a += 2.5 * desc.g + 3; gastar(consumoImpulso() * 1.2 * dt); }
+  if (empuje) { a += 2.5 * desc.g + 3; gastar(consumoImpulso() * 1.2 * dt); informe.gasto("descenso", consumoImpulso() * 1.2 * dt); }
   desc.v += a * dt;
   desc.h += desc.v * dt;
   if (desc.h > 220) { desc.h = 220; desc.v = Math.min(0, desc.v); }
@@ -437,6 +476,7 @@ function tocarSuelo(vel) {
   piezasNecesarias = (averias.pata ? 2 : 0) + (averias.fuga || averias.antena ? 1 : 0);
   piezasEnMano = 0;
   superficie.ponerPiezas(piezasNecesarias);
+  informe.aterrizaje(vel, Object.keys(averias));
   superficie.inclinar(!!averias.pata);
   sonido.reproducir(piezasNecesarias ? "dano" : "aterrizar");
   aterrizar();
@@ -519,7 +559,7 @@ function pasoSuperficie(dt) {
     aviso(`🔧 Pieza de repuesto ${piezasEnMano}/${piezasNecesarias}.${piezasEnMano >= piezasNecesarias ? " Vuelve al cohete para reparar." : ""}`);
     sonido.reproducir("recoger");
   }
-  if (averias.fuga) gastar(FUGA_POR_SEGUNDO * dt); // el tanque pierde combustible hasta que se repare
+  if (averias.fuga) { gastar(FUGA_POR_SEGUNDO * dt); informe.gasto("fuga", FUGA_POR_SEGUNDO * dt); } // pierde combustible hasta repararla
   const mi = superficie.mision, rm = r.mision;
   jugador.mov.sinCorrer = !!rm.sinCorrer;
   superficie.interactuables[0].texto = textoCohete();
@@ -532,6 +572,7 @@ function pasoSuperficie(dt) {
     const dano = desgasteTraje(m.dest) + ((r.enPeligro ? 16 : 0) + rm.dano) / resistenciaTraje();
     traje = Math.max(0, traje - dano * dt);
     oxi -= dt * (jugador.mov.corriendo ? 1.6 : 1) * (traje <= 0 ? 4 : 1); // correr y el traje roto gastan más
+    informe.suelo(traje, Math.max(0, oxi) / oxigenoMax());
   }
 
   esperaPeligro -= dt;
@@ -593,6 +634,7 @@ function desmayo() {
   ponerModo("transicion");
   sonido.reproducir("error");
   const texto = perderRecolectado(cargaSegura);
+  informe.desmayo();
   fundido(() => {
     jugador.colocar(superficie, 2.4, 4, 12, 30);
     oxi = oxigenoMax() * 0.5;
@@ -658,6 +700,7 @@ function pasoFinal(dt) {
 $("final-seguir").addEventListener("click", () => {
   if (modo !== "final") return;
   $("tarjeta-final").classList.remove("visible");
+  informe.cancelar();
   ponerModo("transicion");
   jugador.controls.lock();
   const texto = regresar();
@@ -678,7 +721,14 @@ function volver() {
   const desdeSuelo = modo === "superficie";
   ponerModo("transicion");
   if (desdeSuelo) sonido.motor(1);
+  const m = estado.mision, cargaAntes = estado.carga.length, llevaba = m.carga.length;
+  const rescate = estado.combustible < m.ida;
   const texto = regresar();
+  const traidos = estado.carga.slice(cargaAntes);
+  const datos = informe.terminar({
+    combustibleFinal: estado.combustible, rescate, traidos,
+    perdidos: rescate ? 0 : llevaba - traidos.length, misionHecha: !!estado.misiones[m.dest],
+  });
   fundido(() => {
     limpiarMision();
     soltarCercano();
@@ -686,12 +736,29 @@ function volver() {
     ponerModo("granero");
     aviso(texto);
     if (desdeSuelo) tutorial.marcar("regreso");
+    if (datos) abrirReporte(datos);
   });
 }
 
+// ----- Reporte de misión -----
+let reporteAbierto = false;
+function abrirReporte(datos) {
+  $("informe-cuerpo").innerHTML = htmlInforme(datos);
+  $("informe").classList.add("visible");
+  reporteAbierto = true;
+}
+function cerrarReporte() {
+  $("informe").classList.remove("visible");
+  reporteAbierto = false;
+}
+$("informe").addEventListener("click", cerrarReporte);
+
 // ----- Bucle -----
 function paso(dt) {
-  if (modo === "granero") {
+  if (["espacio", "descenso", "superficie"].includes(modo) && !pausado()) informe.tiempo(dt);
+  if (modo === "granero" && reporteAbierto) {
+    granero.actualizar(dt, estado.mejoras.motor === 0, camera.position);
+  } else if (modo === "granero") {
     jugador.actualizar(dt);
     buscarCercano();
     granero.actualizar(dt, estado.mejoras.motor === 0, camera.position);
@@ -756,6 +823,7 @@ renderer.setAnimationLoop(bucle);
 window.__juego = {
   camera, jugador, granero, espacio, superficie, estado, telefono, interactuar, despegar, volver,
   get modo() { return modo; },
+  get reporteAbierto() { return reporteAbierto; },
   get suelo() { return { oxi, traje, cargaSegura, averias, piezasNecesarias, piezasEnMano }; },
   get desc() { return desc; },
   set suelo(v) { if (v.oxi !== undefined) oxi = v.oxi; if (v.traje !== undefined) traje = v.traje; },

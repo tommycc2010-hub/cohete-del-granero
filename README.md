@@ -53,6 +53,9 @@ Los datos de los planetas están en [`src/datos.js`](src/datos.js). Son conocimi
 3. **Aterrizas a mano**, frenando contra la gravedad. Si tocas el suelo rápido, el cohete se avería y hay que buscar piezas para repararlo.
 4. **Exploras a pie** con oxígeno y traje limitados. El cohete recarga el oxígeno; las zonas peligrosas dañan el traje.
 5. **Cumples la misión** del lugar, recoges muestras y vuelves a casa a venderlas. En el pueblo, Villa Siderense, el mercado paga un 20 % más.
+6. **Lees el reporte de misión:** combustible gastado en cada fase, cómo fue el aterrizaje, qué trajiste y la lección del viaje, es decir, el trade-off que más pesó.
+
+La partida se guarda sola en el navegador cada vez que estás en el granero.
 
 ### Controles
 
@@ -93,6 +96,8 @@ src/
   manos.js        brazos y escáner en primera persona
   cientifico.js   personajes y consejos del Dr. Nova
   telefono.js     menú del teléfono
+  informe.js      reporte de misión y lección de cada viaje
+  guardado.js     guardado automático de la partida
   cohete.js, estilo.js, terreno.js, ruido.js, sonido.js, tutorial.js
 herramientas/simular.mjs   simulador de balance
 electron/main.cjs          app de escritorio
@@ -119,7 +124,6 @@ Cada cambio que se sube a la rama `main` se publica solo en GitHub Pages.
 - Cargar la base de datos oficial de la NASA en lugar de los valores de ejemplo.
 - Ventanas de lanzamiento y retraso de las comunicaciones según la distancia.
 - Un sistema de energía para la nave (paneles solares, baterías y generador de radioisótopos).
-- Guardar la partida.
 
 ## Uso de inteligencia artificial
 

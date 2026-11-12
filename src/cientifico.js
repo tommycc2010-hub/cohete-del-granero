@@ -128,6 +128,8 @@ export function crearCientifico(x, z) {
 // Devuelve las frases que dice según el estado de la partida.
 // `confianza` indica qué tan seguro está: los datos de un planeta se confirman al visitarlo.
 let presentado = false;
+export const yaPresentado = () => presentado;
+export function marcarPresentado(v) { presentado = !!v; }
 
 export function consejos() {
   const L = [];

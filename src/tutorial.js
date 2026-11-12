@@ -9,7 +9,7 @@ const PASOS = [
   { clave: "mejoro",   texto: "Compra una mejora en el TALLER" },
 ];
 
-export function crearTutorial(el) {
+export function crearTutorial(el, alCambiar = () => {}) {
   const hecho = {};
   let i = 0;
 
@@ -24,10 +24,19 @@ export function crearTutorial(el) {
     hecho[clave] = true;
     const antes = i;
     while (i < PASOS.length && hecho[PASOS[i].clave]) i++;
-    if (i !== antes) pintar();
+    if (i !== antes) { pintar(); alCambiar(); }
     return i !== antes;
   }
 
+  // Para guardar y cargar la partida.
+  const hechos = () => Object.keys(hecho);
+  function restaurar(lista) {
+    if (!Array.isArray(lista)) return;
+    lista.forEach(k => { if (PASOS.some(p => p.clave === k)) hecho[k] = true; });
+    while (i < PASOS.length && hecho[PASOS[i].clave]) i++;
+    pintar();
+  }
+
   pintar();
-  return { marcar };
+  return { marcar, hechos, restaurar };
 }

@@ -31,6 +31,37 @@ export const estado = {
   log: ["Bienvenido al granero. El cohete necesita reparaciones."],
 };
 
+// ----- Guardar y cargar -----
+const GUARDABLE = ["dinero", "combustible", "mejoras", "carga", "visitados", "misiones", "final", "log"];
+
+export function exportarEstado() {
+  return JSON.parse(JSON.stringify(Object.fromEntries(GUARDABLE.map(k => [k, estado[k]]))));
+}
+
+// Carga una partida guardada, ignorando cualquier valor con un tipo inesperado.
+export function importarEstado(d) {
+  const num = (x, def) => (typeof x === "number" && isFinite(x) && x >= 0 ? x : def);
+  estado.dinero = Math.round(num(d.dinero, estado.dinero));
+  estado.combustible = num(d.combustible, estado.combustible);
+  if (d.mejoras && typeof d.mejoras === "object") {
+    for (const k of Object.keys(estado.mejoras)) {
+      estado.mejoras[k] = Math.min(MEJORAS[k].max, Math.floor(num(d.mejoras[k], 0)));
+    }
+  }
+  if (Array.isArray(d.carga)) {
+    estado.carga = d.carga.filter(o => o && typeof o.nombre === "string" && typeof o.valor === "number")
+      .map(o => ({ nombre: o.nombre, valor: o.valor, color: String(o.color || "#ffffff") }));
+  }
+  for (const k of ["visitados", "misiones"]) {
+    if (d[k] && typeof d[k] === "object") estado[k] = Object.fromEntries(ORDEN.filter(id => d[k][id]).map(id => [id, true]));
+  }
+  estado.final = !!d.final;
+  if (Array.isArray(d.log)) estado.log = d.log.filter(t => typeof t === "string").slice(0, 6);
+  estado.combustible = Math.min(estado.combustible, capacidad());
+  estado.mision = null;
+  cambio();
+}
+
 const oyentes = [];
 export function suscribir(fn) { oyentes.push(fn); }
 function cambio() { oyentes.forEach(fn => fn(estado)); }
