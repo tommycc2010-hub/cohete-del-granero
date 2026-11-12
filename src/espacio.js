@@ -154,8 +154,39 @@ export function crearEspacio() {
   }
 
   // impulso: 1 acelera, -1 frena, 0 nada. Devuelve los objetos recogidos en este paso.
+  // ----- Lluvia de micrometeoritos: rocas que cruzan la ruta hacia la zona de aterrizaje -----
+  const rocas = [];
+  const geoRoca = new THREE.DodecahedronGeometry(1);
+  const matRoca = toon(0x7a6a5a);
+  let sacudida = 0;
+  function iniciarLluvia(activar) {
+    for (const r of rocas) mundo.remove(r.mesh);
+    rocas.length = 0;
+    if (!activar || !pista) return;
+    for (let i = 0; i < 36; i++) {
+      const base = pista.position.clone().multiplyScalar(0.15 + Math.random() * 0.75);
+      const m = new THREE.Mesh(geoRoca, matRoca);
+      m.add(new THREE.Mesh(geoRoca, matContorno));
+      m.children[0].scale.setScalar(1.12);
+      const s = 0.6 + Math.random() * 1.6;
+      m.scale.setScalar(s);
+      const vel = new THREE.Vector3(Math.random() - 0.5, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.3).normalize().multiplyScalar(5 + Math.random() * 9);
+      m.position.copy(base).addScaledVector(vel, (Math.random() - 0.5) * 6);
+      mundo.add(m);
+      rocas.push({ mesh: m, base, vel, radio: s + 1.5, espera: 0, giro: new THREE.Vector3(Math.random(), Math.random(), Math.random()) });
+    }
+  }
+
   function actualizar(dt, impulso) {
     t += dt;
+    let impactos = 0;
+    for (const r of rocas) {
+      r.mesh.position.addScaledVector(r.vel, dt);
+      r.mesh.rotation.x += r.giro.x * dt; r.mesh.rotation.y += r.giro.y * dt;
+      if (r.mesh.position.distanceTo(r.base) > 32) r.mesh.position.copy(r.base).addScaledVector(r.vel, -28 / r.vel.length());
+      r.espera = Math.max(0, r.espera - dt);
+      if (!r.espera && r.mesh.position.distanceTo(nave.position) < r.radio) { impactos++; r.espera = 2; sacudida = 0.5; }
+    }
     nave.rotation.set(pitch, yaw, 0);
     frente.set(0, 0, -1).applyQuaternion(nave.quaternion);
 
@@ -206,13 +237,19 @@ export function crearEspacio() {
     deseada.set(0, 4.2, 14).applyQuaternion(nave.quaternion).add(nave.position);
     camera.position.lerp(deseada, k);
     camera.quaternion.slerp(nave.quaternion, k);
+    if (sacudida > 0) { // un impacto sacude la cámara
+      sacudida = Math.max(0, sacudida - dt);
+      camera.position.x += (Math.random() - 0.5) * sacudida * 1.6;
+      camera.position.y += (Math.random() - 0.5) * sacudida * 1.6;
+    }
     estrellas.position.copy(camera.position);
 
-    return { recogidos, enLimite, enPista, velocidad: vel.length() };
+    return { recogidos, enLimite, enPista, impactos, velocidad: vel.length() };
   }
 
   return {
-    scene, camera, nave, iniciar, girar, actualizar,
+    scene, camera, nave, iniciar, girar, actualizar, iniciarLluvia,
+    get lluvia() { return rocas.length > 0; },
     get objetos() { return objetos; },
     get pista() { return pista; },
   };

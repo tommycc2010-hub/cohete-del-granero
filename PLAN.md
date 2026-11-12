@@ -177,6 +177,9 @@ Juego 3D en primera persona con estilo tipo Schedule I: modelos low-poly, colore
 4. ✅ **Hecho.** Calendario, ventanas de lanzamiento con recargo de combustible, esperar con mantenimiento y retraso real de la señal.
 5. ✅ **Hecho.** Capturas automáticas (`npm run capturas`), guion del video en `docs/guion-video.md` y modo demo (`?demo`). Falta grabar el video.
 
+6. ✅ **Hecho.** Tráiler narrado generado con el propio juego (`npm run trailer`).
+7. ✅ **Hecho.** Modelos propios para cada muestra, partículas y fenómenos en cada bioma.
+8. ✅ **Hecho.** Postprocesado (bloom y viñeteado), conversaciones con opciones, encargos del pueblo, 11 logros, lluvias de micrometeoritos y tormentas solares.
+
 ## Otras ideas si sobra tiempo
-- Eventos aleatorios: tormenta solar, fallo de componente, fuga de combustible.
-- Ventanas de lanzamiento y retraso de comunicaciones.
+- Más eventos aleatorios: fallo de componente, fuga de combustible.

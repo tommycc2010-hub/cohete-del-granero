@@ -2,7 +2,7 @@
 import {
   estado, MEJORAS, ORDEN, COSTO_EXPLORAR, capacidad, factorMasa, costoIda, costoMejora,
   desbloqueado, comprarMejora, iniciarMision, explorar, regresar, energiaMax, generacion, consumoSistemas,
-  ventana, retrasoSenal, esperar, COSTO_DIA,
+  ventana, retrasoSenal, esperar, COSTO_DIA, ENCARGOS, LOGROS, tieneParaEncargo,
 } from "./reglas.js";
 import { DATOS_PLANETAS, MISIONES } from "./datos.js";
 
@@ -11,6 +11,7 @@ const APPS = {
   taller: { icono: "🔧", nombre: "Taller", color: "#ffd23f" },
   mapa:   { icono: "🚀", nombre: "Mapa",   color: "#e5483b" },
   misiones: { icono: "🎯", nombre: "Misiones", color: "#e28bff" },
+  logros:   { icono: "🏆", nombre: "Logros",   color: "#ffb14a" },
   diario: { icono: "📓", nombre: "Diario", color: "#5cc46b" },
 };
 
@@ -97,6 +98,22 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
     }).join("");
   }
 
+  function vistaEncargos() {
+    return `<h3>Encargos del pueblo</h3>` + Object.entries(ENCARGOS).map(([id, e]) => {
+      const st = estado.encargos[id];
+      const marca = st === "hecho" ? "✅" : st === "activo" ? "📦" : "💬";
+      const detalle = st === "hecho" ? "Cumplido." : st === "activo" ? `${e.desc} Llevas ${tieneParaEncargo(id)}/${e.cantidad}.` : `Habla con ${e.vecino} en Villa Siderense.`;
+      return `<div class="tel-fila tel-mision ${st === "hecho" ? "hecha" : ""}"><div><b>${marca} ${e.vecino}: ${e.titulo}</b><small>${detalle}</small></div>
+        <span class="tel-precio">${e.premio}</span></div>`;
+    }).join("");
+  }
+
+  function vistaLogros() {
+    const total = Object.keys(LOGROS).length, hechos = Object.keys(estado.logros).length;
+    return `<p class="tel-nota">${hechos} de ${total} logros</p><div class="tel-logros">` + Object.entries(LOGROS).map(([id, l]) =>
+      `<div class="tel-logro ${estado.logros[id] ? "" : "bloqueado"}"><span>${estado.logros[id] ? l.icono : "🔒"}</span><b>${l.titulo}</b><small>${l.desc}</small></div>`).join("") + `</div>`;
+  }
+
   function vistaDiario() {
     const destinos = ORDEN.map(id => fila(DATOS_PLANETAS[id].nombre, estado.visitados[id] ? "✅ visitado" : "—")).join("");
     const hallazgos = ORDEN.filter(id => estado.visitados[id])
@@ -116,7 +133,7 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
   }
 
   function pintar() {
-    const vistas = { inicio: vistaInicio, estado: vistaEstado, taller: vistaTaller, mapa: vistaMapa, misiones: vistaMisiones, mision: vistaMision, diario: vistaDiario, final: vistaFinal };
+    const vistas = { inicio: vistaInicio, estado: vistaEstado, taller: vistaTaller, mapa: vistaMapa, misiones: () => vistaMisiones() + vistaEncargos(), logros: vistaLogros, mision: vistaMision, diario: vistaDiario, final: vistaFinal };
     const titulo = app === "inicio" ? "Mi teléfono" : app === "mision" ? "Misión" : app === "final" ? "Europa" : APPS[app].nombre;
     const atras = ["inicio", "mision", "final"].includes(app) ? "" : `<button class="tel-atras" data-acc="app:inicio">‹</button>`;
     pantalla.innerHTML = `<div class="tel-barra">${atras}<span>${titulo}</span></div>

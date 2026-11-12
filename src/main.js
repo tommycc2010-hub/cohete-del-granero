@@ -8,18 +8,21 @@ import { crearManos } from "./manos.js";
 import { crearTelefono } from "./telefono.js";
 import { crearTutorial } from "./tutorial.js";
 import { sonido } from "./sonido.js";
-import { consejos, NOMBRE, TEXTO_CONFIANZA, yaPresentado, marcarPresentado } from "./cientifico.js";
+import { NOMBRE, TEXTO_CONFIANZA, yaPresentado, marcarPresentado } from "./cientifico.js";
+import { conversacionNova, conversacionVecino } from "./dialogos.js";
 import { guardar, cargar, borrar } from "./guardado.js";
 import { crearInforme, htmlInforme } from "./informe.js";
 import { crearMenu } from "./menu.js";
 import { renderizarPista } from "./musica.js";
+import { crearPostpro } from "./postpro.js";
 import { DATOS_PLANETAS } from "./datos.js";
 import {
   estado, capacidad, comprarCombustible, vender, suscribir, regresar,
   generarCampo, consumoImpulso, alcanceSensor, gastar, recolectar, detectarSenal,
-  oxigenoMax, resistenciaTraje, desgasteTraje, puedeAterrizar, aterrizar, perderRecolectado,
+  oxigenoMax, resistenciaTraje, desgasteTraje, puedeAterrizar, aterrizar, COSTO_ATERRIZAR, perderRecolectado,
   BONO_PUEBLO, VALOR_ORBITA, FUGA_POR_SEGUNDO, completarMision, exportarEstado, importarEstado, factorMasa,
   energiaMax, generacion, consumoSistemas, ENERGIA_RECARGA_OXI, retrasoSenal,
+  LOGROS, logrosNuevos, desbloquearLogro,
 } from "./reglas.js";
 
 // ----- Render -----
@@ -38,12 +41,16 @@ const espacio = crearEspacio();
 const superficie = crearSuperficie();
 const final = crearFinal();
 const manos = crearManos();
+const postpro = crearPostpro(renderer);
 const jugador = crearJugador(camera, renderer.domElement, {
   alPaso() {
     sonido.reproducir("paso");
     if (modo === "superficie") superficie.polvoPaso(camera.position.x, jugador.pie, camera.position.z);
   },
-  alSaltar: () => sonido.reproducir("salto"),
+  alSaltar() {
+    sonido.reproducir("salto");
+    if (modo === "superficie" && superficie.gravedad < 0.2) desbloquearLogro("salto");
+  },
   alCaer(golpe) {
     if (golpe > 3) sonido.reproducir("paso");
     if (modo === "superficie" && golpe > 2) superficie.polvoPaso(camera.position.x, jugador.pie, camera.position.z, true);
@@ -70,6 +77,7 @@ function ajustar() {
     c.updateProjectionMatrix();
   }
   manos.ajustar(innerWidth / innerHeight);
+  postpro.ajustar(innerWidth, innerHeight, renderer.getPixelRatio());
 }
 addEventListener("resize", ajustar);
 ajustar();
@@ -161,6 +169,8 @@ let firmaMejoras = JSON.stringify(estado.mejoras);
 suscribir(() => {
   pintarHud();
   guardarPartida();
+  if (Object.values(estado.mejoras).reduce((a, b) => a + b, 0) >= 10) desbloquearLogro("ingeniero");
+  if (["mercurio", "venus", "marte", "jupiter", "europa"].every(id => estado.visitados[id])) desbloquearLogro("explorador");
   const firma = JSON.stringify(estado.mejoras);
   if (firma !== firmaMejoras) {
     firmaMejoras = firma;
@@ -182,6 +192,8 @@ function aviso(texto) {
 
 // ----- Diálogos: E pasa a la siguiente frase -----
 let dialogo = null;
+function enOpciones() { return dialogo && dialogo.opciones && dialogo.i >= dialogo.lineas.length - 1; }
+
 function pintarDialogo() {
   $("dialogo").classList.toggle("visible", !!dialogo);
   if (!dialogo) return;
@@ -190,19 +202,34 @@ function pintarDialogo() {
   $("dialogo-texto").textContent = l.texto;
   $("dialogo-confianza").textContent = l.confianza ? TEXTO_CONFIANZA[l.confianza] : "";
   $("dialogo-confianza").className = l.confianza || "";
-  $("dialogo-sigue").innerHTML = `<b>E</b> ${dialogo.i < dialogo.lineas.length - 1 ? "seguir" : "cerrar"} · ${dialogo.i + 1}/${dialogo.lineas.length}`;
+  const ops = enOpciones() ? dialogo.opciones : [];
+  $("dialogo-opciones").innerHTML = ops.map((o, k) => `<div><b>${k + 1}</b> ${o.texto}</div>`).join("");
+  $("dialogo-sigue").innerHTML = ops.length ? `<b>1</b>–<b>${ops.length}</b> elegir`
+    : `<b>E</b> ${dialogo.i < dialogo.lineas.length - 1 ? "seguir" : "cerrar"} · ${dialogo.i + 1}/${dialogo.lineas.length}`;
 }
-function hablar(nombre, lineas, x, z) {
-  dialogo = { nombre, lineas, i: 0, x, z };
+// conv: { lineas, opciones } (las opciones son opcionales)
+function hablar(nombre, conv, x, z) {
+  dialogo = { nombre, lineas: conv.lineas, opciones: conv.opciones, i: 0, x, z };
   granero.hablando(nombre);
   $("accion").classList.remove("visible");
   sonido.reproducir("hablar");
   pintarDialogo();
 }
 function avanzarDialogo() {
+  if (enOpciones()) return elegirOpcion(dialogo.opciones.length - 1); // E con opciones: la última (despedirse)
   if (++dialogo.i >= dialogo.lineas.length) return cerrarDialogo();
   sonido.reproducir("hablar");
   pintarDialogo();
+}
+function elegirOpcion(k) {
+  if (!enOpciones() || !dialogo.opciones[k]) return;
+  const siguiente = dialogo.opciones[k].accion();
+  sonido.reproducir("clic");
+  if (!siguiente) return cerrarDialogo();
+  Object.assign(dialogo, { lineas: siguiente.lineas, opciones: siguiente.opciones, i: 0 });
+  sonido.reproducir("hablar");
+  pintarDialogo();
+  guardarPartida();
 }
 function cerrarDialogo() {
   if (!dialogo) return;
@@ -212,9 +239,21 @@ function cerrarDialogo() {
   pintarDialogo();
 }
 
+// ----- Logros: aviso en pantalla -----
+let colaLogros = [], relojLogro = 0;
+function revisarLogros() {
+  while (logrosNuevos.length) colaLogros.push(logrosNuevos.shift());
+  if (relojLogro > 0 || !colaLogros.length) return;
+  const l = LOGROS[colaLogros.shift()];
+  $("logro").innerHTML = `<span>${l.icono}</span><div><b>¡Logro!</b>${l.titulo}<small>${l.desc}</small></div>`;
+  $("logro").classList.add("visible");
+  sonido.reproducir("senal");
+  relojLogro = 4;
+}
+
 // ----- Pantalla de inicio / pausa y captura del mouse -----
 // ----- Menú principal / pausa -----
-const CALIDAD = { alta: { pr: 2, sombras: true }, media: { pr: 1, sombras: true }, baja: { pr: 0.75, sombras: false } };
+const CALIDAD = { alta: { pr: 2, sombras: true, post: true }, media: { pr: 1, sombras: true, post: false }, baja: { pr: 0.75, sombras: false, post: false } };
 let calidadActual = null;
 const menu = crearMenu($("inicio"), {
   alJugar() {
@@ -238,6 +277,7 @@ const menu = crearMenu($("inicio"), {
       const c = CALIDAD[o.calidad];
       renderer.setPixelRatio(Math.min(devicePixelRatio, c.pr));
       renderer.shadowMap.enabled = c.sombras;
+      postpro.activar(c.post);
       // los materiales deben recompilarse al activar o quitar las sombras
       for (const esc of [scene, espacio.scene, superficie.scene, final.scene]) {
         esc.traverse(obj => { if (obj.material) [].concat(obj.material).forEach(m => { m.needsUpdate = true; }); });
@@ -271,6 +311,7 @@ const telefono = crearTelefono({
 });
 
 addEventListener("keydown", e => {
+  if (dialogo && /^Digit[1-9]$/.test(e.code) && !e.repeat) return elegirOpcion(Number(e.code.slice(5)) - 1);
   if (reporteAbierto) {
     if (["KeyE", "Enter", "Escape", "Space"].includes(e.code) && !e.repeat) { e.preventDefault(); cerrarReporte(); }
     return;
@@ -328,8 +369,8 @@ function interactuar() {
   else if (c.id === "mercado") venderCarga(BONO_PUEBLO);
   else if (c.id === "taller") telefono.abrir("taller");
   else if (c.id === "cohete") telefono.abrir("mapa");
-  else if (c.id === "cientifico") { hablar(NOMBRE, consejos(), c.x, c.z); tutorial.marcar("hablo"); guardarPartida(); }
-  else if (c.id === "vecino") hablar(c.nombre, c.lineas.map(texto => ({ texto })), c.x, c.z);
+  else if (c.id === "cientifico") { hablar(NOMBRE, conversacionNova(), c.x, c.z); tutorial.marcar("hablo"); guardarPartida(); }
+  else if (c.id === "vecino") hablar(c.nombre, conversacionVecino(c.nombre), c.x, c.z);
   else if (c.id === "despegar") usarCohete();
   else if (c.id === "mision") usarMision(c.clave);
 }
@@ -341,6 +382,7 @@ function despegar() {
   cerrarDialogo();
   soltarCercano();
   granero.iniciarDespegue(estado.mejoras);
+  desbloquearLogro("despegue");
   const m = estado.mision;
   energia = energiaMax();
   avisoEnergia = false;
@@ -361,11 +403,17 @@ function entrarAlEspacio() {
     granero.terminarDespegue();
     sonido.motor(0);
     espacio.iniciar(dest, estado.mejoras, generarCampo(dest, 5, VALOR_ORBITA));
+    lluviaActiva = Math.random() < (["marte", "jupiter", "europa"].includes(dest) ? 0.5 : 0.25);
+    impactosLluvia = 0;
+    espacio.iniciarLluvia(lluviaActiva);
     crearMarcadores(espacio.objetos);
     $("destino").textContent = `🪐 ${DATOS_PLANETAS[dest].nombre}`;
     ponerModo("espacio");
     $("senal-esp").textContent = `📡 ${retrasoSenal(dest)} min`;
-    radio(`📻 ${NOMBRE}: Lo que flota en órbita vale poco. Sigue el marcador 🛬 para aterrizar en ${DATOS_PLANETAS[dest].lugar}.`);
+    if (lluviaActiva) {
+      setTimeout(() => aviso("☄️ ¡Alerta! Lluvia de micrometeoritos en la ruta de aterrizaje. Esquiva las rocas."), 3500);
+      radio(`📻 ${NOMBRE}: Cuidado con esas rocas: un micrometeorito del tamaño de un grano de arena viaja a más de 10 km por segundo. Esquívalas.`);
+    } else radio(`📻 ${NOMBRE}: Lo que flota en órbita vale poco. Sigue el marcador 🛬 para aterrizar en ${DATOS_PLANETAS[dest].lugar}.`);
   });
 }
 
@@ -405,6 +453,9 @@ function pasoEnergia(dt, enSuelo, extra = 0) {
   return alcanzo;
 }
 
+// ----- Eventos -----
+let lluviaActiva = false, impactosLluvia = 0, tormenta = null;
+
 // ----- Vuelo -----
 addEventListener("mousemove", e => {
   if (modo === "espacio" && document.pointerLockElement && !pausado()) espacio.girar(e.movementX * 0.0022, e.movementY * 0.0022);
@@ -424,6 +475,18 @@ function volar(dt) {
   if (impulso) { gastar(consumoImpulso() * dt); informe.gasto("orbita", consumoImpulso() * dt); }
   sonido.motor(impulso > 0 ? 0.6 : 0);
   r.recogidos.forEach(o => { aviso(recolectar(o)); sonido.reproducir("recoger"); });
+  if (r.impactos) {
+    impactosLluvia += r.impactos;
+    // Una fuga gasta el combustible de sobra, pero nunca la reserva para aterrizar y volver
+    const reserva = estado.mision ? estado.mision.ida + COSTO_ATERRIZAR : 0;
+    const perdida = Math.max(0, Math.min(estado.combustible - reserva, 4 * r.impactos));
+    gastar(perdida);
+    informe.gasto("fuga", perdida);
+    sonido.reproducir("dano");
+    aviso(perdida > 0
+      ? `☄️ ¡Impacto de micrometeorito! El casco resistió, pero perdiste ${perdida.toFixed(0)} de combustible.`
+      : "☄️ ¡Impacto de micrometeorito! El tanque de reserva quedó intacto, pero no te queda margen.");
+  }
   if (r.enLimite) aviso("Te alejas demasiado. Vuelve hacia el planeta.");
 
   pintarHudVuelo(r.velocidad);
@@ -575,6 +638,11 @@ function tocarSuelo(vel) {
   piezasEnMano = 0;
   superficie.ponerPiezas(piezasNecesarias);
   informe.aterrizaje(vel, Object.keys(averias));
+  if (vel < 1) desbloquearLogro("seda");
+  if (lluviaActiva && impactosLluvia === 0) desbloquearLogro("esquiva");
+  lluviaActiva = false;
+  // Tormenta solar: en Mercurio y Marte, sin una atmósfera gruesa que proteja, puede llegar una
+  tormenta = (dest === "mercurio" || dest === "marte") && Math.random() < 0.5 ? { fase: "espera", t: 25 + Math.random() * 20 } : null;
   superficie.inclinar(!!averias.pata);
   sonido.reproducir(piezasNecesarias ? "dano" : "aterrizar");
   aterrizar();
@@ -694,6 +762,7 @@ function pasoSuperficie(dt) {
   esperaAlarma -= dt;
   if (!enNave && oxi < oxigenoMax() * 0.25 && esperaAlarma <= 0) { esperaAlarma = 1.2; sonido.reproducir("alarma"); }
 
+  pasoTormenta(dt, enNave);
   pintarHudSuelo(enNave);
   pintarMarcadores(camera, p);
   pintarBaliza($("marcador-pista"), posCohete, camera, p, "🚀 Cohete");
@@ -713,6 +782,32 @@ function pasoSuperficie(dt) {
   if (oxi <= 0) desmayo();
 }
 
+// Tormenta solar: aviso con cuenta atrás, luego unos segundos de radiación fuera del cohete.
+function pasoTormenta(dt, enNave) {
+  if (!tormenta) return;
+  tormenta.t -= dt;
+  if (tormenta.fase === "espera" && tormenta.t <= 0) {
+    Object.assign(tormenta, { fase: "aviso", t: 15 });
+    sonido.reproducir("alarma");
+    aviso(`☀️ ¡Tormenta solar en camino! Fuera de la atmósfera de la Tierra sus partículas dañan el traje. Refúgiate en el cohete.`);
+  } else if (tormenta.fase === "aviso" && tormenta.t <= 0) {
+    Object.assign(tormenta, { fase: "activa", t: 12, aSalvo: true });
+    sonido.reproducir("dano");
+  } else if (tormenta.fase === "activa") {
+    if (!enNave) {
+      tormenta.aSalvo = false;
+      traje = Math.max(0, traje - 6 / resistenciaTraje() * dt);
+    }
+    superficie.tormenta(0.6 + Math.sin(tormenta.t * 6) * 0.2);
+    if (tormenta.t <= 0) {
+      superficie.tormenta(0);
+      if (tormenta.aSalvo) desbloquearLogro("refugio");
+      aviso(tormenta.aSalvo ? "☀️ La tormenta pasó y tú estabas a salvo en el cohete." : "☀️ La tormenta pasó. El traje recibió radiación.");
+      tormenta = null;
+    }
+  }
+}
+
 function pintarHudSuelo(enNave) {
   const m = estado.mision, max = oxigenoMax();
   $("oxi-relleno").style.width = `${100 * Math.max(0, oxi) / max}%`;
@@ -728,6 +823,13 @@ function pintarHudSuelo(enNave) {
   $("averia").style.display = hayAverias() ? "" : "none";
   $("averia").textContent = `🔧 ${Object.keys(averias).map(k => NOMBRE_AVERIA[k]).join(", ")} · piezas ${piezasEnMano}/${piezasNecesarias}`;
   document.body.classList.toggle("traje-roto", traje <= 0);
+  if (tormenta && tormenta.fase !== "espera") {
+    $("alerta").classList.add("visible");
+    $("alerta").textContent = tormenta.fase === "aviso"
+      ? `☀️ Tormenta solar en ${Math.ceil(tormenta.t)} s: ¡vuelve al cohete!`
+      : enNave ? `☀️ Tormenta solar: a salvo dentro del cohete (${Math.ceil(tormenta.t)} s)` : `☀️ ¡Tormenta solar! El traje recibe radiación: ¡al cohete!`;
+    return;
+  }
   $("alerta").classList.toggle("visible", !enNave && (pocoAire || traje <= 0));
   $("alerta").textContent = traje <= 0
     ? "⚠ Traje roto: el oxígeno se escapa 4 veces más rápido. ¡Vuelve al cohete!"
@@ -767,6 +869,9 @@ function limpiarMision() {
   document.body.classList.remove("traje-roto");
   averias = {};
   piezasNecesarias = 0;
+  tormenta = null;
+  lluviaActiva = false;
+  superficie.tormenta(0);
   jugador.mov.sinCorrer = false;
   $("balizas-mision").innerHTML = "";
   sonido.viento(0);
@@ -775,6 +880,7 @@ function limpiarMision() {
 
 function empezarFinal() {
   ponerModo("transicion");
+  desbloquearLogro("contacto");
   detectarSenal();
   completarMision("europa");
   sonido.reproducir("senal");
@@ -862,6 +968,8 @@ $("informe").addEventListener("click", cerrarReporte);
 // ----- Bucle -----
 let tMenu = 0;
 function paso(dt) {
+  revisarLogros();
+  if (relojLogro > 0 && (relojLogro -= dt) <= 0) $("logro").classList.remove("visible");
   if (!empezado && pausado() && modo === "granero") { // vista del menú principal: la cámara gira alrededor del granero
     tMenu += dt;
     const a = 0.6 + tMenu * 0.05; // por encima de los árboles cercanos
@@ -931,7 +1039,13 @@ function bucle() {
 
 function dibujar(dt) {
   renderer.clear();
-  renderer.render(vista.escena, vista.camara);
+  if (postpro.activo) {
+    const ambiente = modo === "superficie" || modo === "descenso" ? (estado.mision ? estado.mision.dest : "granero")
+      : modo === "espacio" || modo === "final" ? modo : "granero";
+    postpro.dibujar(vista.escena, vista.camara, ambiente);
+  } else {
+    renderer.render(vista.escena, vista.camara);
+  }
   // Brazos en primera persona: solo caminando, y no con el teléfono abierto
   if (manosVisibles && (modo === "granero" || modo === "superficie") && !telefono.abierto && (empezado || !pausado())) {
     manos.vestir(modo === "superficie");
@@ -947,6 +1061,8 @@ renderer.setAnimationLoop(bucle);
 window.__juego = {
   camera, jugador, granero, espacio, superficie, estado, telefono, interactuar, despegar, volver,
   get modo() { return modo; },
+  get eventos() { return { lluviaActiva, impactosLluvia, tormenta }; },
+  set tormenta(v) { tormenta = v; },
   refrescarHud: pintarHud,
   grabar: {
     iniciar() { grabando = true; },

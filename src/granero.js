@@ -55,7 +55,7 @@ export function crearGranero(scene, mejoras) {
   scene.background = new THREE.Color(0x8ed1f0);
   scene.fog = new THREE.Fog(0xbfe6f5, 170, 560);
   scene.add(new THREE.HemisphereLight(0xffffff, 0xcdbfa3, 1.6));
-  const lampara = new THREE.PointLight(0xffe2b0, 40, 16, 1.6); // luz cálida dentro del granero
+  const lampara = new THREE.PointLight(0xffe2b0, 18, 16, 1.6); // luz cálida dentro del granero
   lampara.position.set(0, 4.3, -6.5);
   scene.add(lampara);
   const sol = new THREE.DirectionalLight(0xfff1d0, 2.2);

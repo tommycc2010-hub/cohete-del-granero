@@ -33,7 +33,7 @@ function servir() {
 const AYUDAS = `
 (() => { // el objetivo del tutorial no avanza en las capturas: se oculta
   const estilo = document.createElement("style");
-  estilo.textContent = "#objetivo { display: none !important; }";
+  estilo.textContent = "#objetivo, #logro { display: none !important; }";
   document.head.appendChild(estilo);
 })();
 window.T = (() => {
@@ -48,6 +48,8 @@ window.T = (() => {
   }
   function volarHacia(segundos) {
     const e = j.espacio; j.jugador.teclas.KeyW = true;
+    if (e.lluvia) e.iniciarLluvia(false); // sin meteoritos al azar: capturas repetibles
+    j.estado.combustible = Math.max(j.estado.combustible, j.estado.mision.ida + 60); // margen para no quedarse sin reserva
     for (let n = 0; n < segundos / 0.05 && j.modo === "espacio"; n++) {
       ocultar();
       const d = e.pista.position.clone().sub(e.nave.position);

@@ -33,13 +33,16 @@ export const estado = {
   visitados: {},
   misiones: {}, // misiones principales cumplidas, por destino
   dia: 1,       // calendario de la misión
+  encargos: {}, // encargos del pueblo: "activo" o "hecho"
+  logros: {},   // logros conseguidos
+  descuento: 0, // descuento en el taller (por el encargo de Tomás)
   mision: null,
   final: false,
   log: ["Bienvenido al granero. El cohete necesita reparaciones."],
 };
 
 // ----- Guardar y cargar -----
-const GUARDABLE = ["dia", "dinero", "combustible", "mejoras", "carga", "visitados", "misiones", "final", "log"];
+const GUARDABLE = ["dia", "dinero", "combustible", "mejoras", "carga", "visitados", "misiones", "final", "log", "encargos", "logros", "descuento"];
 
 export function exportarEstado() {
   return JSON.parse(JSON.stringify(Object.fromEntries(GUARDABLE.map(k => [k, estado[k]]))));
@@ -57,12 +60,17 @@ export function importarEstado(d) {
   }
   if (Array.isArray(d.carga)) {
     estado.carga = d.carga.filter(o => o && typeof o.nombre === "string" && typeof o.valor === "number")
-      .map(o => ({ nombre: o.nombre, valor: o.valor, color: String(o.color || "#ffffff") }));
+      .map(o => ({ nombre: o.nombre, valor: o.valor, color: String(o.color || "#ffffff"), origen: ORDEN.includes(o.origen) ? o.origen : undefined }));
   }
   for (const k of ["visitados", "misiones"]) {
     if (d[k] && typeof d[k] === "object") estado[k] = Object.fromEntries(ORDEN.filter(id => d[k][id]).map(id => [id, true]));
   }
   estado.final = !!d.final;
+  if (d.encargos && typeof d.encargos === "object") {
+    estado.encargos = Object.fromEntries(Object.keys(ENCARGOS).filter(k => ["activo", "hecho"].includes(d.encargos[k])).map(k => [k, d.encargos[k]]));
+  }
+  if (d.logros && typeof d.logros === "object") estado.logros = Object.fromEntries(Object.keys(LOGROS).filter(k => d.logros[k]).map(k => [k, true]));
+  estado.descuento = d.descuento === 0.15 ? 0.15 : 0;
   estado.dia = Math.max(1, Math.floor(num(d.dia, 1)));
   if (Array.isArray(d.log)) estado.log = d.log.filter(t => typeof t === "string").slice(0, 6);
   estado.combustible = Math.min(estado.combustible, capacidad());
@@ -118,6 +126,7 @@ export function retrasoSenal(id, dia = estado.dia) {
 }
 
 export function esperar(dias) {
+  if (dias > 0) desbloquearLogro("paciencia");
   const pago = Math.min(estado.dinero, COSTO_DIA * dias);
   estado.dinero -= pago;
   estado.dia += dias;
@@ -162,7 +171,7 @@ export function comprarCombustible(cant) {
   return t;
 }
 
-export function costoMejora(k) { return MEJORAS[k].base * (estado.mejoras[k] + 1); }
+export function costoMejora(k) { return Math.round(MEJORAS[k].base * (estado.mejoras[k] + 1) * (1 - estado.descuento)); }
 
 export function comprarMejora(k) {
   const lvl = estado.mejoras[k];
@@ -279,8 +288,10 @@ export function gastar(cantidad) {
 export function recolectar(o) {
   const m = estado.mision;
   if (!m) return "";
+  o.origen = m.dest; // de dónde viene (para los encargos)
   m.carga.push(o);
   m.hecho++;
+  if (o.nombre === "Muestra biológica") desbloquearLogro("legendario");
   const t = msg(`Recogiste ${o.nombre} (valor ${o.valor}).`);
   cambio();
   return t;
@@ -353,4 +364,65 @@ export function regresar() {
   estado.mision = null;
   cambio();
   return t;
+}
+
+// ----- Encargos del pueblo -----
+export const ENCARGOS = {
+  leo:   { vecino: "Leo", titulo: "Una piedra de Marte", desc: "Tráele a Leo cualquier cosa recogida en Marte.",
+           cumple: o => o.origen === "marte", cantidad: 1, dinero: 250, premio: "250 💰" },
+  marta: { vecino: "Marta", titulo: "Hielo para el mercado", desc: "Lleva 3 bloques de hielo al puesto de Marta.",
+           cumple: o => o.nombre === "Hielo", cantidad: 3, dinero: 450, premio: "450 💰" },
+  tomas: { vecino: "Tomás", titulo: "Chatarra para el taller", desc: "Tomás necesita 4 piezas de chatarra espacial para sus inventos.",
+           cumple: o => o.nombre === "Chatarra espacial", cantidad: 4, dinero: 0, descuento: 0.15, premio: "15 % de descuento en el taller" },
+  luz:   { vecino: "Doña Luz", titulo: "Un cristal para la colección", desc: "Doña Luz colecciona piedras y quiere un cristal lunar.",
+           cumple: o => o.nombre === "Cristal lunar", cantidad: 1, dinero: 700, premio: "700 💰" },
+};
+
+export function encargoDe(vecino) { return Object.keys(ENCARGOS).find(k => ENCARGOS[k].vecino === vecino); }
+export function tieneParaEncargo(id) { return estado.carga.filter(ENCARGOS[id].cumple).length; }
+
+export function aceptarEncargo(id) {
+  estado.encargos[id] = "activo";
+  const t = msg(`Nuevo encargo: ${ENCARGOS[id].titulo}.`);
+  cambio();
+  return t;
+}
+
+export function entregarEncargo(id) {
+  const e = ENCARGOS[id];
+  if (estado.encargos[id] !== "activo" || tieneParaEncargo(id) < e.cantidad) return "";
+  let quedan = e.cantidad;
+  estado.carga = estado.carga.filter(o => (quedan > 0 && e.cumple(o) ? (quedan--, false) : true));
+  estado.encargos[id] = "hecho";
+  estado.dinero += e.dinero;
+  if (e.descuento) estado.descuento = e.descuento;
+  if (Object.keys(ENCARGOS).every(k => estado.encargos[k] === "hecho")) desbloquearLogro("vecino");
+  const t = msg(`Encargo cumplido: ${e.titulo}. Premio: ${e.premio}.`);
+  cambio();
+  return t;
+}
+
+// ----- Logros -----
+export const LOGROS = {
+  despegue:   { icono: "🚀", titulo: "¡Despegamos!", desc: "Haz despegar el cohete por primera vez." },
+  seda:       { icono: "🪶", titulo: "Aterrizaje de seda", desc: "Toca el suelo a menos de 1 m/s." },
+  salto:      { icono: "🦘", titulo: "Salto lunar", desc: "Salta en un lugar con menos de 0.2 g de gravedad." },
+  legendario: { icono: "🧬", titulo: "Hallazgo legendario", desc: "Recoge una muestra biológica." },
+  ingeniero:  { icono: "🔧", titulo: "Ingeniería espacial", desc: "Compra 10 mejoras para el cohete." },
+  paciencia:  { icono: "⏳", titulo: "La paciencia paga", desc: "Espera a que se abra una ventana de lanzamiento." },
+  esquiva:    { icono: "☄️", titulo: "Piloto experto", desc: "Cruza una lluvia de micrometeoritos sin recibir impactos." },
+  refugio:    { icono: "☀️", titulo: "A salvo de la tormenta", desc: "Pasa una tormenta solar dentro del cohete." },
+  explorador: { icono: "🗺️", titulo: "Explorador", desc: "Visita los cinco destinos." },
+  vecino:     { icono: "🤝", titulo: "Vecino del año", desc: "Cumple los cuatro encargos del pueblo." },
+  contacto:   { icono: "🛸", titulo: "No estamos solos", desc: "Encuentra el origen de la señal de Europa." },
+};
+export const logrosNuevos = []; // la pantalla los muestra y vacía la lista
+
+export function desbloquearLogro(id) {
+  if (!LOGROS[id] || estado.logros[id]) return false;
+  estado.logros[id] = true;
+  logrosNuevos.push(id);
+  msg(`🏆 Logro: ${LOGROS[id].titulo}.`);
+  cambio();
+  return true;
 }

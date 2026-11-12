@@ -366,6 +366,13 @@ export function crearSuperficie() {
 
   return {
     scene, colisiones, interactuables, iniciar, actualizar, moverCohete, inclinar, ponerPiezas, polvareda, limite: TAM / 2 - 22,
+    // Tormenta solar: el cielo se tiñe de un resplandor anaranjado (0 = normal, 1 = máximo)
+    tormenta(k) {
+      const c = new THREE.Color(bioma.cielo).lerp(new THREE.Color(0xffb36b), k * 0.7);
+      scene.background = c;
+      if (scene.fog) scene.fog.color.copy(new THREE.Color(bioma.niebla ? bioma.niebla[0] : bioma.cielo).lerp(new THREE.Color(0xffb36b), k * 0.7));
+      sol.intensity = bioma.luz * (1 + k * 0.8);
+    },
     // Nube de polvo a los pies (al caminar, al caer de un salto)
     polvoPaso(x, y, z, fuerte = false) {
       rafagas.push(crearRafaga(mundo, x, y + 0.1, z, {
