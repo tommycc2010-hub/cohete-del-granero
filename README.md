@@ -117,7 +117,9 @@ La partida se guarda sola en el navegador cada vez que estás en el granero.
 - **[Vite](https://vite.dev/)** para compilar la versión web.
 - **[Electron](https://www.electronjs.org/)** para la app de escritorio de Windows.
 - **Todo se genera con código:** modelos 3D, terrenos, texturas de planetas, sonidos y música (una pieza distinta para el granero, el espacio y cada planeta). El juego no usa archivos externos de arte ni audio.
-- **Postprocesado:** resplandor (bloom) ajustado a cada escena, para que brillen la lava, los cristales y las llamas, y un viñeteado suave. Se activa con la calidad gráfica alta.
+- **Cielos y paisajes:** cielo con degradado y halo alrededor del Sol (azulado en Marte, donde los atardeceres son azules), montañas en el horizonte, rocas low-poly con contorno y cientos de guijarros dibujados de una sola vez (instancias).
+- **HUD ordenado en los planetas:** arriba, dónde estás y qué llevas; abajo a la izquierda, un panel con oxígeno, traje y energía. La ayuda de controles se desvanece sola.
+- **Postprocesado:** antialiasing MSAA, resplandor (bloom) ajustado a cada escena, para que brillen la lava, los cristales y las llamas, y un viñeteado suave. Se activa con la calidad gráfica alta.
 - **Calidad automática:** si el juego va a menos de 32 imágenes por segundo durante 8 segundos, baja solo la calidad gráfica un nivel y avisa.
 - **Menú principal y opciones:** volumen, música, sensibilidad del mouse, campo de visión y tres niveles de calidad gráfica para computadoras modestas.
 - **Simulador de balance:** un script que juega miles de partidas con las reglas reales y mide cuántos viajes y minutos toma terminar. Hoy da unos 9 viajes y 35 minutos de media.

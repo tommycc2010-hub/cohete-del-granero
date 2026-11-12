@@ -22,7 +22,9 @@ const AJUSTES = {
 };
 
 export function crearPostpro(renderer) {
-  const compositor = new EffectComposer(renderer);
+  // Objetivo con multimuestreo (MSAA x4): sin él, al usar el postprocesado los bordes salen dentados
+  const objetivo = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+  const compositor = new EffectComposer(renderer, objetivo);
   const pasada = new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera());
   const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.4, 0.45, 0.9);
   const vineta = new ShaderPass(VignetteShader);

@@ -27,8 +27,25 @@
     font-weight: bold; font-size: 17px; }
   .fila-hud .tarjeta { padding: 8px 14px; }
   #pista { position: fixed; top: 16px; right: 16px; padding: 8px 14px; font-weight: bold; }
-  #objetivo { position: fixed; top: 66px; right: 16px; width: 250px; padding: 8px 12px; font-size: 14px; line-height: 1.3; }
-  #mision { position: fixed; top: 132px; right: 16px; width: 250px; padding: 8px 12px; font-size: 14px; line-height: 1.3; background: #f6e6ff; }
+  #columna-derecha { position: fixed; top: 66px; right: 16px; width: 250px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+  #objetivo { padding: 8px 12px; font-size: 14px; line-height: 1.3; }
+  #mision { padding: 8px 12px; font-size: 14px; line-height: 1.3; background: #f6e6ff; }
+  /* HUD del planeta: fila superior compacta y panel de constantes vitales */
+  .fila-hud.compacta { font-size: 15px; gap: 8px; }
+  .fila-hud.compacta .tarjeta { padding: 6px 11px; box-shadow: 3px 3px 0 var(--ink); }
+  #vitales { --ver: grid; position: fixed; left: 16px; bottom: 16px; width: 290px; padding: 10px 12px; gap: 7px; }
+  .vital { display: flex; align-items: center; gap: 8px; font-size: 18px; }
+  .vital b { width: 24px; text-align: center; }
+  #vitales .medidor { flex: 1; min-width: 0; max-width: none; height: 26px; border: 2.5px solid var(--ink); border-radius: 9px; font-size: 13px; font-weight: bold; }
+  #vitales .medidor .relleno { border-right-width: 2.5px; transition: width .25s; }
+  #vitales .alerta .relleno, #vitales .medidor.alerta .relleno { background: var(--red); }
+  #vitales .alerta { animation: latido .8s ease-in-out infinite; }
+  .medidor.morado .relleno { background: #d9b3ff; }
+  @keyframes latido { 50% { transform: scale(1.03); } }
+  /* La ayuda de controles se desvanece sola tras unos segundos */
+  .ayuda[data-en~="superficie"], .ayuda[data-en~="espacio"] { animation: desvanecer .8s 9s forwards; }
+  .ayuda[data-en~="superficie"] { left: 322px; }
+  @keyframes desvanecer { to { opacity: 0; visibility: hidden; } }
   #mision b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #8a3fb5; }
   .marcador.mision { background: #6a2f8f; border-color: #e28bff; }
   .tel-mision { align-items: flex-start; }
@@ -238,7 +255,10 @@
   <div class="tarjeta">📅 Día <span id="dia"></span></div>
 </div>
 <div id="pista" class="tarjeta" data-en="granero"><kbd>Tab</kbd> teléfono</div>
-<div id="objetivo" class="tarjeta" data-en="granero espacio descenso superficie"></div>
+<div id="columna-derecha">
+  <div id="objetivo" class="tarjeta" data-en="granero espacio descenso superficie"></div>
+  <div id="mision" class="tarjeta" data-en="superficie"></div>
+</div>
 <div id="mira" data-en="granero superficie"></div>
 <div id="accion" class="tarjeta" data-en="granero superficie"></div>
 <div id="dialogo" class="tarjeta" data-en="granero">
@@ -275,22 +295,24 @@
 </div>
 
 <!-- A pie en un planeta -->
-<div id="hud-suelo" class="fila-hud" data-en="superficie">
+<!-- Arriba: dónde estás y lo que llevas. Abajo a la izquierda: lo que te mantiene con vida. -->
+<div id="hud-suelo" class="fila-hud compacta" data-en="superficie">
   <div class="tarjeta" id="lugar"></div>
-  <div class="tarjeta medidor azul" id="m-oxi"><div class="relleno" id="oxi-relleno"></div><span id="oxi-txt"></span></div>
-  <div class="tarjeta medidor" id="m-traje"><div class="relleno" id="traje-relleno"></div><span id="traje-txt"></span></div>
-  <div class="tarjeta medidor amarillo" id="en-suelo"><div class="relleno" id="en-suelo-relleno"></div><span id="en-suelo-txt"></span></div>
-  <div class="tarjeta" id="recolectado-suelo"></div>
-  <div class="tarjeta medidor" id="m-mision"><div class="relleno" id="mision-relleno"></div><span id="mision-txt"></span></div>
   <div class="tarjeta" id="suelo-comb"></div>
+  <div class="tarjeta" id="recolectado-suelo"></div>
   <div class="tarjeta" id="senal-suelo"></div>
   <div class="tarjeta" id="averia"></div>
+</div>
+<div id="vitales" class="tarjeta" data-en="superficie">
+  <div class="vital"><b>🫁</b><div class="medidor azul" id="m-oxi"><div class="relleno" id="oxi-relleno"></div><span id="oxi-txt"></span></div></div>
+  <div class="vital"><b>🛡</b><div class="medidor" id="m-traje"><div class="relleno" id="traje-relleno"></div><span id="traje-txt"></span></div></div>
+  <div class="vital"><b>🔋</b><div class="medidor amarillo" id="en-suelo"><div class="relleno" id="en-suelo-relleno"></div><span id="en-suelo-txt"></span></div></div>
+  <div class="vital" id="m-mision"><b>🎯</b><div class="medidor morado"><div class="relleno" id="mision-relleno"></div><span id="mision-txt"></span></div></div>
 </div>
 <div class="tarjeta ayuda" data-en="superficie">
   <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> caminar</span><span><kbd>Espacio</kbd> saltar</span><span><kbd>Shift</kbd> correr (gasta más oxígeno)</span><span>El cohete recarga el oxígeno</span>
 </div>
 
-<div id="mision" class="tarjeta" data-en="superficie"></div>
 <div id="balizas-mision" data-en="superficie"></div>
 <div id="marcadores" data-en="espacio superficie"></div>
 <div id="marcador-pista" class="marcador baliza" data-en="espacio superficie"></div>

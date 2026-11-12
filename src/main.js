@@ -413,7 +413,7 @@ function entrarAlEspacio() {
     ponerModo("espacio");
     $("senal-esp").textContent = `📡 ${retrasoSenal(dest)} min`;
     if (lluviaActiva) {
-      setTimeout(() => aviso("☄️ ¡Alerta! Lluvia de micrometeoritos en la ruta de aterrizaje. Esquiva las rocas."), 3500);
+      setTimeout(() => { if (modo === "espacio") aviso("☄️ ¡Alerta! Lluvia de micrometeoritos en la ruta de aterrizaje. Esquiva las rocas."); }, 3500);
       radio(`📻 ${NOMBRE}: Cuidado con esas rocas: un micrometeorito del tamaño de un grano de arena viaja a más de 10 km por segundo. Esquívalas.`);
     } else radio(`📻 ${NOMBRE}: Lo que flota en órbita vale poco. Sigue el marcador 🛬 para aterrizar en ${DATOS_PLANETAS[dest].lugar}.`);
   });
@@ -449,7 +449,7 @@ function pasoEnergia(dt, enSuelo, extra = 0) {
   const gen = generacion(dest, enSuelo), neto = gen - consumoSistemas();
   for (const id of ["en-esp", "en-desc", "en-suelo"]) {
     $(id + "-relleno").style.width = `${100 * energia / energiaMax()}%`;
-    $(id + "-txt").textContent = `🔋 ${Math.floor(energia)} ${neto >= 0 ? "▲" : "▼"} ${Math.abs(neto).toFixed(1)}/s`;
+    $(id + "-txt").textContent = `${id === "en-suelo" ? "Energía" : "🔋"} ${Math.floor(energia)} ${neto >= 0 ? "▲" : "▼"} ${Math.abs(neto).toFixed(1)}/s`;
     $(id).classList.toggle("alerta", energia < energiaMax() * 0.2);
   }
   return alcanzo;
@@ -803,7 +803,10 @@ function pasoSuperficie(dt) {
   $("m-mision").style.display = med ? "" : "none";
   if (med) {
     $("mision-relleno").style.width = `${100 * Math.max(0, Math.min(1, med.valor))}%`;
-    $("mision-txt").textContent = med.texto;
+    const partes = med.texto.match(/^(\S+)\s(.*)$/); // el emoji del principio va como icono del panel
+    const conIcono = partes && !/[a-záéíóúñ0-9]/i.test(partes[1]);
+    $("m-mision").querySelector("b").textContent = conIcono ? partes[1] : "🎯";
+    $("mision-txt").textContent = conIcono ? partes[2] : med.texto;
     $("m-mision").classList.toggle("alerta", !!med.alerta);
   }
 
@@ -845,9 +848,9 @@ function pasoTormenta(dt, enNave) {
 function pintarHudSuelo(enNave) {
   const m = estado.mision, max = oxigenoMax();
   $("oxi-relleno").style.width = `${100 * Math.max(0, oxi) / max}%`;
-  $("oxi-txt").textContent = `🫁 Oxígeno ${Math.ceil(Math.max(0, oxi))} s`;
+  $("oxi-txt").textContent = `Oxígeno ${Math.ceil(Math.max(0, oxi))} s`;
   $("traje-relleno").style.width = `${traje}%`;
-  $("traje-txt").textContent = traje > 0 ? `🛡 Traje ${Math.ceil(traje)} %` : "🛡 ¡Traje roto!";
+  $("traje-txt").textContent = traje > 0 ? `Traje ${Math.ceil(traje)} %` : "¡Traje roto!";
   const pocoAire = oxi < max * 0.25;
   $("m-oxi").classList.toggle("alerta", pocoAire);
   $("m-traje").classList.toggle("alerta", traje < 25);

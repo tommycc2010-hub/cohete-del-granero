@@ -28,6 +28,75 @@ const BIOMAS = {
     luz: 1.7, ambiente: 1.4, estrellas: true, jupiter: 190, peligro: { nombre: "Géiser helado", color: 0x8fe3f0 } },
 };
 
+// Cielo de cada lugar: cenit, horizonte (igual a la niebla, para que el suelo lejano se funda con él),
+// color del halo alrededor del Sol y su fuerza. En Marte el halo es azulado: allí los atardeceres son azules.
+const CIELOS = {
+  mercurio: { cenit: 0x010208, horizonte: 0x0b0e1c, halo: 0xfff1c9, fuerza: 1.1 },
+  venus: { cenit: 0x8a5418, horizonte: 0xd9a441, halo: 0xffe7a8, fuerza: 0.45 },
+  marte: { cenit: 0x9c5a3c, horizonte: 0xe0a878, halo: 0xa9cfff, fuerza: 0.9 },
+  jupiter: { cenit: 0x010106, horizonte: 0x16121f, halo: 0xfff4d6, fuerza: 0.6 },
+  europa: { cenit: 0x01030d, horizonte: 0x0f1938, halo: 0xe6f2ff, fuerza: 0.6 },
+};
+const DIR_SOL = new THREE.Vector3(420, 520, 360).normalize();
+
+function crearCieloDomo() {
+  const material = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: {
+      cenit: { value: new THREE.Color() }, horizonte: { value: new THREE.Color() },
+      halo: { value: new THREE.Color() }, fuerza: { value: 1 }, dirSol: { value: DIR_SOL },
+    },
+    vertexShader: `varying vec3 vDir;
+      void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform vec3 cenit, horizonte, halo; uniform float fuerza; uniform vec3 dirSol; varying vec3 vDir;
+      void main() {
+        vec3 d = normalize(vDir);
+        vec3 c = mix(horizonte, cenit, pow(clamp(d.y, 0.0, 1.0), 0.5));
+        float s = max(dot(d, dirSol), 0.0);
+        c += halo * fuerza * (pow(s, 6.0) * 0.28 + pow(s, 40.0) * 0.5 + pow(s, 400.0) * 1.2);
+        gl_FragColor = vec4(c, 1.0);
+        #include <colorspace_fragment>
+      }`,
+  });
+  const domo = new THREE.Mesh(new THREE.SphereGeometry(1700, 32, 16), material);
+  domo.renderOrder = -1;
+  domo.frustumCulled = false;
+  domo.userData.fijo = true; // no se libera al cambiar de planeta
+  return domo;
+}
+
+// Roca low-poly: un icosaedro deformado, sombreado plano y con contorno negro.
+const matBorde = new THREE.MeshBasicMaterial({ color: 0x1d1d1d, side: THREE.BackSide });
+const matRocas = new Map();
+function crearRoca(s, color, azar) {
+  const geo = new THREE.IcosahedronGeometry(1, 0);
+  const p = geo.attributes.position, factor = new Map();
+  for (let i = 0; i < p.count; i++) { // el mismo vértice comparte deformación en todas sus caras
+    const k = `${p.getX(i).toFixed(2)},${p.getY(i).toFixed(2)},${p.getZ(i).toFixed(2)}`;
+    if (!factor.has(k)) factor.set(k, 0.7 + azar() * 0.55);
+    const f = factor.get(k);
+    p.setXYZ(i, p.getX(i) * f, Math.max(-0.35, p.getY(i)) * f * 0.75, p.getZ(i) * f);
+  }
+  geo.computeVertexNormals();
+  if (!matRocas.has(color)) { const m = toon(color); m.flatShading = true; matRocas.set(color, m); }
+  const roca = new THREE.Mesh(geo, matRocas.get(color));
+  roca.castShadow = roca.receiveShadow = true;
+  const borde = new THREE.Mesh(geo, matBorde);
+  borde.scale.setScalar(1.07);
+  roca.add(borde);
+  roca.scale.set(s * (0.8 + azar() * 0.6), s, s * (0.8 + azar() * 0.6));
+  return roca;
+}
+
+// Libera la memoria de la GPU de lo que se quita del mundo: cada viaje crea un planeta nuevo.
+// (Si algo compartido se libera, three.js lo vuelve a subir a la GPU la próxima vez que se dibuje.)
+function liberar(grupo) {
+  grupo.traverse(o => {
+    if (o.userData.fijo) return;
+    if (o.geometry) o.geometry.dispose();
+  });
+}
+
 // Devuelve la función de altura del bioma.
 function crearRelieve(dest, azar) {
   const focos = Array.from({ length: 16 }, () => ({ x: (azar() - 0.5) * 300, z: (azar() - 0.5) * 300, r: 9 + azar() * 17 }))
@@ -65,6 +134,7 @@ export function crearSuperficie() {
   sol.shadow.bias = -0.0005;
   scene.add(hemi, sol, sol.target);
 
+  const domo = crearCieloDomo(); // se vuelve a añadir al mundo en cada viaje
   const mundo = new THREE.Group(); // todo lo que cambia de un planeta a otro
   scene.add(mundo);
 
@@ -85,6 +155,7 @@ export function crearSuperficie() {
   llama.rotation.x = Math.PI; // punta hacia abajo
 
   function iniciar(dest, mejoras, campo, misionHecha) {
+    liberar(mundo);
     mundo.clear();
     patas = [];
     volando = [];
@@ -98,8 +169,13 @@ export function crearSuperficie() {
     piezas = [];
     const azar = azarSemilla(bioma.semilla);
 
-    scene.background = new THREE.Color(bioma.cielo);
-    scene.fog = bioma.niebla ? new THREE.Fog(...bioma.niebla) : new THREE.Fog(bioma.cielo, 160, 420);
+    const cielo = CIELOS[dest];
+    scene.background = new THREE.Color(cielo.horizonte);
+    scene.fog = bioma.niebla ? new THREE.Fog(...bioma.niebla) : new THREE.Fog(cielo.horizonte, 170, 460);
+    domo.material.uniforms.cenit.value.set(cielo.cenit);
+    domo.material.uniforms.horizonte.value.copy(scene.fog.color);
+    domo.material.uniforms.halo.value.set(cielo.halo);
+    domo.material.uniforms.fuerza.value = cielo.fuerza;
     hemi.intensity = bioma.ambiente;
     sol.intensity = bioma.luz;
 
@@ -108,7 +184,11 @@ export function crearSuperficie() {
     const cs = bioma.suelo;
     const terreno = crearTerreno({
       tam: TAM, seg: 110, altura: relieve,
-      color: (x, z, h, pend, c) => c.set(pend > 0.8 ? bioma.roca : cs[Math.min(2, Math.floor(ruido(x * 0.05, z * 0.05) * 3))]),
+      color: (x, z, h, pend, c) => {
+        c.set(pend > 0.8 ? bioma.roca : cs[Math.min(2, Math.floor(ruido(x * 0.05, z * 0.05) * 3))]);
+        // Variación suave por cara y algo más de luz en lo alto: el relieve se lee mejor
+        c.multiplyScalar(0.9 + 0.2 * ruido(x * 0.35 + 7, z * 0.35 - 3) + Math.min(0.12, Math.max(-0.08, h * 0.012)));
+      },
     });
     mundo.add(terreno.mesh);
     altura = terreno.altura;
@@ -117,7 +197,45 @@ export function crearSuperficie() {
     lejos.position.y = -3;
     mundo.add(lejos);
 
+    // ----- Montañas en el horizonte: dan profundidad, sobre todo donde no hay aire -----
+    {
+      const N = 120, pos = [], radio = 300;
+      const alto = k => 10 + 34 * Math.pow(Math.max(0, fbm(Math.cos(k) * 2.2 + bioma.semilla, Math.sin(k) * 2.2)), 1.6) + 6 * ruido(k * 9, 1);
+      for (let i = 0; i < N; i++) {
+        const a0 = i / N * Math.PI * 2, a1 = (i + 1) / N * Math.PI * 2;
+        const h0 = alto(a0), h1 = alto(a1);
+        const c0 = Math.cos(a0) * radio, s0 = Math.sin(a0) * radio, c1 = Math.cos(a1) * radio, s1 = Math.sin(a1) * radio;
+        pos.push(c0, -4, s0, c1, -4, s1, c0 * 1.06, h0, s0 * 1.06);
+        pos.push(c1, -4, s1, c1 * 1.06, h1, s1 * 1.06, c0 * 1.06, h0, s0 * 1.06);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      const col = new THREE.Color(cs[0]).lerp(scene.fog.color, 0.35);
+      mundo.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide })));
+    }
+
+    // ----- Guijarros: cientos de piedras pequeñas en una sola llamada de dibujo -----
+    {
+      const n = 420, mat = toon(bioma.roca);
+      mat.flatShading = true;
+      const piedras = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), mat, n);
+      const o = new THREE.Object3D(), c = new THREE.Color();
+      for (let i = 0; i < n; i++) {
+        const a = azar() * Math.PI * 2, r = 7 + Math.pow(azar(), 0.7) * 170, s = 0.12 + Math.pow(azar(), 3) * 0.45;
+        const x = Math.cos(a) * r, z = Math.sin(a) * r;
+        o.position.set(x, altura(x, z) + s * 0.25, z);
+        o.rotation.set(azar() * 3, azar() * 3, azar() * 3);
+        o.scale.set(s * (0.8 + azar() * 0.6), s * 0.7, s);
+        o.updateMatrix();
+        piedras.setMatrixAt(i, o.matrix);
+        piedras.setColorAt(i, c.set(i % 3 ? bioma.roca : cs[0]).multiplyScalar(0.85 + azar() * 0.3));
+      }
+      piedras.receiveShadow = true;
+      mundo.add(piedras);
+    }
+
     // ----- Cielo -----
+    mundo.add(domo);
     if (bioma.estrellas) {
       const pos = new Float32Array(1200 * 3);
       for (let i = 0; i < 1200; i++) {
@@ -131,7 +249,7 @@ export function crearSuperficie() {
     }
     if (bioma.sol) {
       const disco = new THREE.Mesh(new THREE.SphereGeometry(bioma.sol, 20, 14), new THREE.MeshBasicMaterial({ color: 0xfff3c4, fog: false }));
-      disco.position.set(420, 520, 360);
+      disco.position.copy(DIR_SOL).multiplyScalar(820);
       mundo.add(disco);
     }
     if (bioma.jupiter) {
@@ -145,9 +263,9 @@ export function crearSuperficie() {
     for (let i = 0; i < 55; i++) {
       const a = azar() * Math.PI * 2, r = 14 + azar() * 170, s = 0.6 + azar() * 2.4;
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
-      const roca = caja(s * (0.8 + azar()), s, s * (0.8 + azar()), i % 3 ? bioma.roca : cs[0]);
-      roca.position.set(x, altura(x, z) + s * 0.3, z);
-      roca.rotation.set(azar() - 0.5, azar() * 3, azar() - 0.5);
+      const roca = crearRoca(s * 0.75, i % 3 ? bioma.roca : cs[0], azar);
+      roca.position.set(x, altura(x, z) + s * 0.15, z);
+      roca.rotation.set((azar() - 0.5) * 0.4, azar() * 3, (azar() - 0.5) * 0.4);
       mundo.add(roca);
       if (s > 1.6) colisiones.push({ minX: x - s * 0.6, maxX: x + s * 0.6, minZ: z - s * 0.6, maxZ: z + s * 0.6 });
     }
@@ -373,9 +491,12 @@ export function crearSuperficie() {
     scene, colisiones, interactuables, iniciar, actualizar, moverCohete, inclinar, ponerPiezas, polvareda, limite: TAM / 2 - 22,
     // Tormenta solar: el cielo se tiñe de un resplandor anaranjado (0 = normal, 1 = máximo)
     tormenta(k) {
-      const c = new THREE.Color(bioma.cielo).lerp(new THREE.Color(0xffb36b), k * 0.7);
-      scene.background = c;
-      if (scene.fog) scene.fog.color.copy(new THREE.Color(bioma.niebla ? bioma.niebla[0] : bioma.cielo).lerp(new THREE.Color(0xffb36b), k * 0.7));
+      const cielo = CIELOS[destino], naranja = new THREE.Color(0xffb36b);
+      const h = new THREE.Color(bioma.niebla ? bioma.niebla[0] : cielo.horizonte).lerp(naranja, k * 0.7);
+      scene.background = h;
+      if (scene.fog) scene.fog.color.copy(h);
+      domo.material.uniforms.horizonte.value.copy(h);
+      domo.material.uniforms.cenit.value.set(cielo.cenit).lerp(naranja, k * 0.35);
       sol.intensity = bioma.luz * (1 + k * 0.8);
     },
     // Nube de polvo a los pies (al caminar, al caer de un salto)
