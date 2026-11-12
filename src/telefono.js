@@ -2,6 +2,7 @@
 import {
   estado, MEJORAS, ORDEN, COSTO_EXPLORAR, capacidad, factorMasa, costoIda, costoMejora,
   desbloqueado, comprarMejora, iniciarMision, explorar, regresar, energiaMax, generacion, consumoSistemas,
+  ventana, retrasoSenal, esperar, COSTO_DIA,
 } from "./reglas.js";
 import { DATOS_PLANETAS, MISIONES } from "./datos.js";
 
@@ -49,17 +50,25 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
   }
 
   function vistaMapa() {
-    return ORDEN.map(id => {
+    return `<div class="tel-fila"><span>📅 Hoy</span><b>Día ${estado.dia}</b></div>` + ORDEN.map(id => {
       const d = DATOS_PLANETAS[id], ok = desbloqueado(id), ida = costoIda(id);
       let nota = d.nota;
       if (!ok) nota = id === "europa"
         ? "Bloqueado: cumple la misión de Júpiter y sube la antena a nivel 2."
         : `Bloqueado: cumple la misión de ${DATOS_PLANETAS[ORDEN[ORDEN.indexOf(id) - 1]].nombre}.`;
-      return `<button class="tel-item" data-acc="lanzar:${id}" ${ok ? "" : "disabled"}>
+      const v = ventana(id);
+      const estadoVentana = v.abierta
+        ? `<span class="tel-ventana abierta">🟢 Ventana abierta · quedan ${v.quedan} días</span>`
+        : `<span class="tel-ventana">🔴 Fuera de ventana · +${Math.round(v.recargo * 100)} % combustible · abre en ${v.abre} días</span>`;
+      const espera = ok && !v.abierta
+        ? `<button class="tel-esperar" data-acc="esperar:${v.abre}">⏳ Esperar ${v.abre} días (${v.abre * COSTO_DIA} 💰)</button>` : "";
+      return `<div class="tel-destino"><button class="tel-item" data-acc="lanzar:${id}" ${ok ? "" : "disabled"}>
         <b>${ok ? "" : "🔒 "}${d.nombre}</b>${estado.visitados[id] ? " <em>visitado</em>" : ""}
         <span class="tel-precio ${ok && estado.combustible < ida * 2 ? "caro" : ""}">${ida * 2} ⛽ ida y vuelta</span>
         <small>${nota}</small>
-        <small>☀ Luz solar ${d.luz >= 1 ? d.luz.toFixed(1) + "×" : "1/" + Math.round(1 / d.luz)} la de la Tierra · 🔋 ${(generacion(id, true) - consumoSistemas()) >= 0 ? "energía de sobra" : "la batería se gasta"}</small></button>`;
+        ${ok ? estadoVentana : ""}
+        <small>☀ Luz solar ${d.luz >= 1 ? d.luz.toFixed(1) + "×" : "1/" + Math.round(1 / d.luz)} la de la Tierra · 🔋 ${(generacion(id, true) - consumoSistemas()) >= 0 ? "energía de sobra" : "la batería se gasta"}</small>
+        <small>📡 Señal: ${retrasoSenal(id)} min de retraso · 📅 viaje de ${d.viaje} días</small></button>${espera}</div>`;
     }).join("");
   }
 
@@ -121,6 +130,7 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
     const [tipo, valor] = b.dataset.acc.split(":");
     if (tipo === "app") { app = valor; ultimo = ""; }
     else if (tipo === "mejora") ultimo = comprarMejora(valor);
+    else if (tipo === "esperar") ultimo = esperar(Number(valor));
     else if (tipo === "lanzar") {
       ultimo = iniciarMision(valor);
       if (estado.mision) { // despegue: el teléfono se guarda y empieza el vuelo en 3D

@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { caja, etiqueta } from "./estilo.js";
 import { DATOS_PLANETAS, MISIONES } from "./datos.js";
-import { estado, ORDEN, capacidad, costoIda, alcanceSensor, oxigenoMax, COSTO_ATERRIZAR, energiaMax, generacion, consumoSistemas } from "./reglas.js";
+import { estado, ORDEN, capacidad, costoIda, alcanceSensor, oxigenoMax, COSTO_ATERRIZAR, energiaMax, generacion, consumoSistemas, ventana, COSTO_DIA } from "./reglas.js";
 
 export const NOMBRE = "Dr. Nova";
 
@@ -174,6 +174,13 @@ export function consejos() {
     di(`Carga combustible: ${p.nombre} pide ${necesita} para ir, aterrizar y volver, más lo que gastes maniobrando.`, "alta");
   } else {
     di(`Estamos listos para ${p.nombre}. Recuerda: solo el impulso gasta combustible. Acelera, suelta y déjate llevar.`);
+  }
+
+  const v = ventana(objetivo);
+  if (!v.abierta && v.recargo > 0.1) {
+    di(`La ventana de lanzamiento a ${p.nombre} abre en ${v.abre} días. Si despegas ahora, el viaje gasta un ${Math.round(v.recargo * 100)} % más de combustible; si esperas, el granero cuesta ${COSTO_DIA} 💰 por día. Las misiones reales esperan: a Marte, la ventana se abre cada 26 meses.`, "alta");
+  } else if (v.abierta) {
+    di(`La ventana a ${p.nombre} está abierta: quedan ${v.quedan} días para despegar al mejor precio.`, "alta");
   }
 
   const balance = generacion(objetivo, true) - consumoSistemas();

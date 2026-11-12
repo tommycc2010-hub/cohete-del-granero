@@ -1,21 +1,23 @@
 // Datos de EJEMPLO. Se reemplazan por la base de datos oficial de la NASA cuando se libere.
 export const DATOS_PLANETAS = {
-  mercurio: { nombre: "Mercurio", lugar: "Mercurio", luz: 6.67, suelo_luz: 1, gravedad: 0.38, arrastre: 0, distancia: 1.0, peligro: 0.6, nota: "Calor extremo, sin atmósfera",
+  mercurio: { nombre: "Mercurio", lugar: "Mercurio", ciclo: 12, viaje: 6, fase: 0, senal: [4, 12], luz: 6.67, suelo_luz: 1, gravedad: 0.38, arrastre: 0, distancia: 1.0, peligro: 0.6, nota: "Calor extremo, sin atmósfera",
     suelo: "Aterrizamos en una llanura de cráteres. Sin atmósfera, el cielo es negro aunque sea de día. Al sol el traje se calienta: avanza de sombra en sombra.",
     dato: "Casi no tiene atmósfera que guarde el calor: de día ronda los 430 °C y de noche baja a unos -180 °C." },
-  venus:    { nombre: "Venus", lugar: "Venus", luz: 1.91, suelo_luz: 0.15, gravedad: 0.90, arrastre: 0.02, distancia: 1.6, peligro: 0.8, nota: "Presión y calor enormes",
+  venus:    { nombre: "Venus", lugar: "Venus", ciclo: 58, viaje: 8, fase: 50, senal: [2, 14], luz: 1.91, suelo_luz: 0.15, gravedad: 0.90, arrastre: 0.02, distancia: 1.6, peligro: 0.8, nota: "Presión y calor enormes",
     suelo: "Bienvenido al horno: nubes de ácido sulfúrico, volcanes y charcos de lava. El traje va a sufrir, no te alejes demasiado.",
     dato: "Su superficie ronda los 465 °C y la presión es unas 90 veces la de la Tierra. Un escudo térmico es obligatorio." },
-  marte:    { nombre: "Marte", lugar: "Marte", luz: 0.43, suelo_luz: 1, gravedad: 0.38, arrastre: 0.002, distancia: 2.4, peligro: 0.5, nota: "Agua antigua",
+  marte:    { nombre: "Marte", lugar: "Marte", ciclo: 78, viaje: 12, fase: 40, senal: [3, 22], luz: 0.43, suelo_luz: 1, gravedad: 0.38, arrastre: 0.002, distancia: 2.4, peligro: 0.5, nota: "Agua antigua",
     suelo: "Marte: polvo rojo, mesetas y remolinos de polvo. El aire es tan fino que no sirve para respirar. Vigila tu oxígeno.",
     dato: "Tiene hielo de agua en los polos y cauces secos de ríos y lagos antiguos. Donde hubo agua, pudo haber vida." },
-  jupiter:  { nombre: "Júpiter", lugar: "Ío, luna de Júpiter", luz: 0.037, suelo_luz: 1, gravedad: 0.18, arrastre: 0, distancia: 3.6, peligro: 1.0, nota: "Radiación intensa; se aterriza en su luna Ío",
+  jupiter:  { nombre: "Júpiter", lugar: "Ío, luna de Júpiter", ciclo: 40, viaje: 30, fase: 25, senal: [33, 53], luz: 0.037, suelo_luz: 1, gravedad: 0.18, arrastre: 0, distancia: 3.6, peligro: 1.0, nota: "Radiación intensa; se aterriza en su luna Ío",
     suelo: "Júpiter es puro gas, no hay dónde posarse. Por eso bajamos en Ío, su luna: el lugar con más volcanes activos del sistema solar.",
     dato: "Es un gigante gaseoso sin suelo donde aterrizar, y sus cinturones de radiación dañan la electrónica." },
-  europa:   { nombre: "Europa", lugar: "Europa", luz: 0.037, suelo_luz: 1, gravedad: 0.13, arrastre: 0, distancia: 3.8, peligro: 0.9, nota: "Océano bajo el hielo (final)",
+  europa:   { nombre: "Europa", lugar: "Europa", ciclo: 40, viaje: 32, fase: 25, senal: [33, 53], luz: 0.037, suelo_luz: 1, gravedad: 0.13, arrastre: 0, distancia: 3.8, peligro: 0.9, nota: "Océano bajo el hielo (final)",
     suelo: "Estamos sobre el hielo de Europa. La antena marca el origen de la señal 📡: camina hasta allí y cuidado con los géiseres.",
     dato: "Bajo su corteza de hielo los datos indican un océano de agua salada, con más agua que todos los océanos de la Tierra." },
 };
+// `ciclo`: días entre ventanas de lanzamiento (el periodo sinódico real dividido por 10: Marte, 780 días → 78).
+// `viaje`: días de ida y vuelta en el juego. `senal`: minutos que tarda la luz en llegar desde la Tierra (mín. y máx.).
 // `luz` es la luz solar comparada con la de la Tierra (cae con el cuadrado de la distancia al Sol);
 // `suelo_luz` es la parte que llega a la superficie (las nubes de Venus dejan pasar poca).
 // `gravedad` es la del lugar donde se aterriza (Tierra = 1); `arrastre` es el freno de su atmósfera.
@@ -26,10 +28,10 @@ export const MISIONES = {
   mercurio: { titulo: "Hielo en la sombra", recompensa: 300,
     desc: "Toma una muestra de hielo en un cráter donde nunca da el sol.",
     dato: "En los cráteres de los polos de Mercurio hay hielo de agua en sombra permanente, aunque el planeta está pegado al Sol." },
-  venus: { titulo: "Estación contra el calor", recompensa: 450,
+  venus: { titulo: "Estación contra el calor", recompensa: 550,
     desc: "Instala una estación meteorológica antes de que el calor la destruya.",
     dato: "Las sondas soviéticas Venera aguantaron como mucho unas dos horas en la superficie de Venus." },
-  marte: { titulo: "El rover dormido", recompensa: 650,
+  marte: { titulo: "El rover dormido", recompensa: 850,
     desc: "Limpia y orienta el panel solar de un rover abandonado.",
     dato: "El polvo acumulado en los paneles solares dejó sin energía a varias misiones reales en Marte." },
   jupiter: { titulo: "El pulso del volcán", recompensa: 900,

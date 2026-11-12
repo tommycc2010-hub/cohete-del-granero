@@ -18,7 +18,7 @@ import {
   generarCampo, consumoImpulso, alcanceSensor, gastar, recolectar, detectarSenal,
   oxigenoMax, resistenciaTraje, desgasteTraje, puedeAterrizar, aterrizar, perderRecolectado,
   BONO_PUEBLO, VALOR_ORBITA, FUGA_POR_SEGUNDO, completarMision, exportarEstado, importarEstado, factorMasa,
-  energiaMax, generacion, consumoSistemas, ENERGIA_RECARGA_OXI,
+  energiaMax, generacion, consumoSistemas, ENERGIA_RECARGA_OXI, retrasoSenal,
 } from "./reglas.js";
 
 // ----- Render -----
@@ -133,6 +133,7 @@ function pintarHud() {
   $("dinero").textContent = estado.dinero;
   $("combustible").textContent = `${Math.floor(estado.combustible)}/${capacidad()}`;
   $("carga").textContent = estado.carga.length;
+  $("dia").textContent = estado.dia;
 }
 
 // El cohete del granero se reconstruye cuando cambia alguna mejora.
@@ -325,7 +326,7 @@ function despegar() {
   avisoEnergia = false;
   informe.empezar({
     dest: m.dest, combustible: estado.combustible + m.ida, capacidad: capacidad(), ida: m.ida,
-    masa: factorMasa(), misionHecha: !!estado.misiones[m.dest],
+    masa: factorMasa(), misionHecha: !!estado.misiones[m.dest], recargo: m.recargo, dias: m.dias, dia: estado.dia,
   });
   camera.position.set(11, 1.6, 17);
   ponerModo("despegue");
@@ -343,8 +344,19 @@ function entrarAlEspacio() {
     crearMarcadores(espacio.objetos);
     $("destino").textContent = `🪐 ${DATOS_PLANETAS[dest].nombre}`;
     ponerModo("espacio");
-    aviso(`📻 ${NOMBRE}: Lo que flota en órbita vale poco. Sigue el marcador 🛬 para aterrizar en ${DATOS_PLANETAS[dest].lugar}.`);
+    $("senal-esp").textContent = `📡 ${retrasoSenal(dest)} min`;
+    radio(`📻 ${NOMBRE}: Lo que flota en órbita vale poco. Sigue el marcador 🛬 para aterrizar en ${DATOS_PLANETAS[dest].lugar}.`);
   });
+}
+
+// ----- Radio con retraso de la señal -----
+// Escala del juego: cada minuto real de retraso son 0.4 s. El mensaje llega solo si la misión sigue en curso.
+let radioId = 0;
+function radio(texto) {
+  if (!estado.mision) return aviso(texto);
+  const min = retrasoSenal(estado.mision.dest), espera = min * 0.4, id = ++radioId;
+  aviso(`📡 Mensaje del ${NOMBRE} en camino · la señal tarda ${min} min en llegar`);
+  setTimeout(() => { if (id === radioId && estado.mision) { aviso(texto); sonido.reproducir("telefono"); } }, espera * 1000);
 }
 
 // ----- Energía del viaje -----
@@ -497,7 +509,10 @@ function empezarDescenso() {
     $("lugar-desc").textContent = `🛬 ${d.lugar} · gravedad ${d.gravedad.toFixed(2)} g`;
     pasoDescenso(0);
     ponerModo("descenso");
-    aviso(`📻 ${NOMBRE}: Mantén W para frenar. Toca el suelo a menos de ${V_SUAVE} m/s o romperás algo.`);
+    const min = retrasoSenal(dest);
+    aviso(min >= 3
+      ? `📡 La señal tarda ${min} min en llegar a la Tierra: nadie puede ayudarte a tiempo. Aterrizaje autónomo: mantén W para frenar y toca el suelo a menos de ${V_SUAVE} m/s.`
+      : `📻 ${NOMBRE}: Mantén W para frenar. Toca el suelo a menos de ${V_SUAVE} m/s o romperás algo.`);
   });
 }
 
@@ -557,7 +572,8 @@ function tocarSuelo(vel) {
     $("lugar").textContent = `📍 ${d.lugar} · ${d.gravedad.toFixed(2)} g`;
     ponerModo("superficie");
     sonido.viento(dest === "venus" || dest === "marte" ? 1 : 0.25);
-    aviso(texto);
+    $("senal-suelo").textContent = `📡 ${retrasoSenal(dest)} min`;
+    radio(texto);
     tutorial.marcar("aterrizo");
   });
 }
@@ -761,6 +777,7 @@ function pasoFinal(dt) {
   if (tFinal >= 9.5 && !sonoFinal) { sonoFinal = true; sonido.reproducir("final"); }
   if (tFinal >= DURACION && !tarjetaFinal) {
     tarjetaFinal = true;
+    $("final-dias").innerHTML = `<b>Tu misión duró ${estado.dia} días.</b>`;
     $("tarjeta-final").classList.add("visible");
     if (jugador.controls.isLocked) jugador.controls.unlock(); // libera el mouse para los botones
   }
@@ -906,6 +923,7 @@ window.__juego = {
   get reporteAbierto() { return reporteAbierto; },
   get suelo() { return { oxi, traje, cargaSegura, averias, piezasNecesarias, piezasEnMano }; },
   get desc() { return desc; },
+  get radioId() { return radioId; },
   get energia() { return energia; },
   set energia(v) { energia = v; },
   set suelo(v) { if (v.oxi !== undefined) oxi = v.oxi; if (v.traje !== undefined) traje = v.traje; },

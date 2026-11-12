@@ -20,7 +20,10 @@ export const ENCUENTROS = 4;
 export const COSTO_ATERRIZAR = 4;   // reserva mínima de combustible para empezar el descenso
 export const FUGA_POR_SEGUNDO = 0.12; // combustible que se pierde con una fuga en el tanque
 export const BONO_PUEBLO = 1.2;     // el mercado del pueblo paga un 20 % más
-export const VALOR_ORBITA = 0.35;   // lo que flota en órbita vale poco: lo bueno está en el suelo
+export const VALOR_ORBITA = 0.35;
+export const COSTO_DIA = 3;          // mantenimiento del granero por cada día de espera
+export const VENTANA = 0.25;         // parte del ciclo en que la ventana está abierta
+export const RECARGO_MAX = 0.6;      // fuera de ventana el viaje puede gastar hasta un 60 % más   // lo que flota en órbita vale poco: lo bueno está en el suelo
 
 export const estado = {
   dinero: 100,
@@ -29,13 +32,14 @@ export const estado = {
   carga: [],
   visitados: {},
   misiones: {}, // misiones principales cumplidas, por destino
+  dia: 1,       // calendario de la misión
   mision: null,
   final: false,
   log: ["Bienvenido al granero. El cohete necesita reparaciones."],
 };
 
 // ----- Guardar y cargar -----
-const GUARDABLE = ["dinero", "combustible", "mejoras", "carga", "visitados", "misiones", "final", "log"];
+const GUARDABLE = ["dia", "dinero", "combustible", "mejoras", "carga", "visitados", "misiones", "final", "log"];
 
 export function exportarEstado() {
   return JSON.parse(JSON.stringify(Object.fromEntries(GUARDABLE.map(k => [k, estado[k]]))));
@@ -59,6 +63,7 @@ export function importarEstado(d) {
     if (d[k] && typeof d[k] === "object") estado[k] = Object.fromEntries(ORDEN.filter(id => d[k][id]).map(id => [id, true]));
   }
   estado.final = !!d.final;
+  estado.dia = Math.max(1, Math.floor(num(d.dia, 1)));
   if (Array.isArray(d.log)) estado.log = d.log.filter(t => typeof t === "string").slice(0, 6);
   estado.combustible = Math.min(estado.combustible, capacidad());
   estado.mision = null;
@@ -94,8 +99,35 @@ export function generacionSolar(id, enSuelo) {
 }
 export function generacion(id, enSuelo) { return generacionSolar(id, enSuelo) + 0.9 * estado.mejoras.rtg; }
 
+// ----- Ventanas de lanzamiento -----
+// Los planetas se alinean cada cierto tiempo; en la ventana el viaje es el más corto y barato.
+export function ventana(id, dia = estado.dia) {
+  const d = DATOS_PLANETAS[id];
+  const fase = ((dia + d.fase) % d.ciclo) / d.ciclo; // 0 a 1
+  if (fase < VENTANA) return { abierta: true, quedan: Math.ceil((VENTANA - fase) * d.ciclo), abre: 0, recargo: 0, fase };
+  const x = fase - VENTANA, cerrada = 1 - VENTANA;
+  const lejos = Math.min(x, cerrada - x) / (cerrada / 2); // 0 junto a una ventana, 1 en el punto más lejano
+  return { abierta: false, quedan: 0, abre: Math.ceil((1 - fase) * d.ciclo), recargo: RECARGO_MAX * lejos, fase };
+}
+
+// Minutos que tarda la señal en llegar desde la Tierra: menos cerca de la ventana, más lejos de ella (aproximado).
+export function retrasoSenal(id, dia = estado.dia) {
+  const [min, max] = DATOS_PLANETAS[id].senal, f = ventana(id, dia).fase;
+  const lejania = Math.min(1, Math.abs(f - VENTANA / 2) * 2);
+  return Math.round(min + (max - min) * lejania);
+}
+
+export function esperar(dias) {
+  const pago = Math.min(estado.dinero, COSTO_DIA * dias);
+  estado.dinero -= pago;
+  estado.dia += dias;
+  const t = msg(`Esperaste ${dias === 1 ? "1 día" : dias + " días"}. Mantenimiento: ${pago} 💰.`);
+  cambio();
+  return t;
+}
+
 export function costoIda(id) {
-  return Math.ceil(DATOS_PLANETAS[id].distancia * 12 * factorMasa() / (1 + 0.25 * estado.mejoras.motor));
+  return Math.ceil(DATOS_PLANETAS[id].distancia * 12 * factorMasa() / (1 + 0.25 * estado.mejoras.motor) * (1 + ventana(id).recargo));
 }
 
 export function desbloqueado(id) {
@@ -167,7 +199,7 @@ export function iniciarMision(id) {
   else {
     estado.combustible -= ida;
     estado.visitados[id] = true;
-    estado.mision = { dest: id, ida, hecho: 0, encuentros: ENCUENTROS, carga: [], ultimo: "" };
+    estado.mision = { dest: id, ida, hecho: 0, encuentros: ENCUENTROS, carga: [], ultimo: "", recargo: ventana(id).recargo, dias: DATOS_PLANETAS[id].viaje };
     t = msg(`Despegaste hacia ${DATOS_PLANETAS[id].nombre}.`);
   }
   cambio();
@@ -317,6 +349,7 @@ export function regresar() {
     }
   }
   estado.carga.push(...carga);
+  estado.dia += m.dias || 0;
   estado.mision = null;
   cambio();
   return t;

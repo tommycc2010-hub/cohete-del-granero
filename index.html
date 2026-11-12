@@ -144,6 +144,11 @@
   .tel-precio { float: right; font-weight: bold; background: var(--green); border: 2px solid var(--ink);
     border-radius: 8px; padding: 0 6px; }
   .tel-precio.caro { background: var(--red); }
+  .tel-destino { display: flex; flex-direction: column; gap: 4px; }
+  .tel-ventana { display: block; margin-top: 4px; font-size: 13px; font-weight: bold; color: #b5301f; }
+  .tel-ventana.abierta { color: #2f7d3a; }
+  .tel-esperar { font: inherit; font-size: 13px; font-weight: bold; padding: 6px 10px; cursor: pointer; color: var(--ink);
+    background: #e9f4ff; border: 2px solid var(--ink); border-radius: 10px; }
   .tel-boton { font-weight: bold; background: var(--yellow); }
   .tel-boton.azul { background: var(--blue); }
   .tel-boton.verde { background: var(--green); }
@@ -203,6 +208,7 @@
   <div class="tarjeta">💰 <span id="dinero"></span></div>
   <div class="tarjeta">⛽ <span id="combustible"></span></div>
   <div class="tarjeta">📦 <span id="carga"></span></div>
+  <div class="tarjeta">📅 Día <span id="dia"></span></div>
 </div>
 <div id="pista" class="tarjeta" data-en="granero"><kbd>Tab</kbd> teléfono</div>
 <div id="objetivo" class="tarjeta" data-en="granero espacio descenso superficie"></div>
@@ -222,6 +228,7 @@
   <div class="tarjeta medidor amarillo" id="en-esp"><div class="relleno" id="en-esp-relleno"></div><span id="en-esp-txt"></span></div>
   <div class="tarjeta" id="recolectado"></div>
   <div class="tarjeta" id="velocidad"></div>
+  <div class="tarjeta" id="senal-esp"></div>
 </div>
 <div class="tarjeta ayuda" data-en="espacio">
   <span><kbd>W</kbd> impulso</span><span><kbd>S</kbd> frenar</span><span>🖱 o <kbd>A</kbd><kbd>D</kbd><kbd>↑</kbd><kbd>↓</kbd> dirigir</span><span><kbd>R</kbd> volver a casa</span>
@@ -248,6 +255,7 @@
   <div class="tarjeta" id="recolectado-suelo"></div>
   <div class="tarjeta medidor" id="m-mision"><div class="relleno" id="mision-relleno"></div><span id="mision-txt"></span></div>
   <div class="tarjeta" id="suelo-comb"></div>
+  <div class="tarjeta" id="senal-suelo"></div>
   <div class="tarjeta" id="averia"></div>
 </div>
 <div class="tarjeta ayuda" data-en="superficie">
@@ -268,6 +276,7 @@
   <div class="tarjeta">
     <h1>🛸 ¡Vida en Europa!</h1>
     <p>Reparaste un cohete abandonado en un granero, cruzaste el sistema solar y escuchaste lo que había bajo el hielo.</p>
+    <p id="final-dias"></p>
     <p class="real"><b>¿Y en la realidad?</b> Este final es ficción: hoy no hay evidencia de vida en Europa. Lo que sí indican los datos es un océano de agua salada bajo el hielo, y por eso la NASA envió la misión Europa Clipper a estudiar si podría ser habitable.</p>
     <button id="final-seguir" class="verde">Volver al granero</button>
     <button id="final-reiniciar">Jugar de nuevo</button>

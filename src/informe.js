@@ -9,9 +9,9 @@ export function crearInforme() {
     get activo() { return !!v; },
 
     // Al despegar. `combustible` es el que había antes de restar el viaje de ida.
-    empezar({ dest, combustible, capacidad, ida, masa, misionHecha }) {
+    empezar({ dest, combustible, capacidad, ida, masa, misionHecha, recargo = 0, dias = 0, dia = 1 }) {
       v = {
-        dest, combustible, capacidad, ida, masa, misionHecha,
+        dest, combustible, capacidad, ida, masa, misionHecha, recargo, dias, dia,
         gasto: { orbita: 0, descenso: 0, fuga: 0 },
         tiempo: 0, aterrizo: false, velAterrizaje: 0, averias: [], desmayos: 0, trajeMin: 100, oxiMin: 1, energiaMin: 1, sinEnergia: false,
       };
@@ -56,6 +56,7 @@ function leccion(r) {
   if (r.averias.includes("pata")) return `Tocaste suelo a ${r.velAterrizaje.toFixed(1)} m/s y rompiste una pata. Frenar antes cuesta un poco más de combustible, pero ahorra tiempo, oxígeno y piezas.`;
   if (r.averias.length) return `Tocaste suelo a ${r.velAterrizaje.toFixed(1)} m/s y el cohete se averió. Por debajo de 3 m/s el aterrizaje es limpio.`;
   if (r.perdidos) return `La reentrada dañó ${r.perdidos === 1 ? "1 objeto" : r.perdidos + " objetos"}. El escudo térmico protege la carga: las cápsulas reales superan los 1.500 °C al volver a la atmósfera.`;
+  if (r.recargo > 0.25) return `Despegaste fuera de la ventana de lanzamiento y el viaje gastó un ${Math.round(r.recargo * 100)} % más de combustible. Las misiones reales esperan la alineación de los planetas: a Marte, la ventana se abre cada 26 meses.`;
   if (r.combustibleFinal < r.capacidad * 0.12) return `Volviste con solo ${Math.floor(r.combustibleFinal)} de combustible. Un margen tan pequeño es arriesgado: un tanque mayor da margen, pero suma masa; un motor mejor gasta menos.`;
   if (r.trajeMin < 30) return `El traje llegó al ${Math.round(r.trajeMin)} %. Un traje mejor resiste más el ambiente de ${lugar}, a cambio de algo de masa.`;
   if (!r.aterrizo) return "No aterrizaste. Lo que flota en órbita vale poco: lo valioso y las misiones están en la superficie.";
@@ -85,9 +86,10 @@ export function htmlInforme(r) {
   const traje = `${Math.round(r.trajeMin)} % mínimo${r.desmayos ? ` · ${r.desmayos} desmayo${r.desmayos > 1 ? "s" : ""}` : ""}`;
 
   return `<h2>📋 Reporte de misión</h2>
-    <p class="inf-destino">${d.lugar} · ${mmss(r.tiempo)}</p>
+    <p class="inf-destino">${d.lugar} · días ${r.dia} a ${r.dia + r.dias} · ${mmss(r.tiempo)} de juego</p>
     ${fila("⛽ Combustible usado", `${usado.toFixed(0)} (${partes})`)}
     ${fila("⛽ Al volver", `${Math.floor(r.combustibleFinal)} / ${r.capacidad}`)}
+    ${fila("🪐 Ventana", r.recargo > 0.01 ? `Fuera de ventana · +${Math.round(r.recargo * 100)} % combustible` : "Despegue en ventana")}
     ${fila("🛬 Aterrizaje", aterrizaje)}
     ${fila("🎯 Misión", mision)}
     ${fila("📦 Carga", carga)}

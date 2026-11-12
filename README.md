@@ -30,12 +30,14 @@ En *Cohete del Granero* **el jugador siente cada trade-off en carne propia**. La
 | **Presupuesto** | El dinero viene de vender muestras y cumplir misiones; el combustible y cada mejora cuestan. |
 | **Masa** | Un factor de masa que crece con cada mejora y sube el consumo de combustible de cada viaje. |
 | **Energía** | Una batería que los sistemas gastan durante el viaje. Los paneles solares rinden según la luz real de cada lugar (6.7 veces la de la Tierra en Mercurio, 27 veces menos en Júpiter); lejos del Sol hace falta un generador de radioisótopos (RTG). Sin energía se apagan los instrumentos y el cohete no recarga el oxígeno. Además, la misión de Marte consiste en devolverle la energía a un rover cubierto de polvo. |
-| **Comunicaciones** | La antena: sin el nivel suficiente no se puede llegar a Europa, y si se avería al aterrizar los sensores no identifican nada. |
-| **Restricciones del viaje** | Distancia y combustible de ida y vuelta, una reserva para volver, el aterrizaje contra la gravedad real de cada lugar y averías si se toca suelo demasiado rápido. |
+| **Comunicaciones** | La antena: sin el nivel suficiente no se puede llegar a Europa, y si se avería al aterrizar los sensores no identifican nada. Los mensajes del Dr. Nova llegan con el retraso real de la señal (de 3 a 22 minutos de luz en Marte, de 33 a 53 en Júpiter), así que el aterrizaje es autónomo. |
+| **Restricciones del viaje** | Ventanas de lanzamiento: cada destino se alinea cada cierto tiempo (el periodo real dividido por 10) y fuera de la ventana el viaje gasta hasta un 60 % más; esperar cuesta mantenimiento. Además: combustible de ida y vuelta, una reserva para volver, el aterrizaje contra la gravedad real de cada lugar y averías si se toca suelo demasiado rápido. |
 
 ## La ciencia detrás del juego
 
 - **Gravedad real** de cada lugar al saltar y al aterrizar: Venus 0.90, Mercurio y Marte 0.38, Ío 0.18 y Europa 0.13 veces la de la Tierra.
+- **Ventanas de lanzamiento:** los planetas se alinean cada cierto tiempo. A Marte, la ventana se abre cada 26 meses; por eso las misiones reales salen todas casi a la vez.
+- **Retraso de la señal:** la luz tarda minutos en llegar. Un aterrizaje en Marte no se puede pilotar desde la Tierra: la nave aterriza sola.
 - **Luz solar real:** cae con el cuadrado de la distancia al Sol. Por eso las sondas que van más allá de Marte suelen llevar generadores de radioisótopos; la misión Juno llegó a Júpiter con paneles solares enormes.
 - **Mercurio:** en los cráteres de sus polos hay hielo de agua en sombra permanente, aunque es el planeta más cercano al Sol. En el juego, al sol el traje se calienta y hay que avanzar de sombra en sombra.
 - **Venus:** su superficie ronda los 465 °C con una presión unas 90 veces la de la Tierra. Las sondas soviéticas Venera aguantaron como mucho unas dos horas; en el juego, la estación se derrite si no la instalas a tiempo.
@@ -79,7 +81,7 @@ La partida se guarda sola en el navegador cada vez que estás en el granero.
 - **[Electron](https://www.electronjs.org/)** para la app de escritorio de Windows.
 - **Todo se genera con código:** modelos 3D, terrenos, texturas de planetas, sonidos y música (una pieza distinta para el granero, el espacio y cada planeta). El juego no usa archivos externos de arte ni audio.
 - **Menú principal y opciones:** volumen, música, sensibilidad del mouse, campo de visión y tres niveles de calidad gráfica para computadoras modestas.
-- **Simulador de balance:** un script que juega miles de partidas con las reglas reales y mide cuántos viajes y minutos toma terminar. Hoy da unos 7 viajes y 29 minutos de media.
+- **Simulador de balance:** un script que juega miles de partidas con las reglas reales y mide cuántos viajes y minutos toma terminar. Hoy da unos 9 viajes y 35 minutos de media.
 
 ### Estructura
 
@@ -126,7 +128,6 @@ Cada cambio que se sube a la rama `main` se publica solo en GitHub Pages.
 ## Próximos pasos
 
 - Cargar la base de datos oficial de la NASA en lugar de los valores de ejemplo.
-- Ventanas de lanzamiento y retraso de las comunicaciones según la distancia.
 
 ## Uso de inteligencia artificial
 

@@ -10,7 +10,7 @@ import {
   estado, MEJORAS, ORDEN, capacidad, costoIda, costoMejora, comprarMejora, comprarCombustible,
   iniciarMision, gastar, recolectar, regresar, vender, completarMision, generarCampo, consumoImpulso,
   oxigenoMax, desgasteTraje, desbloqueado, COMBUSTIBLE_PRECIO, FUGA_POR_SEGUNDO, VALOR_ORBITA,
-  energiaMax, generacion, consumoSistemas, ENERGIA_RECARGA_OXI,
+  energiaMax, generacion, consumoSistemas, ENERGIA_RECARGA_OXI, ventana, esperar, COSTO_DIA,
 } from "../src/reglas.js";
 import { DATOS_PLANETAS, MISIONES } from "../src/datos.js";
 
@@ -42,7 +42,7 @@ const NECESITA = {
 
 function reiniciar() {
   Object.assign(estado, {
-    dinero: 100, combustible: 60, carga: [], visitados: {}, misiones: {}, mision: null, final: false, log: [],
+    dinero: 100, combustible: 60, carga: [], visitados: {}, misiones: {}, mision: null, final: false, log: [], dia: 1,
     mejoras: { motor: 0, tanque: 0, escudo: 0, sensor: 0, antena: 0, traje: 0, oxigeno: 0, paneles: 0, bateria: 0, rtg: 0 },
   });
 }
@@ -117,6 +117,16 @@ function comprarExtras(dest) {
 
 // Un viaje completo. Devuelve los segundos que tomó.
 function viaje(dest, registro) {
+  // ¿Esperar la ventana de lanzamiento o salir ya? Elige lo más barato.
+  const v = ventana(dest);
+  let esperó = 0;
+  if (!v.abierta) {
+    const extra = costoIda(dest) * 2 * (1 - 1 / (1 + v.recargo)) * COMBUSTIBLE_PRECIO;
+    if (v.abre * COSTO_DIA < extra && estado.dinero >= v.abre * COSTO_DIA + combustibleViaje(dest) * COMBUSTIBLE_PRECIO) {
+      esperar(v.abre);
+      esperó = v.abre;
+    }
+  }
   const dineroAntes = estado.dinero;
   const falta = Math.ceil(Math.min(capacidad(), combustibleViaje(dest) + 4) - estado.combustible);
   comprarCombustible(Math.max(0, falta)); // con 0 solo actúa el combustible de emergencia, si hace falta
@@ -156,7 +166,7 @@ function viaje(dest, registro) {
   regresar();
   const carga = estado.carga.reduce((s, o) => s + o.valor, 0);
   vender();
-  registro.push({ dest, cumplio, recogidos, carga, piezas, neto: Math.round(estado.dinero - dineroAntes) });
+  registro.push({ dest, cumplio, recogidos, carga, piezas, neto: Math.round(estado.dinero - dineroAntes), esperó });
   return seg + J.segVuelo + J.segGranero;
 }
 
@@ -166,6 +176,9 @@ function partida() {
   let seg = 0;
   while (!estado.misiones.europa && registro.length < 60) {
     const objetivo = ORDEN.find(id => !estado.misiones[id]);
+    // Si fuera de ventana el tanque no alcanza, espera a que se abra (como haría una persona).
+    const vo = ventana(objetivo);
+    if (desbloqueado(objetivo) && !vo.abierta && capacidad() < combustibleViaje(objetivo) && estado.dinero >= vo.abre * COSTO_DIA) esperar(vo.abre);
     let dest = objetivo;
     const alcanza = id => capacidad() >= combustibleViaje(id)
       && estado.combustible + Math.floor(estado.dinero / COMBUSTIBLE_PRECIO) >= combustibleViaje(id);
@@ -177,7 +190,7 @@ function partida() {
     if (!t) break; // sin dinero ni para combustible
     seg += t;
   }
-  return { viajes: registro.length, min: seg / 60, registro, mejoras: { ...estado.mejoras }, gano: !!estado.misiones.europa, dinero: estado.dinero };
+  return { viajes: registro.length, min: seg / 60, registro, mejoras: { ...estado.mejoras }, gano: !!estado.misiones.europa, dinero: estado.dinero, dias: estado.dia };
 }
 
 // ----- Resultados -----
@@ -211,5 +224,7 @@ if (ganadas.length) {
   console.log(`\nPrimer viaje: neto medio ${Math.round(media(primero))} · en el ${(100 * primero.filter(x => x < 150).length / N).toFixed(0)} % no alcanza ni para la mejora más barata`);
   console.log("Mejoras al terminar (nivel medio):");
   console.log("  " + Object.keys(MEJORAS).map(k => `${k} ${f1(media(ganadas.map(p => p.mejoras[k])))}`).join(" · "));
+  const esperas = ganadas.flatMap(p => p.registro.map(r => r.esperó));
+  console.log(`Días de calendario: media ${Math.round(media(ganadas.map(p => p.dias)))} · viajes en que esperó la ventana: ${(100 * esperas.filter(x => x > 0).length / esperas.length).toFixed(0)} %`);
   console.log(`Dinero sobrante al terminar: ${Math.round(media(ganadas.map(p => p.dinero)))}`);
 }
