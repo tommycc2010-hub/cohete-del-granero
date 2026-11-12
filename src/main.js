@@ -12,6 +12,7 @@ import { consejos, NOMBRE, TEXTO_CONFIANZA, yaPresentado, marcarPresentado } fro
 import { guardar, cargar, borrar } from "./guardado.js";
 import { crearInforme, htmlInforme } from "./informe.js";
 import { crearMenu } from "./menu.js";
+import { renderizarPista } from "./musica.js";
 import { DATOS_PLANETAS } from "./datos.js";
 import {
   estado, capacidad, comprarCombustible, vender, suscribir, regresar,
@@ -912,15 +913,23 @@ function leerEscaner() {
 const ORDEN_MISIONES = ["mercurio", "venus", "marte", "jupiter", "europa"];
 
 let antes = performance.now();
+// Grabación cuadro a cuadro (herramientas/trailer): el bucle normal se detiene y cada cuadro se avanza a mano.
+let grabando = false, manosVisibles = true;
+
 function bucle() {
+  if (grabando) return;
   const ahora = performance.now();
   const dt = Math.min((ahora - antes) / 1000, 0.05);
   paso(dt);
   antes = ahora;
+  dibujar(dt);
+}
+
+function dibujar(dt) {
   renderer.clear();
   renderer.render(vista.escena, vista.camara);
   // Brazos en primera persona: solo caminando, y no con el teléfono abierto
-  if ((modo === "granero" || modo === "superficie") && !telefono.abierto && (empezado || !pausado())) {
+  if (manosVisibles && (modo === "granero" || modo === "superficie") && !telefono.abierto && (empezado || !pausado())) {
     manos.vestir(modo === "superficie");
     manos.actualizar(dt, jugador.mov, jugador.enSuelo, camera);
     if ((relojEscaner -= dt) <= 0) { relojEscaner = 0.25; leerEscaner(); }
@@ -935,6 +944,15 @@ window.__juego = {
   camera, jugador, granero, espacio, superficie, estado, telefono, interactuar, despegar, volver,
   get modo() { return modo; },
   refrescarHud: pintarHud,
+  grabar: {
+    iniciar() { grabando = true; },
+    paso,
+    dibujar,
+    set manos(v) { manosVisibles = v; },
+    get desc() { return desc; },
+    get tFinal() { return tFinal; },
+    renderizarPista,
+  },
   menu,
   get reporteAbierto() { return reporteAbierto; },
   get suelo() { return { oxi, traje, cargaSegura, averias, piezasNecesarias, piezasEnMano }; },

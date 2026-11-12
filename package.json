@@ -10,11 +10,13 @@
     "simular": "node herramientas/simular.mjs",
     "app": "vite build && electron .",
     "empaquetar": "vite build && electron-packager . CoheteDelGranero --platform=win32 --arch=x64 --out=salida --overwrite --asar --ignore=\"^/(src|herramientas|prototipo-2d|salida|\\.claude|\\.github|PLAN\\.md|index\\.html|vite\\.config\\.js)\" && powershell -NoProfile -Command \"Compress-Archive -Path salida/CoheteDelGranero-win32-x64 -DestinationPath salida/CoheteDelGranero-windows.zip -Force\"",
-    "capturas": "vite build && electron herramientas/capturas.cjs"
+    "capturas": "vite build && electron herramientas/capturas.cjs",
+    "trailer": "vite build && electron herramientas/trailer/grabar.cjs"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",
     "electron": "^45.3.0",
+    "ffmpeg-static": "^5.3.0",
     "three": "^0.187.0",
     "vite": "^8.3.7"
   },

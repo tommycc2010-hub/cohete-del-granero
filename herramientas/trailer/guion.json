@@ -1,0 +1,31 @@
+{
+  "voz": "es_MX-ald-medium",
+  "fps": 30,
+  "tomas": [
+    { "id": "granero", "musica": "granero", "min": 6,
+      "texto": "En un granero olvidado, al final de un camino de tierra, alguien dejó un cohete." },
+    { "id": "cohete-roto", "musica": "granero", "min": 4.5,
+      "texto": "Está roto. Pero con paciencia, ingenio y un poco de ciencia, puede volver a volar." },
+    { "id": "dr-nova", "musica": "granero", "min": 4,
+      "texto": "El doctor Nova te guía, pero las decisiones son tuyas." },
+    { "id": "mejoras", "musica": "granero", "min": 6,
+      "texto": "Motor, tanque, paneles solares, un generador nuclear. Cada mejora te lleva más lejos, y cada kilo se paga con combustible." },
+    { "id": "mapa", "musica": "granero", "min": 5,
+      "texto": "Los planetas se alinean cada cierto tiempo. ¿Esperar la ventana de lanzamiento, o salir ya y gastar más?" },
+    { "id": "despegue", "musica": "espacio", "min": 3.6,
+      "texto": "Motores encendidos." },
+    { "id": "vuelo", "musica": "espacio", "min": 4,
+      "texto": "Rumbo a Júpiter, donde la luz del Sol es veintisiete veces más débil." },
+    { "id": "descenso", "musica": "espacio", "min": 5,
+      "texto": "La señal tarda cuarenta y tres minutos en llegar a casa. Nadie puede ayudarte a aterrizar." },
+    { "id": "io", "musica": "jupiter", "min": 4.5,
+      "texto": "Cada mundo tiene su propia gravedad. En Ío, un salto te eleva seis metros." },
+    { "id": "reporte", "musica": "granero", "min": 4.5,
+      "texto": "Cada planeta guarda una misión basada en ciencia real, y cada viaje deja una lección." },
+    { "id": "europa", "musica": "europa", "min": 4.5,
+      "texto": "Hasta que, bajo el hielo de Europa, algo responde." },
+    { "id": "final", "musica": "europa", "min": 7, "texto": "" },
+    { "id": "cierre", "musica": "europa", "min": 6,
+      "texto": "Cohete del Granero. Diseñar una misión es decidir." }
+  ]
+}

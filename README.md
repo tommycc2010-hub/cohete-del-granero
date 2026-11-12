@@ -147,6 +147,17 @@ Cada cambio que se sube a la rama `main` se publica solo en GitHub Pages.
 
 `npm run capturas` vuelve a generar las capturas de `docs/capturas`.
 
+**Tráiler narrado:** `herramientas/trailer` graba el juego cuadro a cuadro, añade la narración, subtítulos y la música del juego, y lo monta con ffmpeg en `salida/trailer-cohete-del-granero.mp4`:
+
+```bash
+pip install piper-tts
+python -m piper.download_voices es_MX-ald-medium
+python herramientas/trailer/narrar.py <carpeta de la voz> salida/trailer
+npm run trailer
+```
+
+La narración usa [Piper](https://github.com/OHF-Voice/piper1-gpl), un sintetizador de voz de código abierto que funciona sin conexión.
+
 ## Próximos pasos
 
 - Cargar la base de datos oficial de la NASA en lugar de los valores de ejemplo.
