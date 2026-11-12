@@ -4,6 +4,8 @@
 
 **▶ Jugar en el navegador:** https://tommycc2010-hub.github.io/cohete-del-granero/
 
+**💻 Descargar para Windows:** [CoheteDelGranero-windows.zip](https://github.com/tommycc2010-hub/cohete-del-granero/releases/latest/download/CoheteDelGranero-windows.zip) (195 MB). Descomprímelo y abre `CoheteDelGranero.exe`. Como la app no está firmada, Windows puede avisar: pulsa *Más información → Ejecutar de todas formas*.
+
 **🎬 Ver el tráiler (1:20):** https://tommycc2010-hub.github.io/cohete-del-granero/trailer-cohete-del-granero.mp4
 
 **Equipo:** Siderense Rocket Labs
