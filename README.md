@@ -151,7 +151,7 @@ Cada cambio que se sube a la rama `main` se publica solo en GitHub Pages.
 
 ```bash
 pip install piper-tts
-python -m piper.download_voices es_MX-ald-medium
+python -m piper.download_voices es_ES-sharvard-medium
 python herramientas/trailer/narrar.py <carpeta de la voz> salida/trailer
 npm run trailer
 ```

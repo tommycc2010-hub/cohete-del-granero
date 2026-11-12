@@ -1,5 +1,6 @@
 {
-  "voz": "es_MX-ald-medium",
+  "voz": "es_ES-sharvard-medium",
+  "hablante": 0,
   "fps": 30,
   "tomas": [
     { "id": "granero", "musica": "granero", "min": 6,
