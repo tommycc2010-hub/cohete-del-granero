@@ -29,6 +29,7 @@ app.whenReady().then(() => {
   const ventana = new BrowserWindow({
     width: 1280, height: 760, minWidth: 900, minHeight: 560,
     title: "Cohete del Granero", backgroundColor: "#8ed1f0", show: false,
+    icon: path.join(__dirname, "icono.png"),
     webPreferences: { contextIsolation: true, sandbox: true },
   });
   ventana.once("ready-to-show", () => ventana.show());
