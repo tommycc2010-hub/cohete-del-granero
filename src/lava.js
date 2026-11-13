@@ -16,24 +16,11 @@ export const PALETAS = {
 
 const tiempo = { value: 0 }; // compartido por todos los charcos
 
-const VERTICE = /* glsl */`
-  varying vec3 vMundo;
-  #include <fog_pars_vertex>
-  void main() {
-    vec4 mundo = modelMatrix * vec4(position, 1.0);
-    vMundo = mundo.xyz;
-    vec4 mvPosition = viewMatrix * mundo;
-    gl_Position = projectionMatrix * mvPosition;
-    #include <fog_vertex>
-  }`;
-
-const FRAGMENTO = /* glsl */`
+// Funciones compartidas por el vértice (relieve) y el fragmento (color): así las grietas que se ven
+// coinciden con los surcos de la malla.
+const COMUN = /* glsl */`
   uniform float t, cubierta, radio;
-  uniform vec3 caliente, medio, costra;
   uniform vec2 centro;
-  varying vec3 vMundo;
-  #include <fog_pars_fragment>
-
   vec2 h2(vec2 p) { p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3))); return fract(sin(p) * 43758.5453); }
   float ruido(vec2 p) {
     vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f);
@@ -53,27 +40,70 @@ const FRAGMENTO = /* glsl */`
     }
     return sqrt(d2) - sqrt(d1);
   }
-
-  void main() {
-    vec2 p = vMundo.xz;
-    float dc = clamp(length(p - centro) / radio, 0.0, 1.0);          // 0 en el centro, 1 en la orilla
+  // Todo lo que describe la lava en un punto: x = cuánto brilla (0 costra, 1 fundida), y = altura del relieve
+  vec2 lava(vec2 p, out float dc, out float calor) {
+    dc = clamp(length(p - centro) / radio, 0.0, 1.0);
     vec2 flujo = p * 0.6 + vec2(t * 0.04, t * 0.025) + (vec2(fbm(p * 0.25 + t * 0.03), fbm(p * 0.25 - t * 0.03)) - 0.5) * 1.6;
     float borde = grietas(flujo);
-    float ancho = mix(0.16, 0.05, cubierta) * (1.0 - 0.5 * dc);       // grietas más finas cerca de la orilla
+    float ancho = mix(0.16, 0.05, cubierta) * (1.0 - 0.5 * dc);
     float grieta = 1.0 - smoothstep(0.0, ancho, borde);
-    float calor = fbm(p * 0.7 - vec2(t * 0.12, t * 0.07));
+    calor = fbm(p * 0.7 - vec2(t * 0.12, t * 0.07));
     float fundido = smoothstep(0.40, 0.58, calor) * (1.0 - cubierta) * (1.0 - dc * 0.6);
     // Como en los lagos de lava reales (Loki, en Ío): junto a la orilla la costra se rompe y brilla
     float orilla = smoothstep(0.74, 0.84, dc) * (1.0 - smoothstep(0.86, 0.92, dc)) * (0.55 + 0.45 * ruido(p * 1.5 + t * 0.2));
     float g = clamp(max(max(grieta, fundido) - dc * dc * 0.2, orilla * (1.0 - cubierta * 0.6)), 0.0, 1.0);
+    // Relieve: las placas de costra se levantan y se abomban; grietas y lava fundida quedan hundidas
+    float placa = smoothstep(0.0, ancho * 2.5, borde);
+    float alto = placa * (0.22 + 0.18 * fbm(p * 1.4)) * (1.0 - fundido) - fundido * 0.12 - orilla * 0.1;
+    alto += 0.05 * ruido(p * 4.0) * placa;                            // grumos de la costra
+    alto *= 1.0 - smoothstep(0.9, 1.0, dc);                           // se junta con la orilla
+    return vec2(g, alto);
+  }`;
+
+const VERTICE = /* glsl */`
+  varying vec3 vMundo;
+  varying float vAlto;
+  ${COMUN}
+  #include <fog_pars_vertex>
+  void main() {
+    vec4 mundo = modelMatrix * vec4(position, 1.0);
+    float dc, calor;
+    vec2 l = lava(mundo.xz, dc, calor);
+    mundo.y += l.y;                                                    // relieve real en la malla
+    vMundo = mundo.xyz;
+    vAlto = l.y;
+    vec4 mvPosition = viewMatrix * mundo;
+    gl_Position = projectionMatrix * mvPosition;
+    #include <fog_vertex>
+  }`;
+
+const FRAGMENTO = /* glsl */`
+  uniform vec3 caliente, medio, costra, dirSol;
+  varying vec3 vMundo;
+  varying float vAlto;
+  ${COMUN}
+  #include <fog_pars_fragment>
+
+  void main() {
+    vec2 p = vMundo.xz;
+    float dc, calor;
+    float g = lava(p, dc, calor).x;
     g = floor(g * 4.0 + 0.5) / 4.0;                                    // por bandas, como el resto del juego
 
+    // Normal de cada faceta (low-poly) y luz del sol en 3 tonos, como los materiales toon
+    vec3 n = normalize(cross(dFdx(vMundo), dFdy(vMundo)));
+    if (n.y < 0.0) n = -n;
+    float luz = max(dot(n, dirSol), 0.0);
+    luz = luz > 0.75 ? 1.0 : luz > 0.4 ? 0.72 : 0.45;
+
     vec3 c = mix(costra, medio, smoothstep(0.15, 0.5, g));
-    c = mix(c, caliente * 1.7, smoothstep(0.6, 0.95, g));             // lo más caliente brilla (bloom)
+    c = mix(c, caliente * 1.5, smoothstep(0.6, 0.95, g));             // lo más caliente brilla (bloom)
     c *= 1.0 + 0.12 * sin(t * 1.7 + calor * 7.0);                      // late despacio
     float grano = step(0.62, ruido(p * 3.5)) * (1.0 - g);              // textura de la costra
     c = mix(c, costra * 0.55, grano * 0.6);
-    c = mix(c, costra * 1.6 + 0.04, (1.0 - g) * smoothstep(0.45, 0.8, ruido(p * 1.3 + 9.0)) * 0.35); // costra más gris en placas viejas
+    c = mix(c, costra * 1.6 + 0.04, (1.0 - g) * smoothstep(0.45, 0.8, ruido(p * 1.3 + 9.0)) * 0.35); // placas viejas más grises
+    c *= mix(luz * 1.25, 1.0, smoothstep(0.3, 0.7, g));                // la costra recibe luz y sombra; lo encendido no
+    c += medio * 0.35 * smoothstep(0.08, -0.06, vAlto) * (1.0 - g);    // reflejo rojizo en lo hundido, junto a la lava
     c = mix(c, vec3(0.06, 0.05, 0.05), smoothstep(0.95, 1.0, dc));     // contorno oscuro
     gl_FragColor = vec4(c, 1.0);
     #include <tonemapping_fragment>
@@ -90,6 +120,7 @@ function materialBase(dest) {
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
       cubierta: { value: pal.cubierta }, radio: { value: 5 }, centro: { value: new THREE.Vector2() },
       caliente: { value: new THREE.Color(pal.caliente) }, medio: { value: new THREE.Color(pal.medio) }, costra: { value: new THREE.Color(pal.costra) },
+      dirSol: { value: new THREE.Vector3(14, 22, 12).normalize() }, // la misma dirección que el sol de la superficie
     }]),
   });
   m.uniforms.t = tiempo;
@@ -98,7 +129,7 @@ function materialBase(dest) {
 }
 
 // Superficie que sigue el relieve: anillos alrededor del centro, con la orilla irregular
-function geometriaCharco(x, z, radio, altura, forma, anillos = 7, lados = 36, alzado = 0.1) {
+function geometriaCharco(x, z, radio, altura, forma, anillos = 16, lados = 64, alzado = 0.1) {
   const pos = [x, altura(x, z) + alzado, z], idx = [];
   for (let a = 1; a <= anillos; a++) {
     for (let s = 0; s < lados; s++) {
@@ -157,7 +188,9 @@ export function crearLava(dest, x, z, radio, altura, azar) {
   mat.uniforms.t = tiempo;
   mat.uniforms.centro.value.set(x, z);
   mat.uniforms.radio.value = radio;
-  grupo.add(new THREE.Mesh(geometriaCharco(x, z, radio, altura, forma), mat));
+  const superficie = new THREE.Mesh(geometriaCharco(x, z, radio, altura, forma), mat);
+  superficie.frustumCulled = false; // el relieve se calcula en la GPU: la caja de la malla no lo incluye
+  grupo.add(superficie);
 
   const roca = toon(pal.roca);
   roca.flatShading = true;
@@ -182,6 +215,21 @@ export function crearLava(dest, x, z, radio, altura, azar) {
     grupo.add(p);
   }
 
+  // Bloques de costra que flotan y derivan despacio sobre la lava, con contorno
+  const bloques = [];
+  const nBloques = 2 + Math.floor(azar() * 3);
+  for (let i = 0; i < nBloques; i++) {
+    const s = 0.5 + azar() * 0.6;
+    const b = new THREE.Mesh(geoPiedra, roca);
+    b.scale.set(s * (1 + azar() * 0.6), s * 0.28, s * (0.8 + azar() * 0.5));
+    b.castShadow = true;
+    const borde = new THREE.Mesh(geoPiedra, matBorde);
+    borde.scale.setScalar(1.08);
+    b.add(borde);
+    grupo.add(b);
+    bloques.push({ b, a: azar() * 6.28, r: radio * (0.15 + azar() * 0.45), v: (azar() < 0.5 ? -1 : 1) * (0.02 + azar() * 0.03), giro: azar() * 6, fase: azar() * 6 });
+  }
+
   // Brasas que saltan y suben desde la superficie
   const N = 14, brasas = crearParticulas(N, { color: pal.brasas, tam: 0.32, aditivo: true, opacidad: 0.95 });
   grupo.add(brasas.puntos);
@@ -198,6 +246,13 @@ export function crearLava(dest, x, z, radio, altura, azar) {
         brasas.poner(i, px + Math.sin(c.f * 9 + i) * 0.3, altura(px, pz) + 0.2 + c.f * 3.2, pz + Math.cos(c.f * 7 + i) * 0.3);
       }
       brasas.listo();
+      for (const k of bloques) {
+        k.a += k.v * dt;
+        k.giro += k.v * dt * 3;
+        const px = x + Math.cos(k.a) * k.r, pz = z + Math.sin(k.a) * k.r;
+        k.b.position.set(px, altura(px, pz) + 0.18 + Math.sin(tiempo.value * 0.8 + k.fase) * 0.04, pz);
+        k.b.rotation.set(Math.sin(tiempo.value * 0.6 + k.fase) * 0.06, k.giro, Math.cos(tiempo.value * 0.5 + k.fase) * 0.06);
+      }
     },
   };
 }

@@ -102,7 +102,7 @@ function venus(api, hecha) {
   [[38, 3], [62, -2]].forEach(([d, hueco]) => {
     for (let k = -4; k <= 4; k++) {
       if (k === hueco) continue;
-      api.ponerZona(u.x * d + p.x * k * 9, u.z * d + p.z * k * 9, 5);
+      api.ponerZona(u.x * d + p.x * k * 9, u.z * d + p.z * k * 9, 4.6); // se tocan sin montarse: solo se pasa por el hueco
     }
   });
 
