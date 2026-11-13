@@ -14,7 +14,7 @@ const APPS = {
   diario: { icono: "📓", nombre: "Diario", color: "#5cc46b" },
 };
 
-export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
+export function crearTelefono({ alAbrir, alCerrar, alLanzar, alDisenar }) {
   const el = document.getElementById("telefono");
   const pantalla = el.querySelector(".tel-pantalla");
   let app = "inicio", abierto = false, ultimo = "";
@@ -66,6 +66,7 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
         <b>${ok ? "" : "🔒 "}${d.nombre}</b>${estado.visitados[id] ? " <em>visitado</em>" : ""}
         <span class="tel-precio ${ok && estado.combustible < ida * 2 ? "caro" : ""}">${ida * 2} ⛽ ida y vuelta</span>
         <small>${nota}</small>
+        ${ok ? `<small class="tel-disenar">🧪 Toca para diseñar la misión${estado.records[id] ? ` · 🏅 récord ${estado.records[id].total} ${"⭐".repeat(estado.records[id].estrellas)}` : ""}</small>` : ""}
         ${ok ? estadoVentana : ""}
         <small>☀ Luz solar ${d.luz >= 1 ? d.luz.toFixed(1) + "×" : "1/" + Math.round(1 / d.luz)} la de la Tierra · 🔋 ${(generacion(id, true) - consumoSistemas()) >= 0 ? "energía de sobra" : "la batería se gasta"}</small>
         <small>📡 Señal: ${retrasoSenal(id)} min de retraso · 📅 viaje de ${d.viaje} días</small></button>${espera}</div>`;
@@ -94,6 +95,7 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
           <small>${abierta || hecha ? M.desc : "Cumple la misión anterior para verla."}</small>
           ${hecha ? `<small class="tel-dato">Dato real: ${M.dato}</small>` : ""}</div>
         <span class="tel-precio">${M.recompensa} 💰</span></div>
+        ${estado.records[id] ? `<div class="tel-record">🏅 Mejor diseño: ${estado.records[id].total} puntos ${"⭐".repeat(estado.records[id].estrellas)} (${estado.records[id].tipo})</div>` : ""}
         ${abierta || hecha ? `<div class="tel-secundarias"><b>⭐ Secundarias ${secundariasHechas(id)}/5</b>` + SECUNDARIAS[id].map(sx => {
           const pr = progresoSecundaria(id, sx), ok = pr === "✅";
           return `<div class="${ok ? "hecha" : ""}"><span>${ok ? "✅" : sx.icono}</span><div><b>${sx.titulo}</b> <i>${ok ? "" : pr}</i><small>${ok ? "Dato real: " + sx.dato : sx.desc}</small></div><em>${sx.recompensa} 💰</em></div>`;
@@ -151,6 +153,11 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar }) {
     if (tipo === "app") { app = valor; ultimo = ""; }
     else if (tipo === "mejora") ultimo = comprarMejora(valor);
     else if (tipo === "esperar") ultimo = esperar(Number(valor));
+    else if (tipo === "lanzar" && alDisenar) { // se diseña la misión en el laboratorio antes de despegar
+      abierto = false;
+      el.classList.remove("abierto");
+      return alDisenar(valor);
+    }
     else if (tipo === "lanzar") {
       ultimo = iniciarMision(valor);
       if (estado.mision) { // despegue: el teléfono se guarda y empieza el vuelo en 3D

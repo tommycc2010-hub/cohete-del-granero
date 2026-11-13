@@ -31,5 +31,5 @@ Juego 3D (Three.js + Vite) para el NASA Space Apps 2026, reto *Space Mission Des
 - Commits con autor `Siderense Rocket Labs` y el correo `noreply` de GitHub. Nunca poner correos personales en commits ni en servicios externos.
 - Las acciones de GitHub se hacen con la credencial guardada en el equipo; el usuario es quien inicia sesión.
 
-## Reto: lo que falta
-Ver el final de `docs/mapa-del-proyecto.md`: laboratorio de diseño de misión, recurso datos y comunicaciones, puntaje con análisis y modo equipo de hasta 4 jugadores.
+## Reto
+El diseño de misión (laboratorio, datos, puntaje y modo equipo) está en `diseno.js` y `laboratorio.js`; el flujo completo está en `docs/mapa-del-proyecto.md`. Lo pendiente también.

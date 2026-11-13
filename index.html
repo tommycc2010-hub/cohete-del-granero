@@ -212,7 +212,71 @@
   #informe { position: fixed; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center;
     padding: 16px; background: rgba(20, 30, 50, .4); cursor: pointer; }
   #informe.visible { display: flex; }
-  #informe .tarjeta { width: min(520px, 100%); padding: 18px 20px; }
+  #informe .tarjeta { width: min(560px, 100%); padding: 18px 20px; max-height: 92vh; overflow-y: auto; }
+  .inf-diseno { margin-top: 12px; padding-top: 10px; border-top: 3px dashed var(--ink); }
+  .inf-diseno h3 { margin: 0 0 4px; }
+  .inf-estrellas { font-size: 20px; margin: 4px 0 8px; }
+  .inf-estrellas small { font-size: 12px; opacity: .7; }
+  .inf-record { white-space: nowrap; background: var(--yellow); border: 2px solid var(--ink); border-radius: 8px; padding: 1px 8px; font-size: 13px; font-weight: bold; }
+  .inf-porque { margin-top: 8px; font-size: 13px; }
+  .inf-porque ul { margin: 4px 0 0; padding-left: 18px; }
+  .inf-porque li { margin-bottom: 3px; }
+  .inf-parecido { margin-top: 8px; font-size: 13px; padding: 8px 10px; background: #e8f4ff; border: 2px solid var(--ink); border-radius: 10px; }
+  .tel-disenar { color: #8a3fb5; font-weight: bold; }
+  .tel-record { margin: -6px 0 8px 14px; font-size: 12px; font-weight: bold; color: #9a6a00; }
+
+  /* ----- Laboratorio de Diseño de Misión ----- */
+  #laboratorio { display: none; position: fixed; inset: 0; z-index: 16; background: rgba(14, 22, 40, .72); padding: 14px; overflow: auto; }
+  #laboratorio.abierto { display: grid; place-items: start center; }
+  .lab { width: min(1180px, 100%); padding: 14px 16px; }
+  .lab-cabeza { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 3px solid var(--ink); padding-bottom: 8px; margin-bottom: 8px; }
+  .lab-cabeza h2 { margin: 0; font-size: 20px; flex: 1; min-width: 240px; }
+  .lab-cml { display: flex; align-items: center; gap: 4px; font-weight: bold; font-size: 13px; }
+  .lab-cml i { width: 22px; height: 10px; border: 2px solid var(--ink); border-radius: 4px; background: #fff; }
+  .lab-cml i.on { background: var(--green); }
+  .lab-cml span { margin-left: 6px; }
+  .lab-x { font: inherit; font-size: 18px; font-weight: bold; width: 36px; height: 36px; border: 3px solid var(--ink); border-radius: 50%; background: #fff; cursor: pointer; }
+  .lab-link { font: inherit; font-size: 13px; font-weight: bold; border: 2px solid var(--ink); border-radius: 10px; background: #fff; padding: 5px 10px; cursor: pointer; }
+  .lab-cuerpo { display: grid; grid-template-columns: 1.55fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .lab-cuerpo { grid-template-columns: 1fr; } }
+  .lab-pasos h3, .lab-lado h3 { margin: 12px 0 6px; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .lab-rol { font-size: 12px; background: #f6e6ff; border: 2px solid var(--ink); border-radius: 8px; padding: 1px 7px; }
+  .lab-ops { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+  .lab-insts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px; }
+  .lab-op, .lab-inst { font: inherit; text-align: left; padding: 8px 10px; border: 3px solid var(--ink); border-radius: 12px; background: #fff; cursor: pointer; box-shadow: 3px 3px 0 var(--ink); }
+  .lab-op b, .lab-inst b { display: block; font-size: 14px; }
+  .lab-op small, .lab-inst small { display: block; font-size: 12px; opacity: .85; margin-top: 2px; }
+  .lab-op.sel, .lab-inst.sel { background: var(--yellow); }
+  .lab-inst.util { border-color: #8a3fb5; }
+  .lab-inst em { font-style: normal; font-size: 11px; font-weight: bold; color: #fff; background: #8a3fb5; border-radius: 6px; padding: 0 6px; }
+  .lab-op.no-sirve, .lab-inst.no-sirve { opacity: .55; }
+  .lab-icono { float: right; font-size: 22px; }
+  .lab-necesita { color: #6a2f8f; }
+  .lab-num { font-weight: bold; opacity: 1 !important; }
+  .lab-nota { font-size: 12px; opacity: .8; margin: 2px 0 6px; }
+  .lab-dato { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 13px; margin-bottom: 6px; }
+  .lab-dato b { text-align: right; }
+  .lab-barra { grid-column: 1 / -1; height: 10px; border: 2px solid var(--ink); border-radius: 6px; background: #fff; overflow: hidden; }
+  .lab-barra i { display: block; height: 100%; background: var(--green); }
+  .lab-barra.justo i { background: var(--yellow); }
+  .lab-barra.mal i { background: var(--red); }
+  .lab-revision { list-style: none; padding: 0; margin: 0; font-size: 13px; }
+  .lab-revision li { padding: 6px 8px; margin-bottom: 5px; border: 2px solid var(--ink); border-radius: 10px; }
+  .lab-revision .mal { background: #ffd9d3; } .lab-revision .justo { background: #fff3c4; } .lab-revision .bien { background: #d6f5dc; }
+  .lab-aprobar { margin-top: 10px; padding: 8px 10px; border: 2px solid var(--ink); border-radius: 10px; background: #f6e6ff; font-size: 13px; }
+  .lab-aprobar label { display: block; margin: 4px 0; cursor: pointer; }
+  .lab-metas { font-size: 12px; padding-left: 18px; }
+  .lab-botones { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+  .lab-boton { font: inherit; font-weight: bold; font-size: 15px; padding: 9px 16px; border: 3px solid var(--ink); border-radius: 12px; background: #fff; cursor: pointer; box-shadow: 3px 3px 0 var(--ink); }
+  .lab-boton.principal { background: var(--green); font-size: 17px; }
+  .lab-boton:disabled { opacity: .45; cursor: not-allowed; }
+  .lab-equipo { width: min(640px, 100%); }
+  .lab-equipo p { font-size: 14px; }
+  .lab-nombres { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin: 10px 0; }
+  .lab-nombres label { font-size: 13px; font-weight: bold; }
+  .lab-nombres input { display: block; width: 100%; font: inherit; padding: 6px 8px; border: 2px solid var(--ink); border-radius: 8px; margin-top: 3px; }
+  body.tactil #laboratorio { padding: 6px; }
+  body.tactil .lab { padding: 10px; }
   #informe h2 { margin: 0; font-size: 24px; }
   .inf-destino { margin: 2px 0 12px; font-weight: bold; opacity: .7; }
   .inf-fila { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 2px solid rgba(29, 29, 29, .12); }
@@ -353,6 +417,7 @@
   <div class="tarjeta medidor amarillo" id="en-esp"><div class="relleno" id="en-esp-relleno"></div><span id="en-esp-txt"></span></div>
   <div class="tarjeta" id="recolectado"></div>
   <div class="tarjeta" id="velocidad"></div>
+  <div class="tarjeta" id="datos-esp"></div>
   <div class="tarjeta" id="senal-esp"></div>
 </div>
 <div class="tarjeta ayuda" data-en="espacio">
@@ -378,6 +443,7 @@
   <div class="tarjeta" id="suelo-comb"></div>
   <div class="tarjeta" id="recolectado-suelo"></div>
   <div class="tarjeta" id="senal-suelo"></div>
+  <div class="tarjeta" id="datos-suelo"></div>
   <div class="tarjeta" id="averia"></div>
 </div>
 <div id="vitales" class="tarjeta" data-en="superficie">
@@ -395,6 +461,7 @@
 <div id="marcador-pista" class="marcador baliza" data-en="espacio superficie"></div>
 <div id="marcador-senal" class="marcador baliza" data-en="superficie"></div>
 <div id="alerta" class="tarjeta" data-en="espacio superficie"></div>
+<div id="laboratorio"></div>
 <div id="aviso" class="tarjeta"></div>
 <div id="logro" class="tarjeta"></div>
 

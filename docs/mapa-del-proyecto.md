@@ -54,6 +54,8 @@ Sirve para saber **qué tocar y qué se rompe** antes de editar. Si el código c
 | `telefono.js` | Menú del teléfono: mapa, taller, misiones, logros |
 | `menu.js` | Menú principal, pausa, opciones y las 4 ranuras |
 | `informe.js` | Reporte de misión y la lección del viaje |
+| `diseno.js` | **Diseño de misión** (sin nada visual): instrumentos, lanzadores, tipos de misión, objetivos, cálculo del diseño, datos y memoria, evaluación, récords y modo equipo |
+| `laboratorio.js` | Pantalla del Laboratorio de Diseño de Misión y la evaluación del reporte |
 | `tutorial.js`, `tactil.js` | Objetivos del tutorial · controles del celular |
 
 ### Utilidades (casi nadie las importa a ellas)
@@ -68,6 +70,8 @@ Sirve para saber **qué tocar y qué se rompe** antes de editar. Si el código c
 | `estilo.js` (`toon`, `caja`…) | **Todo lo que se ve**: 15 archivos | Revisar con `npx electron herramientas/revisar.cjs` |
 | `reglas.js` (números de economía) | Balance, teléfono, Dr. Nova, simulador | `npm run simular` (debe seguir ~9 viajes) |
 | `reglas.js` (`GUARDABLE`, `estado`) | **Partidas guardadas** | Probar guardar y cargar; añadir el campo en `importarEstado` |
+| `reglas.js` (`factorMasa`, `consumoSistemas`, `costoIda`) | Incluyen la masa y la energía de los instrumentos del diseño: afectan al vuelo, la energía y al laboratorio | `npm run simular` |
+| `diseno.js` (catálogos, premios) | Laboratorio, evaluación y simulador (usa `disenoAutomatico`) | `npm run simular` y probar el laboratorio |
 | `datos.js` | 10 archivos, incluido el simulador | `npm run simular` |
 | `main.js` | Es el único que importa `granero.js` y `superficie.js` | Probar los 6 modos |
 | `superficie.js` | Los 5 biomas | Aterrizar en 2 o 3 planetas |
@@ -80,7 +84,12 @@ Sirve para saber **qué tocar y qué se rompe** antes de editar. Si el código c
 - **Añadir un logro:** `reglas.js` (`LOGROS` + `desbloquearLogro("id")` donde ocurre).
 - **Añadir un dato de planeta:** `datos.js` (`DATOS_PLANETAS`) y, si tiene bioma, `superficie.js` (`BIOMAS`, `CIELOS`).
 - **Tocar el aspecto de un objeto 3D:** su archivo (`objetos.js`, `granja.js`, `pueblo.js`…) y después fotografiarlo con `herramientas/revisar.cjs`.
+- **Añadir un instrumento:** `diseno.js` (`INSTRUMENTOS`); si es el que pide un objetivo, también en `OBJETIVOS`. Aparece solo en el laboratorio.
+- **Añadir un objetivo científico:** `diseno.js` (`OBJETIVOS[destino]`) y, si tiene misión real parecida, `REALES`.
 - **Publicar:** `npm run empaquetar` → release en GitHub (el APK lo compila Actions solo).
 
-## Pendiente por el reto (ver el análisis del reto)
-Para el reto *Space Mission Design Game* faltan un laboratorio de diseño de misión (objetivo, instrumentos, lanzador, órbita), el recurso **datos** y la comunicación, un puntaje con análisis, y el modo equipo de hasta 4 jugadores. Casi todo iría en archivos **nuevos** (`mision-diseno.js`, `instrumentos.js`, `puntaje.js`) y conectaría con `reglas.js` y el teléfono, sin tocar los mundos 3D.
+## Flujo del diseño de misión
+`telefono.js` (elegir destino) → `laboratorio.js` (diseñar; `diseno.calcularDiseno`) → `reglas.iniciarMision(dest, diseno)` (cobra el diseño, crea la memoria de datos) → `main.observar()` cada fotograma en órbita y en el suelo (`diseno.pasoDatos`) → `main.volver()` → `diseno.evaluar` + `evaluarEquipo` → premio (`reglas.ganar`), récord y reporte (`laboratorio.htmlEvaluacion`).
+
+## Pendiente por el reto
+Ya están el laboratorio, los datos, el puntaje y el modo equipo local. Quedan ideas como niveles de dificultad, modo sandbox, compartir y comparar diseños, y el modo equipo en línea (cada persona en su teléfono).

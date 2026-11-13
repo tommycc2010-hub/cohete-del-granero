@@ -44,6 +44,12 @@ window.T = (() => {
     j.estado.combustible = 60 + 20 * j.estado.mejoras.tanque;
     j.telefono.abrir("mapa");
     [...document.querySelectorAll(".tel-item")].find(b => b.textContent.includes(dest)).click();
+    // El mapa abre el laboratorio de diseño: se despega con el diseño propuesto (y la cámara, para tener datos)
+    const lab = document.getElementById("laboratorio");
+    if (lab.classList.contains("abierto")) {
+      lab.querySelector('[data-inst="camara"]').click();
+      lab.querySelector('[data-acc="despegar"]').click();
+    }
     j.avanzar(4.2); await pausa(1300); ocultar();
   }
   function volarHacia(segundos) {
@@ -155,6 +161,14 @@ const ESCENAS = [
     T.j.jugador.colocar(T.j.granero, -62, 56, -75, 72); T.j.avanzar(4);
     T.j.camera.lookAt(-76, 2.2, 70);
   })()`, 1200],
+
+  ["11-laboratorio-mision", `(async () => {
+    T.j.estado.dinero = 2600; T.j.estado.combustible = 140; T.j.refrescarHud();
+    T.j.telefono.abrir("mapa"); await T.pausa(200);
+    [...document.querySelectorAll(".tel-item")].find(b => b.textContent.includes("Marte")).click(); await T.pausa(300);
+    const lab = document.getElementById("laboratorio");
+    for (const sel of ['[data-inst="radar"]', '[data-inst="camara"]', '[data-tipo="orbitador"]']) { lab.querySelector(sel).click(); await T.pausa(80); }
+  })()`, 900],
 ];
 
 app.whenReady().then(async () => {

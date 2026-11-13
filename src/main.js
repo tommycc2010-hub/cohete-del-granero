@@ -17,6 +17,8 @@ import { renderizarPista } from "./musica.js";
 import { crearPostpro } from "./postpro.js";
 import { crearEventosEspacio, crearEventosSuelo } from "./eventos.js";
 import { crearExtrasSuelo } from "./secundarias.js";
+import { crearLaboratorio, htmlEvaluacion } from "./laboratorio.js";
+import { pasoDatos, evaluar, evaluarEquipo, anotarRecord, premioObjetivo, memoriaNave, enlace, TIPOS } from "./diseno.js";
 import { esTactil, crearTactil, simularBloqueo } from "./tactil.js";
 import { DATOS_PLANETAS, SECUNDARIAS } from "./datos.js";
 import {
@@ -26,7 +28,7 @@ import {
   BONO_PUEBLO, VALOR_ORBITA, FUGA_POR_SEGUNDO, completarMision, exportarEstado, importarEstado, factorMasa,
   energiaMax, generacion, consumoSistemas, ENERGIA_RECARGA_OXI, retrasoSenal,
   LOGROS, logrosNuevos, desbloquearLogro, donarMuseo, ventana, desbloqueado, ORDEN, importarMision,
-  soltarRecolectado, recuperarMochila, marcarPunto, revisarAterrizaje, avisosSecundarias, progresoSecundaria, secundariasHechas,
+  ganar, iniciarMision, soltarRecolectado, recuperarMochila, marcarPunto, revisarAterrizaje, avisosSecundarias, progresoSecundaria, secundariasHechas,
 } from "./reglas.js";
 
 // ----- Render -----
@@ -101,7 +103,8 @@ const VISTAS = {
   final: () => ({ escena: final.scene, camara: final.camera }),
 };
 const $ = id => document.getElementById(id);
-const pausado = () => !$("inicio").classList.contains("oculto");
+// En pausa: el menú está abierto o se está diseñando una misión en el laboratorio
+const pausado = () => !$("inicio").classList.contains("oculto") || $("laboratorio").classList.contains("abierto");
 
 function actualizarMusica() {
   if (modo === "granero" || modo === "despegue") sonido.musica("granero");
@@ -366,7 +369,7 @@ if (partida) menu.mostrarPartidas(); // venimos de "Cargar partida": el menú ab
 document.body.classList.add("en-menu"); // el HUD se oculta hasta empezar a jugar
 jugador.controls.addEventListener("lock", () => $("inicio").classList.add("oculto"));
 jugador.controls.addEventListener("unlock", () => {
-  if (!telefono.abierto && !tarjetaFinal) { menu.refrescar(); $("inicio").classList.remove("oculto"); }
+  if (!telefono.abierto && !tarjetaFinal && !laboratorio.abierto) { menu.refrescar(); $("inicio").classList.remove("oculto"); }
 });
 
 // ----- App instalable (PWA): guarda el juego para abrirlo sin internet. No en la app de escritorio. -----
@@ -402,9 +405,25 @@ const telefono = crearTelefono({
     jugador.controls.lock();
   },
   alLanzar: despegar,
+  alDisenar: dest => laboratorio.abrir(dest),
+});
+
+// ----- Laboratorio de Diseño de Misión: se abre al elegir un destino en el mapa -----
+const laboratorio = crearLaboratorio({
+  alDespegar(diseno) {
+    const dineroInicial = estado.dinero;
+    const t = iniciarMisionConDiseno(diseno);
+    if (!estado.mision) { aviso(t); sonido.reproducir("error"); return false; }
+    estado.mision.dineroInicial = dineroInicial;
+    laboratorio.cerrar();
+    despegar();
+    return true;
+  },
+  alCancelar() { laboratorio.cerrar(); telefono.abrir("mapa"); },
 });
 
 addEventListener("keydown", e => {
+  if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
   if (dialogo && /^Digit[1-9]$/.test(e.code) && !e.repeat) return elegirOpcion(Number(e.code.slice(5)) - 1);
   if (reporteAbierto) {
     if (["KeyE", "Enter", "Escape", "Space"].includes(e.code) && !e.repeat) { e.preventDefault(); cerrarReporte(); }
@@ -531,8 +550,32 @@ function entrarAlEspacio() {
     if (lluviaActiva) {
       setTimeout(() => { if (modo === "espacio") aviso("☄️ ¡Alerta! Lluvia de micrometeoritos en la ruta de aterrizaje. Esquiva las rocas."); }, 3500);
       radio(`📻 ${NOMBRE}: Cuidado con esas rocas: un micrometeorito del tamaño de un grano de arena viaja a más de 10 km por segundo. Esquívalas.`);
-    } else radio(`📻 ${NOMBRE}: Lo que flota en órbita vale poco. Sigue el marcador 🛬 para aterrizar en ${DATOS_PLANETAS[dest].lugar}.`);
+    } else if (tipoMision() === "sobrevuelo") radio(`📻 ${NOMBRE}: Es un sobrevuelo: tienes ${TIPOS.sobrevuelo.ventana} segundos cerca del planeta. Los instrumentos observan solos; luego volvemos a casa.`);
+    else if (tipoMision() === "orbitador") radio(`📻 ${NOMBRE}: Estamos en órbita. Los instrumentos observan y la antena envía los datos a la Tierra. Pulsa R para volver cuando quieras.`);
+    else radio(`📻 ${NOMBRE}: Lo que flota en órbita vale poco. Sigue el marcador 🛬 para aterrizar en ${DATOS_PLANETAS[dest].lugar}.`);
+    espacio.pista.visible = tipoMision() === "aterrizaje";
   });
+}
+
+// ----- Diseño de misión: tipo, observación y datos -----
+const tipoMision = () => (estado.mision && estado.mision.diseno && estado.mision.diseno.tipo) || "aterrizaje";
+function iniciarMisionConDiseno(diseno) { return iniciarMision(diseno.dest, diseno); }
+// Los instrumentos observan (si hay energía), llenan la memoria y la antena envía a la Tierra
+function observar(dt, lugar) {
+  const m = estado.mision;
+  if (!m || !m.diseno) return;
+  const r = pasoDatos(m, dt, lugar, !sinEnergia());
+  if (r.lleno && !m.avisoMemoria) {
+    m.avisoMemoria = true;
+    aviso("💾 ¡Memoria llena! Los instrumentos generan más datos de los que la antena alcanza a enviar: se está perdiendo ciencia.");
+    sonido.reproducir("alarma");
+  }
+}
+function textoDatos() {
+  const m = estado.mision;
+  if (!m || !m.datos) return "";
+  const D = m.datos, falta = tipoMision() === "sobrevuelo" ? ` · ⏱ ${Math.max(0, Math.ceil(TIPOS.sobrevuelo.ventana - (m.tObs || 0)))} s` : "";
+  return `💾 ${Math.round(D.memoria)}/${memoriaNave()} MB · 📡 ${Math.round(D.enviados)} MB enviados${falta}`;
 }
 
 // ----- Radio con retraso de la señal -----
@@ -630,13 +673,20 @@ function volar(dt) {
   }
   if (r.enLimite) aviso("Te alejas demasiado. Vuelve hacia el planeta.");
 
+  observar(dt, "orbita");
   pintarHudVuelo(r.velocidad);
   pintarMarcadores(espacio.camera, espacio.nave.position);
-  pintarBaliza($("marcador-pista"), espacio.pista.position, espacio.camera, espacio.nave.position, "🛬 Aterrizar");
+  pintarBaliza($("marcador-pista"), tipoMision() === "aterrizaje" ? espacio.pista.position : null, espacio.camera, espacio.nave.position, "🛬 Aterrizar");
+  // Sobrevuelo: pasada corta; al terminar, el cohete vuelve solo
+  if (tipoMision() === "sobrevuelo") {
+    const m = estado.mision;
+    m.tObs = (m.tObs || 0) + dt;
+    if (m.tObs >= TIPOS.sobrevuelo.ventana) { aviso("☄ Fin del sobrevuelo: el planeta queda atrás. Rumbo a casa."); return volver(); }
+  }
   pintarBaliza($("marcador-senal"), null);
 
   esperaAviso -= dt;
-  if (r.enPista) {
+  if (r.enPista && tipoMision() === "aterrizaje") {
     if (puedeAterrizar()) return empezarDescenso();
     if (esperaAviso <= 0) {
       esperaAviso = 4;
@@ -654,6 +704,7 @@ function pintarHudVuelo(velocidad) {
   $("txt-comb").textContent = `⛽ ${estado.combustible.toFixed(1)} · reserva ${m.ida}`;
   $("recolectado").textContent = `📦 ${m.carga.length} · quedan ${espacio.objetos.length}`;
   $("velocidad").textContent = `${Math.round(velocidad)} m/s`;
+  $("datos-esp").textContent = textoDatos();
   const justo = estado.combustible <= m.ida + 2;
   $("barra").classList.toggle("alerta", justo);
   $("alerta").classList.toggle("visible", justo || !!alertaEvento);
@@ -909,6 +960,7 @@ function pasoSuperficie(dt) {
   if (!enNave && oxi < oxigenoMax() * 0.25 && esperaAlarma <= 0) { esperaAlarma = 1.2; sonido.reproducir("alarma"); }
 
   pasoTormenta(dt, enNave);
+  observar(dt, "suelo");
   const ex = extras.actualizar(dt, p);
   for (const { tipo, i } of ex.puntos) {
     const sx = SECUNDARIAS[m.dest].find(x => x.tipo === tipo), n = marcarPunto(m.dest, tipo, i);
@@ -983,6 +1035,7 @@ function pintarSecundarias(dest) {
 
 function pintarHudSuelo(enNave) {
   const m = estado.mision, max = oxigenoMax();
+  $("datos-suelo").textContent = textoDatos();
   pintarSecundarias(m.dest);
   $("oxi-relleno").style.width = `${100 * Math.max(0, oxi) / max}%`;
   $("oxi-txt").textContent = `Oxígeno ${Math.ceil(Math.max(0, oxi))} s`;
@@ -1170,7 +1223,21 @@ function volver() {
   if (desdeSuelo) sonido.motor(1);
   const m = estado.mision, cargaAntes = estado.carga.length, llevaba = m.carga.length;
   const rescate = estado.combustible < m.ida;
+  const resumen = informe.datos || {};
+  const ev = evaluar(m, { rescate, averias: resumen.averias || [], desmayos: resumen.desmayos || 0,
+    combustibleFinal: rescate ? 0 : estado.combustible - m.ida, capacidad: capacidad() });
+  const eq = ev ? evaluarEquipo(ev, estado.equipo, m.dineroInicial || estado.dinero) : null;
   const texto = regresar();
+  let premio = 0, record = false;
+  if (ev) {
+    premio = (ev.cumplido ? premioObjetivo(m.dest) : 0) + Math.round(ev.ciencia * 0.2);
+    if (premio) ganar(premio, `🔬 Ciencia entregada: ${ev.entregadoTotal} MB. Premio científico: ${premio} 💰.`);
+    if (eq) ev.total += eq.bonus;
+    record = anotarRecord(ev);
+    if (ev.estrellas >= 3) desbloquearLogro("tresestrellas");
+    if (eq && eq.metas.every(x => x.ok)) desbloquearLogro("equipo");
+    if (eq) ev.total -= eq.bonus; // el reporte lo muestra aparte
+  }
   const traidos = estado.carga.slice(cargaAntes);
   const datos = informe.terminar({
     combustibleFinal: estado.combustible, rescate, traidos,
@@ -1183,14 +1250,15 @@ function volver() {
     ponerModo("granero");
     aviso(texto);
     if (desdeSuelo) tutorial.marcar("regreso");
-    if (datos) abrirReporte(datos);
+    if (datos) abrirReporte(datos, ev, eq, { premio, record });
   });
 }
 
 // ----- Reporte de misión -----
 let reporteAbierto = false;
-function abrirReporte(datos) {
-  $("informe-cuerpo").innerHTML = htmlInforme(datos);
+function abrirReporte(datos, ev = null, eq = null, extra = {}) {
+  const cerrar = '<p class="inf-cerrar"><kbd>E</kbd> continuar</p>'; // al final, después de la evaluación
+  $("informe-cuerpo").innerHTML = htmlInforme(datos).replace(cerrar, "") + htmlEvaluacion(ev, eq, extra) + cerrar;
   $("informe").classList.add("visible");
   reporteAbierto = true;
 }

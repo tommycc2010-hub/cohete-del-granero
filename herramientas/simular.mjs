@@ -13,6 +13,7 @@ import {
   energiaMax, generacion, consumoSistemas, ENERGIA_RECARGA_OXI, ventana, esperar, COSTO_DIA,
 } from "../src/reglas.js";
 import { DATOS_PLANETAS, MISIONES } from "../src/datos.js";
+import { disenoAutomatico, premioObjetivo } from "../src/diseno.js";
 
 const N = Number(process.argv[2]) || 300;
 const DETALLE = process.argv.includes("-v");
@@ -20,6 +21,8 @@ const DETALLE = process.argv.includes("-v");
 // ----- Supuestos sobre el jugador promedio -----
 const J = {
   aterrizaje: { suave: 0.55, medio: 0.33 },  // el resto son aterrizajes duros
+  exitoObjetivo: 0.7,        // probabilidad de cumplir el objetivo científico del diseño
+  cienciaMedia: 90,          // premio medio por la ciencia entregada (además del objetivo); en las pruebas, 100-300
   exitoMision: 0.8,          // probabilidad de cumplir la misión al intentarla (si le alcanza el traje y el oxígeno)
   margenTraje: 0.8,          // no gasta más del 80 % del traje antes de volver
   margenOxigeno: 0.9,
@@ -54,7 +57,8 @@ function combustibleManiobras(dest) {
   const segFrenando = caida / (1.5 * g + 3) * 1.25; // un 25 % de más por no frenar perfecto
   return 6 * consumoImpulso() + segFrenando * consumoImpulso() * 1.2;
 }
-const combustibleViaje = dest => costoIda(dest) * 2 + combustibleManiobras(dest) + 3;
+// Con el diseño automático (sus instrumentos suman masa)
+const combustibleViaje = dest => costoIda(dest, disenoAutomatico(dest)) * 2 + combustibleManiobras(dest) + 3;
 const segundosTraje = dest => 100 / desgasteTraje(dest) * J.margenTraje;
 
 // Segundos que la batería deja estar en la superficie, tras gastar en el vuelo (unos 45 s) y en recargar oxígeno.
@@ -130,7 +134,9 @@ function viaje(dest, registro) {
   const dineroAntes = estado.dinero;
   const falta = Math.ceil(Math.min(capacidad(), combustibleViaje(dest) + 4) - estado.combustible);
   comprarCombustible(Math.max(0, falta)); // con 0 solo actúa el combustible de emergencia, si hace falta
-  iniciarMision(dest);
+  iniciarMision(dest, disenoAutomatico(dest)); // diseño sencillo: el instrumento más barato del objetivo y el lanzador justo
+  const conDiseno = !!estado.mision;
+  if (!estado.mision) iniciarMision(dest); // sin dinero para el diseño: viaja sin instrumentos (sin premio científico)
   if (!estado.mision) return 0; // no alcanzó ni para despegar
   gastar(combustibleManiobras(dest));
   if (Math.random() < 0.5) recolectar(generarCampo(dest, 1, VALOR_ORBITA)[0]); // algo recogido en órbita
@@ -163,6 +169,8 @@ function viaje(dest, registro) {
   });
   seg += recolectando;
 
+  // Ciencia del diseño: con un aterrizaje normal, el objetivo se cumple la mayoría de las veces
+  if (conDiseno && Math.random() < J.exitoObjetivo) estado.dinero += premioObjetivo(dest) + J.cienciaMedia;
   regresar();
   const carga = estado.carga.reduce((s, o) => s + o.valor, 0);
   vender();

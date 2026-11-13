@@ -35,9 +35,14 @@ En *Cohete del Granero* **el jugador siente cada trade-off en carne propia**. La
 
 | Elemento del reto | Cómo aparece en el juego |
 |---|---|
-| **Objetivos de misión** | Cada destino tiene una misión científica propia, basada en un hecho real. Cumplirla abre el siguiente destino. |
+| **Definir el objetivo** | Antes de cada viaje, en el **Laboratorio de Diseño de Misión**, eliges uno de 3 objetivos científicos del destino (15 en total), cada uno con los instrumentos y los datos que necesita. |
+| **Lanzador y órbita** | 3 lanzadores con distinta capacidad y precio: si la nave pesa más de lo que el lanzador lleva, no despega. 3 tipos de misión: sobrevuelo (barato y corto), orbitador (observa sin bajar) y aterrizaje (más ciencia y más riesgo). |
+| **Datos y comunicaciones** | Los instrumentos generan datos, que se guardan en una memoria limitada y la antena envía a la Tierra más despacio cuanto más lejos estás. Si la memoria se llena, se pierde ciencia. |
+| **Evaluación y puntaje** | Cada misión recibe un puntaje (ciencia, objetivo, presupuesto y riesgos) con 0 a 3 estrellas, un **"¿por qué salió así?"**, la misión real a la que se parece tu diseño y un récord por destino. |
+| **Equipos de hasta 4** | Modo equipo en el mismo dispositivo: Dirección, Ciencia, Ingeniería y Operaciones se reparten el diseño, cada rol tiene una meta que choca con las demás y el cohete solo despega si todo el equipo lo aprueba. |
+| **Objetivos de misión** | Además, cada destino tiene una misión principal basada en un hecho real y 5 secundarias. Cumplir la principal abre el siguiente destino. |
 | **Diseño de la nave** | Diez mejoras: motor, tanque, escudo térmico, sensores, antena, traje, tanque de oxígeno, paneles solares, batería y generador RTG. Cada una cambia el modelo 3D del cohete. |
-| **Instrumentos científicos** | Escáner en la mano, estación meteorológica (Venus), sismógrafo (Ío) y tres antenas para triangular una señal (Europa). |
+| **Instrumentos científicos** | 7 instrumentos para elegir (cámara, espectrómetro, radar, cámara infrarroja, magnetómetro, sismómetro y estación meteorológica), cada uno con su masa, energía, costo, datos por segundo y valor científico, y dónde funciona (órbita o suelo). Además, las misiones usan estación meteorológica, sismógrafo y antenas. |
 | **Presupuesto** | El dinero viene de vender muestras y cumplir misiones; el combustible y cada mejora cuestan. |
 | **Masa** | Un factor de masa que crece con cada mejora y sube el consumo de combustible de cada viaje. |
 | **Energía** | Una batería que los sistemas gastan durante el viaje. Los paneles solares rinden según la luz real de cada lugar (6.7 veces la de la Tierra en Mercurio, 27 veces menos en Júpiter); lejos del Sol hace falta un generador de radioisótopos (RTG). Sin energía se apagan los instrumentos y el cohete no recarga el oxígeno. Además, la misión de Marte consiste en devolverle la energía a un rover cubierto de polvo. |
@@ -56,7 +61,7 @@ En *Cohete del Granero* **el jugador siente cada trade-off en carne propia**. La
 | Misión en Marte: reactivar un rover cubierto de polvo | Reporte de misión con la lección del viaje |
 | ![Antenas en Europa](docs/capturas/08-europa-antenas.png) | ![Final en Europa](docs/capturas/09-final-europa.png) |
 | Tres antenas triangulan la señal de Europa | El final bajo el hielo |
-| ![Villa Siderense](docs/capturas/10-pueblo.png) | |
+| ![Villa Siderense](docs/capturas/10-pueblo.png) | ![Laboratorio de Diseño de Misión](docs/capturas/11-laboratorio-mision.png) |
 | El pueblo y su mercado | |
 
 ## La ciencia detrás del juego
@@ -80,11 +85,12 @@ Los datos de los planetas están en [`src/datos.js`](src/datos.js). Son conocimi
 ## Cómo se juega
 
 1. **En el granero** compras combustible, vendes muestras y mejoras el cohete. El Dr. Nova da consejos según tu partida, con un nivel de confianza en cada dato.
-2. **Despegas** hacia un destino y vuelas hasta la zona de aterrizaje. Lo que flota en órbita vale poco.
-3. **Aterrizas a mano**, frenando contra la gravedad. Si tocas el suelo rápido, el cohete se avería y hay que buscar piezas para repararlo.
-4. **Exploras a pie** con oxígeno y traje limitados. El cohete recarga el oxígeno; las zonas peligrosas dañan el traje.
-5. **Cumples la misión** del lugar, recoges muestras y vuelves a casa a venderlas. En el pueblo, Villa Siderense, el mercado paga un 20 % más.
-6. **Lees el reporte de misión:** combustible gastado en cada fase, cómo fue el aterrizaje, qué trajiste y la lección del viaje, es decir, el trade-off que más pesó.
+2. **Diseñas la misión** en el laboratorio: objetivo, instrumentos, lanzador y tipo de misión. Un panel muestra en vivo la masa, la energía, el presupuesto, el combustible y los datos, y el Dr. Nova revisa el diseño y explica cada problema. El concepto madura de CML 1 (idea) a CML 4 (diseño final), como en el JPL.
+3. **Despegas** y vuelas hasta el destino; mientras tanto, los instrumentos observan y la antena envía los datos. Lo que flota en órbita vale poco.
+4. **Aterrizas a mano** (si la misión es de aterrizaje), frenando contra la gravedad. Si tocas el suelo rápido, el cohete se avería y hay que buscar piezas para repararlo.
+5. **Exploras a pie** con oxígeno y traje limitados. El cohete recarga el oxígeno; las zonas peligrosas dañan el traje.
+6. **Cumples la misión** del lugar, recoges muestras y vuelves a casa a venderlas. En el pueblo, Villa Siderense, el mercado paga un 20 % más.
+7. **Lees el reporte de misión:** combustible gastado en cada fase, cómo fue el aterrizaje, qué trajiste, la lección del viaje y la **evaluación del diseño** (puntaje, estrellas, por qué salió así y a qué misión real se parece).
 
 **Partidas guardadas:** hay **4 ranuras**, cada una con una partida distinta. El juego guarda solo cuando estás en el granero, y además puedes guardar **en cualquier momento**, incluso en órbita o explorando un planeta: desde la pausa (Esc → Guardar partida) o con la tecla **G** (guardado rápido). Al cargar una partida guardada en un planeta, apareces donde estabas, con el mismo oxígeno, traje, carga y averías. En la app de escritorio las partidas quedan en la propia app y se conservan al cerrarla.
 
@@ -163,6 +169,8 @@ src/
   dialogos.js     conversaciones con opciones, encargos y saludos de los vecinos
   eventos.js      eventos aleatorios en el espacio y en la superficie
   secundarias.js  puntos de las misiones secundarias y mochilas en el suelo
+  diseno.js       diseño de misión: instrumentos, lanzadores, objetivos, datos, puntaje y modo equipo
+  laboratorio.js  pantalla del Laboratorio de Diseño de Misión y evaluación del reporte
   lava.js         charcos de lava: shader de costra y grietas, reborde y brasas
   tactil.js       controles táctiles para el celular (joystick, mirar y botones)
 android/                   app de Android (Capacitor); el APK lo compila GitHub Actions

@@ -38,13 +38,15 @@ export const estado = {
   descuento: 0, // descuento en el taller (por el encargo de Tomás)
   museo: {},    // piezas donadas al Museo del Espacio
   secundarias: {}, // misiones secundarias: true si está cumplida, o su progreso (número o puntos visitados)
+  records: {},     // mejor puntaje de diseño de misión por destino
+  equipo: null,    // modo equipo: { activo, jugadores: [{ nombre, roles }] }
   mision: null,
   final: false,
   log: ["Bienvenido al granero. El cohete necesita reparaciones."],
 };
 
 // ----- Guardar y cargar -----
-const GUARDABLE = ["dia", "dinero", "combustible", "mejoras", "carga", "visitados", "misiones", "final", "log", "encargos", "logros", "descuento", "museo", "secundarias"];
+const GUARDABLE = ["dia", "dinero", "combustible", "mejoras", "carga", "visitados", "misiones", "final", "log", "encargos", "logros", "descuento", "museo", "secundarias", "records", "equipo"];
 
 export function exportarEstado() {
   return JSON.parse(JSON.stringify(Object.fromEntries(GUARDABLE.map(k => [k, estado[k]]))));
@@ -73,6 +75,19 @@ export function importarEstado(d) {
   }
   if (d.logros && typeof d.logros === "object") estado.logros = Object.fromEntries(Object.keys(LOGROS).filter(k => d.logros[k]).map(k => [k, true]));
   estado.descuento = d.descuento === 0.15 ? 0.15 : 0;
+  estado.records = {};
+  if (d.records && typeof d.records === "object") {
+    for (const dest of ORDEN) {
+      const r = d.records[dest];
+      if (r && typeof r.total === "number" && isFinite(r.total)) estado.records[dest] = { total: Math.round(r.total), estrellas: Math.max(0, Math.min(3, r.estrellas | 0)), tipo: String(r.tipo || ""), dia: r.dia | 0 };
+    }
+  }
+  const ROLES_OK = ["direccion", "ciencia", "ingenieria", "operaciones"];
+  estado.equipo = d.equipo && Array.isArray(d.equipo.jugadores) && d.equipo.jugadores.length >= 2
+    ? { activo: !!d.equipo.activo, jugadores: d.equipo.jugadores.slice(0, 4).map((j, i) => ({
+        nombre: String((j && j.nombre) || `Jugador ${i + 1}`).slice(0, 20),
+        roles: (Array.isArray(j && j.roles) ? j.roles : []).filter(r => ROLES_OK.includes(r)) })) }
+    : null;
   estado.secundarias = {};
   if (d.secundarias && typeof d.secundarias === "object") {
     for (const dest of ORDEN) for (const sx of SECUNDARIAS[dest]) {
@@ -100,9 +115,10 @@ function msg(t) {
 
 export function capacidad() { return 60 + 20 * estado.mejoras.tanque; }
 
-export function factorMasa() {
+// extraKg: masa de los instrumentos (600 kg = la nave original). Por defecto, los de la misión en curso.
+export function factorMasa(extraKg = (estado.mision && estado.mision.diseno && estado.mision.diseno.masaInstr) || 0) {
   const m = estado.mejoras;
-  return 1 + 0.1 * m.motor + 0.08 * (m.tanque + m.escudo + m.sensor + m.antena) + 0.04 * (m.traje + m.oxigeno)
+  return 1 + extraKg / 600 + 0.1 * m.motor + 0.08 * (m.tanque + m.escudo + m.sensor + m.antena) + 0.04 * (m.traje + m.oxigeno)
     + 0.04 * m.paneles + 0.05 * m.bateria + 0.15 * m.rtg;
 }
 
@@ -110,7 +126,10 @@ export function factorMasa() {
 // La batería se carga en el granero; en el viaje los sistemas la gastan y los paneles y el RTG la reponen.
 export const ENERGIA_RECARGA_OXI = 2.5; // energía por segundo mientras el cohete recarga el oxígeno del traje
 export function energiaMax() { return 80 + 40 * estado.mejoras.bateria; }
-export function consumoSistemas() { return 0.35 + 0.06 * (estado.mejoras.sensor + estado.mejoras.antena); }
+export function consumoSistemas() {
+  const instrumentos = (estado.mision && estado.mision.diseno && estado.mision.diseno.potencia) || 0;
+  return 0.35 + 0.06 * (estado.mejoras.sensor + estado.mejoras.antena) + instrumentos;
+}
 export function generacionSolar(id, enSuelo) {
   const d = DATOS_PLANETAS[id];
   return Math.min(4, 0.35 * (1 + 0.8 * estado.mejoras.paneles) * d.luz * (enSuelo ? d.suelo_luz : 1));
@@ -145,8 +164,9 @@ export function esperar(dias) {
   return t;
 }
 
-export function costoIda(id) {
-  return Math.ceil(DATOS_PLANETAS[id].distancia * 12 * factorMasa() / (1 + 0.25 * estado.mejoras.motor) * (1 + ventana(id).recargo));
+export function costoIda(id, diseno = null) {
+  const extra = diseno ? diseno.masaInstr || 0 : 0, tipo = diseno ? diseno.factorCombustible || 1 : 1;
+  return Math.ceil(DATOS_PLANETAS[id].distancia * 12 * factorMasa(extra) * tipo / (1 + 0.25 * estado.mejoras.motor) * (1 + ventana(id).recargo));
 }
 
 export function desbloqueado(id) {
@@ -210,15 +230,19 @@ export function vender(bono = 1) {
   return t;
 }
 
-export function iniciarMision(id) {
+// diseno (opcional): el diseño de misión del laboratorio (objetivo, instrumentos, lanzador y tipo).
+export function iniciarMision(id, diseno = null) {
   let t;
-  const ida = costoIda(id);
+  const ida = costoIda(id, diseno);
   if (!desbloqueado(id)) t = msg("Destino bloqueado.");
   else if (estado.combustible < ida * 2) t = msg(`Necesitas ${ida * 2} de combustible para ir y volver.`);
+  else if (diseno && estado.dinero < diseno.costo) t = msg(`El diseño cuesta ${diseno.costo} 💰 y no alcanza el dinero.`);
   else {
     estado.combustible -= ida;
+    if (diseno) estado.dinero -= diseno.costo;
     estado.visitados[id] = true;
-    estado.mision = { dest: id, ida, hecho: 0, encuentros: ENCUENTROS, carga: [], ultimo: "", recargo: ventana(id).recargo, dias: DATOS_PLANETAS[id].viaje };
+    estado.mision = { dest: id, ida, hecho: 0, encuentros: ENCUENTROS, carga: [], ultimo: "", recargo: ventana(id).recargo, dias: DATOS_PLANETAS[id].viaje,
+      diseno, datos: diseno ? { memoria: 0, enviados: 0, perdidos: 0, generados: {}, sinEnergia: 0 } : null };
     t = msg(`Despegaste hacia ${DATOS_PLANETAS[id].nombre}.`);
   }
   cambio();
@@ -432,6 +456,8 @@ export const LOGROS = {
   cometa:     { icono: "🌠", titulo: "Cazador de cometas", desc: "Atrapa hielo de la cola de un cometa." },
   fuga:       { icono: "🧯", titulo: "Mecánico en órbita", desc: "Sella una fuga de combustible en pleno vuelo." },
   meteorito:  { icono: "🌑", titulo: "Caído del cielo", desc: "Recoge un meteorito recién caído." },
+  tresestrellas: { icono: "🌟", titulo: "Diseño de tres estrellas", desc: "Consigue 3 estrellas en el diseño de una misión." },
+  equipo:     { icono: "👥", titulo: "Equipo perfecto", desc: "En modo equipo, cumplan las cuatro metas de rol en una misión." },
   cientifico: { icono: "🔬", titulo: "Científico de campo", desc: "Cumple las 5 misiones secundarias de un mismo lugar." },
   curador:    { icono: "🏛️", titulo: "Curador del museo", desc: "Dona al museo una pieza de cada tipo." },
   contacto:   { icono: "🛸", titulo: "No estamos solos", desc: "Encuentra el origen de la señal de Europa." },
@@ -478,8 +504,27 @@ export function importarMision(m) {
     carga: (Array.isArray(m.carga) ? m.carga : []).filter(o => o && typeof o.nombre === "string" && typeof o.valor === "number")
       .map(o => ({ nombre: o.nombre, valor: o.valor, color: String(o.color || "#ffffff"), origen: m.dest })),
     ultimo: "", recargo: num(m.recargo, 0), dias: num(m.dias, DATOS_PLANETAS[m.dest].viaje),
+    diseno: m.diseno && typeof m.diseno === "object" && Array.isArray(m.diseno.instrumentos) ? {
+      dest: m.dest, objetivo: String(m.diseno.objetivo || ""), instrumentos: m.diseno.instrumentos.map(String).slice(0, 8),
+      lanzador: String(m.diseno.lanzador || "ligero"), tipo: ["sobrevuelo", "orbitador", "aterrizaje"].includes(m.diseno.tipo) ? m.diseno.tipo : "aterrizaje",
+      masaInstr: num(m.diseno.masaInstr, 0), potencia: num(m.diseno.potencia, 0), costo: num(m.diseno.costo, 0), masa: num(m.diseno.masa, 0),
+      factorCombustible: num(m.diseno.factorCombustible, 1) } : null,
+    datos: null,
   };
+  if (estado.mision.diseno) {
+    const D = m.datos && typeof m.datos === "object" ? m.datos : {};
+    estado.mision.datos = { memoria: num(D.memoria, 0), enviados: num(D.enviados, 0), perdidos: num(D.perdidos, 0), sinEnergia: num(D.sinEnergia, 0),
+      generados: Object.fromEntries(Object.entries(D.generados || {}).filter(([, x]) => typeof x === "number" && x >= 0)) };
+  }
   return true;
+}
+
+// Dinero ganado fuera de la venta (premios de ciencia del diseño de misión)
+export function ganar(cantidad, texto) {
+  estado.dinero += Math.max(0, Math.round(cantidad));
+  const t = msg(texto);
+  cambio();
+  return t;
 }
 
 // ----- Misiones secundarias (5 por destino) -----
@@ -553,4 +598,10 @@ export function recuperarMochila(objetos) {
   const t = msg(`🎒 Recuperaste tu mochila: ${objetos.length === 1 ? "1 objeto" : objetos.length + " objetos"}.`);
   cambio();
   return t;
+}
+
+// Modo equipo: null para jugar solo
+export function ponerEquipo(equipo) {
+  estado.equipo = equipo;
+  cambio();
 }
