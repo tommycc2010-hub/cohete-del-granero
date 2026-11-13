@@ -79,7 +79,7 @@ function crearRoca(s, color, azar) {
     p.setXYZ(i, p.getX(i) * f, Math.max(-0.35, p.getY(i)) * f * 0.75, p.getZ(i) * f);
   }
   geo.computeVertexNormals();
-  if (!matRocas.has(color)) { const m = toon(color); m.flatShading = true; matRocas.set(color, m); }
+  if (!matRocas.has(color)) { const m = toon(color, "roca"); m.flatShading = true; matRocas.set(color, m); }
   const roca = new THREE.Mesh(geo, matRocas.get(color));
   roca.castShadow = roca.receiveShadow = true;
   const borde = new THREE.Mesh(geo, matBorde);
@@ -193,7 +193,7 @@ export function crearSuperficie() {
     });
     mundo.add(terreno.mesh);
     altura = terreno.altura;
-    const lejos = new THREE.Mesh(new THREE.CircleGeometry(1600, 24), toon(cs[1]));
+    const lejos = new THREE.Mesh(new THREE.CircleGeometry(1600, 24), toon(cs[1], "suelo"));
     lejos.rotation.x = -Math.PI / 2;
     lejos.position.y = -3;
     mundo.add(lejos);
@@ -217,7 +217,7 @@ export function crearSuperficie() {
 
     // ----- Guijarros: cientos de piedras pequeñas en una sola llamada de dibujo -----
     {
-      const n = 420, mat = toon(bioma.roca);
+      const n = 420, mat = toon(bioma.roca, "roca");
       mat.flatShading = true;
       const piedras = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), mat, n);
       const o = new THREE.Object3D(), c = new THREE.Color();

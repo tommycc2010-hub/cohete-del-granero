@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { toon } from "./estilo.js";
 
 // altura(x, z) -> metros.  color(x, z, h, pendiente, c) escribe el color de la cara en `c`.
-export function crearTerreno({ tam, seg, altura, color }) {
+export function crearTerreno({ tam, seg, altura, color, tipo = "suelo" }) {
   const n = seg + 1, celda = tam / seg, mitad = tam / 2;
   const H = new Float32Array(n * n);
   for (let iz = 0; iz < n; iz++)
@@ -29,7 +29,7 @@ export function crearTerreno({ tam, seg, altura, color }) {
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
   geo.computeVertexNormals();
-  const mat = toon(0xffffff);
+  const mat = toon(0xffffff, tipo);
   mat.vertexColors = true;
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;

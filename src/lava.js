@@ -192,7 +192,7 @@ export function crearLava(dest, x, z, radio, altura, azar) {
   superficie.frustumCulled = false; // el relieve se calcula en la GPU: la caja de la malla no lo incluye
   grupo.add(superficie);
 
-  const roca = toon(pal.roca);
+  const roca = toon(pal.roca, "roca");
   roca.flatShading = true;
   const reborde = new THREE.Mesh(geometriaReborde(x, z, radio, altura, forma), roca);
   reborde.receiveShadow = true;

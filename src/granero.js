@@ -1,6 +1,6 @@
 // Mundo del granero: llanuras, montañas al norte, mesetas al este, un lago y el pueblo.
 import * as THREE from "three";
-import { caja, cilindro, cono, esfera, etiqueta, toon } from "./estilo.js";
+import { caja, cilindro, cono, esfera, etiqueta, toon, conTextura } from "./estilo.js";
 import { crearCohete } from "./cohete.js";
 import { crearCientifico, NOMBRE } from "./cientifico.js";
 import { crearPueblo } from "./pueblo.js";
@@ -67,10 +67,10 @@ export function crearGranero(scene, mejoras) {
   scene.add(sol, sol.target);
 
   // ----- Terreno -----
-  const terreno = crearTerreno({ tam: TAM, seg: 120, altura: alturaBase, color: colorTerreno });
+  const terreno = crearTerreno({ tam: TAM, seg: 120, altura: alturaBase, color: colorTerreno, tipo: "pasto" });
   scene.add(terreno.mesh);
   const altura = terreno.altura;
-  const lejos = new THREE.Mesh(new THREE.CircleGeometry(1800, 24), toon(0x7bc96f)); // suelo hasta el horizonte
+  const lejos = new THREE.Mesh(new THREE.CircleGeometry(1800, 24), toon(0x7bc96f, "pasto")); // suelo hasta el horizonte
   lejos.rotation.x = -Math.PI / 2;
   lejos.position.y = -2.5;
   scene.add(lejos);
@@ -81,13 +81,14 @@ export function crearGranero(scene, mejoras) {
 
   // ----- Granero (12 x 10 m, frente abierto hacia +Z) -----
   const Z0 = -8; // centro del granero
-  poner(caja(12, 0.1, 10, 0xc9a36b, false), 0, 0.05, Z0);          // piso
-  poner(caja(12, 5, 0.3, ROJO), 0, 2.5, Z0 - 5);                    // fondo
-  poner(caja(0.3, 5, 10, ROJO), -6, 2.5, Z0);                       // izquierda
-  poner(caja(0.3, 5, 10, ROJO), 6, 2.5, Z0);                        // derecha
-  poner(caja(3, 5, 0.3, ROJO), -4.5, 2.5, Z0 + 5);                  // frente izq.
-  poner(caja(3, 5, 0.3, ROJO), 4.5, 2.5, Z0 + 5);                   // frente der.
-  poner(caja(6, 1, 0.3, ROJO), 0, 4.5, Z0 + 5);                     // dintel
+  poner(conTextura(caja(12, 0.1, 10, 0xc9a36b, false), "madera"), 0, 0.05, Z0); // piso de tablas
+  const tablas = obj => conTextura(obj, "madera");                  // paredes de tablas de madera
+  poner(tablas(caja(12, 5, 0.3, ROJO)), 0, 2.5, Z0 - 5);            // fondo
+  poner(tablas(caja(0.3, 5, 10, ROJO)), -6, 2.5, Z0);               // izquierda
+  poner(tablas(caja(0.3, 5, 10, ROJO)), 6, 2.5, Z0);                // derecha
+  poner(tablas(caja(3, 5, 0.3, ROJO)), -4.5, 2.5, Z0 + 5);          // frente izq.
+  poner(tablas(caja(3, 5, 0.3, ROJO)), 4.5, 2.5, Z0 + 5);           // frente der.
+  poner(tablas(caja(6, 1, 0.3, ROJO)), 0, 4.5, Z0 + 5);             // dintel
   col(0, Z0 - 5, 12, 0.3); col(-6, Z0, 0.3, 10); col(6, Z0, 0.3, 10);
   col(-4.5, Z0 + 5, 3, 0.3); col(4.5, Z0 + 5, 3, 0.3);
 
@@ -104,7 +105,7 @@ export function crearGranero(scene, mejoras) {
   tri.moveTo(-6, 0); tri.lineTo(6, 0); tri.lineTo(0, 2.85); tri.closePath();
   const geoTri = new THREE.ExtrudeGeometry(tri, { depth: 0.3, bevelEnabled: false });
   [Z0 + 4.85, Z0 - 5.15].forEach(z => {
-    const h = new THREE.Mesh(geoTri, toon(ROJO));
+    const h = new THREE.Mesh(geoTri, toon(ROJO, "madera"));
     h.castShadow = true;
     poner(h, 0, 5, z);
   });
