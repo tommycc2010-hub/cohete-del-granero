@@ -1,0 +1,39 @@
+# Compila la app de Android (APK) en los servidores de GitHub, que ya tienen el SDK de Android instalado.
+# Se ejecuta al publicar una versión (y la adjunta a esa versión) o a mano desde la pestaña Actions.
+name: App de Android (APK)
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      - run: npm run build
+      - run: npx cap sync android
+      - run: chmod +x android/gradlew && cd android && ./gradlew assembleDebug --no-daemon
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk CoheteDelGranero-android.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CoheteDelGranero-android
+          path: CoheteDelGranero-android.apk
+      - name: Adjuntar el APK a la versión publicada
+        if: github.event_name == 'release'
+        run: gh release upload "${{ github.event.release.tag_name }}" CoheteDelGranero-android.apk --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

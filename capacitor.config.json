@@ -1,0 +1,7 @@
+{
+  "appId": "com.siderenserocketlabs.cohetedelgranero",
+  "appName": "Cohete del Granero",
+  "webDir": "dist",
+  "backgroundColor": "#8ed1f0",
+  "android": { "allowMixedContent": false }
+}

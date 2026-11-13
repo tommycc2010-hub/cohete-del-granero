@@ -1,7 +1,9 @@
 // Menú principal y de pausa, con opciones guardadas en el navegador.
 // Usa el elemento #inicio: visible = juego en pausa o en el menú.
 const CLAVE_OPCIONES = "cohete-del-granero:opciones:v1";
-export const OPCIONES_BASE = { volumen: 0.7, musica: 0.5, sensibilidad: 1, fov: 70, calidad: "alta" };
+import { esTactil } from "./tactil.js";
+// En el celular se empieza con calidad media (sin postprocesado): va más fluido y gasta menos batería
+export const OPCIONES_BASE = { volumen: 0.7, musica: 0.5, sensibilidad: 1, fov: 70, calidad: esTactil() ? "media" : "alta" };
 
 export function cargarOpciones() {
   try {

@@ -6,6 +6,11 @@
 
 **💻 Descargar para Windows:** [CoheteDelGranero-windows.zip](https://github.com/tommycc2010-hub/cohete-del-granero/releases/latest/download/CoheteDelGranero-windows.zip) (195 MB). Descomprímelo y abre `CoheteDelGranero.exe`. Como la app no está firmada, Windows puede avisar: pulsa *Más información → Ejecutar de todas formas*.
 
+**📱 En el celular:**
+- **Android:** descarga [CoheteDelGranero-android.apk](https://github.com/tommycc2010-hub/cohete-del-granero/releases/latest/download/CoheteDelGranero-android.apk), ábrelo y acepta instalar apps de origen desconocido.
+- **Android o iPhone sin instalar nada:** abre la página del juego en el navegador y elige *Añadir a la pantalla de inicio* (en iPhone, desde Safari → Compartir). Queda como una app, a pantalla completa y funciona sin internet.
+- Se juega en horizontal con controles táctiles: joystick a la izquierda, arrastrar a la derecha para mirar, y botones para usar (E), saltar, correr, el teléfono, guardar y pausa. En el cohete: 🔥 impulso, 🛑 frenar y 🏠 volver.
+
 **🎬 Ver el tráiler (1:20):** https://tommycc2010-hub.github.io/cohete-del-granero/trailer-cohete-del-granero.mp4
 
 **Equipo:** Siderense Rocket Labs
@@ -159,6 +164,9 @@ src/
   eventos.js      eventos aleatorios en el espacio y en la superficie
   secundarias.js  puntos de las misiones secundarias y mochilas en el suelo
   lava.js         charcos de lava: shader de costra y grietas, reborde y brasas
+  tactil.js       controles táctiles para el celular (joystick, mirar y botones)
+android/                   app de Android (Capacitor); el APK lo compila GitHub Actions
+public/                    icono, manifiesto y service worker de la app instalable (PWA)
   granja.js       alrededores del granero: tablero, vitrina, telescopio y estación de tierra
   postpro.js      resplandor y viñeteado (calidad alta)
   objetos.js, particulas.js, ambiente.js   modelos de las muestras, partículas y fenómenos de cada bioma

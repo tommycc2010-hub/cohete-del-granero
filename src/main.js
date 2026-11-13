@@ -17,6 +17,7 @@ import { renderizarPista } from "./musica.js";
 import { crearPostpro } from "./postpro.js";
 import { crearEventosEspacio, crearEventosSuelo } from "./eventos.js";
 import { crearExtrasSuelo } from "./secundarias.js";
+import { esTactil, crearTactil, simularBloqueo } from "./tactil.js";
 import { DATOS_PLANETAS, SECUNDARIAS } from "./datos.js";
 import {
   estado, capacidad, comprarCombustible, vender, suscribir, regresar,
@@ -244,7 +245,7 @@ function pintarDialogo() {
   $("dialogo-confianza").textContent = l.confianza ? TEXTO_CONFIANZA[l.confianza] : "";
   $("dialogo-confianza").className = l.confianza || "";
   const ops = enOpciones() ? dialogo.opciones : [];
-  $("dialogo-opciones").innerHTML = ops.map((o, k) => `<div><b>${k + 1}</b> ${o.texto}</div>`).join("");
+  $("dialogo-opciones").innerHTML = ops.map((o, k) => `<div data-k="${k}"><b>${k + 1}</b> ${o.texto}</div>`).join("");
   $("dialogo-sigue").innerHTML = ops.length ? `<b>1</b>–<b>${ops.length}</b> elegir`
     : `<b>E</b> ${dialogo.i < dialogo.lineas.length - 1 ? "seguir" : "cerrar"} · ${dialogo.i + 1}/${dialogo.lineas.length}`;
 }
@@ -306,6 +307,7 @@ const menu = crearMenu($("inicio"), {
       if (reanudar) { const p = reanudar; reanudar = null; reanudarMision(p); }
     }
     actualizarMusica();
+    if (tactil) tactil.pantallaCompleta();
     jugador.controls.lock();
   },
   infoPartida() { return partida ? `Partida de la ranura ${elegida} lista: pulsa Continuar.` : ""; },
@@ -366,6 +368,24 @@ jugador.controls.addEventListener("lock", () => $("inicio").classList.add("ocult
 jugador.controls.addEventListener("unlock", () => {
   if (!telefono.abierto && !tarjetaFinal) { menu.refrescar(); $("inicio").classList.remove("oculto"); }
 });
+
+// ----- App instalable (PWA): guarda el juego para abrirlo sin internet. No en la app de escritorio. -----
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost") && !location.search.includes("demo")) {
+  addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+}
+
+// ----- Celular: controles táctiles -----
+const TACTIL = esTactil();
+const mirarTactil = TACTIL ? simularBloqueo(jugador.controls, camera) : null;
+const tactil = TACTIL ? crearTactil({
+  mirar(dx, dy) {
+    if (modo === "espacio") espacio.girar(dx * 0.0022, dy * 0.0022);
+    else if (modo === "granero" || modo === "superficie") mirarTactil(dx, dy);
+  },
+  modo: () => modo,
+  activo: () => empezado && !pausado() && !telefono.abierto && !reporteAbierto,
+  pausar: () => jugador.controls.unlock(),
+}) : null;
 
 // ----- Teléfono (Tab) -----
 // Al abrirlo se libera el mouse para poder hacer clic; al cerrarlo se vuelve a capturar.
@@ -465,6 +485,12 @@ function textoTelescopio() {
   });
   return `🔭 Ventanas de lanzamiento · ${partes.join(" · ")}. Los planetas se alinean cada cierto tiempo: fuera de la ventana el viaje cuesta más combustible.`;
 }
+
+// En el celular las respuestas de las conversaciones se eligen tocándolas (también sirve con el mouse)
+$("dialogo-opciones").addEventListener("click", e => {
+  const fila = e.target.closest("[data-k]");
+  if (fila) elegirOpcion(Number(fila.dataset.k));
+});
 
 // ----- Despegue -----
 let tDespegue = 0;
@@ -1243,6 +1269,7 @@ let grabando = false, manosVisibles = true;
 
 function bucle() {
   if (grabando) return;
+  if (tactil) tactil.actualizar();
   const ahora = performance.now();
   medirRendimiento(ahora - antes);
   const dt = Math.min((ahora - antes) / 1000, 0.05);
