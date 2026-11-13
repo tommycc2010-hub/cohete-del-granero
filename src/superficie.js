@@ -10,6 +10,7 @@ import { DATOS_PLANETAS } from "./datos.js";
 import { crearMision } from "./misiones.js";
 import { crearAmbiente, colorPolvo } from "./ambiente.js";
 import { crearRafaga } from "./particulas.js";
+import { crearLava, avanzarLava, tieneLava } from "./lava.js";
 
 const TAM = 440;
 const RADIO_RECOGER = 2.4;
@@ -273,6 +274,12 @@ export function crearSuperficie() {
     // ----- Zonas peligrosas: dañan el traje -----
     zonas = [];
     const ponerZona = (x, z, radio) => {
+      if (tieneLava(dest)) { // charco de lava con costra, grietas que brillan, reborde de roca y brasas
+        const lava = crearLava(dest, x, z, radio, altura, azar);
+        mundo.add(lava.grupo);
+        zonas.push({ x, z, radio, lava });
+        return;
+      }
       const m = new THREE.Mesh(new THREE.SphereGeometry(radio, 14, 8),
         new THREE.MeshBasicMaterial({ color: bioma.peligro.color, transparent: true, opacity: 0.8 }));
       m.scale.y = 0.16;
@@ -468,8 +475,10 @@ export function crearSuperficie() {
     });
 
     let enPeligro = false;
+    avanzarLava(dt);
     for (const z of zonas) {
-      z.mesh.material.opacity = 0.6 + 0.3 * Math.sin(t * 3 + z.fase);
+      if (z.lava) z.lava.actualizar(dt);
+      else z.mesh.material.opacity = 0.6 + 0.3 * Math.sin(t * 3 + z.fase);
       if (Math.hypot(z.x - pos.x, z.z - pos.z) < z.radio) enPeligro = true;
     }
 
