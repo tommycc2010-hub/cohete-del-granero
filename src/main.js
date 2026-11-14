@@ -11,13 +11,13 @@ import { sonido } from "./sonido.js";
 import { NOMBRE, TEXTO_CONFIANZA, yaPresentado, marcarPresentado } from "./cientifico.js";
 import { conversacionNova, conversacionVecino } from "./dialogos.js";
 import { guardarRanura, cargarRanura, borrarRanura, listarRanuras, elegirParaRecargar, ranuraElegida } from "./guardado.js";
-import { crearInforme, htmlInforme } from "./informe.js";
+import { crearInforme, htmlReporte, animarReporte } from "./informe.js";
 import { crearMenu } from "./menu.js";
 import { renderizarPista } from "./musica.js";
 import { crearPostpro } from "./postpro.js";
 import { crearEventosEspacio, crearEventosSuelo } from "./eventos.js";
 import { crearExtrasSuelo } from "./secundarias.js";
-import { crearLaboratorio, htmlEvaluacion } from "./laboratorio.js";
+import { crearLaboratorio } from "./laboratorio.js";
 import { pasoDatos, evaluar, evaluarEquipo, anotarRecord, premioObjetivo, memoriaNave, enlace, TIPOS } from "./diseno.js";
 import { esTactil, crearTactil, simularBloqueo } from "./tactil.js";
 import { crearMultijugador } from "./multijugador.js";
@@ -1327,9 +1327,9 @@ function volver() {
 // ----- Reporte de misión -----
 let reporteAbierto = false;
 function abrirReporte(datos, ev = null, eq = null, extra = {}, html = null) {
-  const cerrar = '<p class="inf-cerrar"><kbd>E</kbd> continuar</p>'; // al final, después de la evaluación
-  $("informe-cuerpo").innerHTML = html || htmlInforme(datos).replace(cerrar, "") + htmlEvaluacion(ev, eq, extra) + cerrar;
+  $("informe-cuerpo").innerHTML = html || htmlReporte(datos, ev, eq, extra);
   if (!html) multi.compartirReporte($("informe-cuerpo").innerHTML);
+  animarReporte($("informe-cuerpo"));
   $("informe").classList.add("visible");
   reporteAbierto = true;
 }
@@ -1337,7 +1337,8 @@ function cerrarReporte() {
   $("informe").classList.remove("visible");
   reporteAbierto = false;
 }
-$("informe").addEventListener("click", cerrarReporte);
+// Se cierra con el botón Continuar (o E), o tocando fuera de la tarjeta; dentro se puede abrir "Ver los números"
+$("informe").addEventListener("click", e => { if (e.target.closest("[data-cerrar]") || e.target === $("informe")) cerrarReporte(); });
 
 // ----- Bucle -----
 let tMenu = 0;

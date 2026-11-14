@@ -87,12 +87,12 @@ Los datos de los planetas están en [`src/datos.js`](src/datos.js). Son conocimi
 ## Cómo se juega
 
 1. **En el granero** compras combustible, vendes muestras y mejoras el cohete. El Dr. Nova da consejos según tu partida, con un nivel de confianza en cada dato.
-2. **Diseñas la misión** en el laboratorio: objetivo, instrumentos, lanzador y tipo de misión. Un panel muestra en vivo la masa, la energía, el presupuesto, el combustible y los datos, y el Dr. Nova revisa el diseño y explica cada problema. El concepto madura de CML 1 (idea) a CML 4 (diseño final), como en el JPL.
+2. **Diseñas la misión** en el laboratorio, paso a paso y con una pregunta por pantalla: ¿qué quieres descubrir? (objetivo), ¿con qué vas a observar? (instrumentos), ¿qué cohete te sube? (lanzador) y ¿cómo visitas el planeta? (ruta). El Dr. Nova explica cada paso y, a un lado, **Tu nave** muestra con medidores sencillos (😀 bien, 😬 justo, ⛔ no alcanza) cómo cada decisión cambia el peso, la energía, el dinero, el combustible y los datos, y qué cambió (+35 kg, +120 💰). El diseño madura de idea a listo (los niveles CML del JPL).
 3. **Despegas** y vuelas hasta el destino; mientras tanto, los instrumentos observan y la antena envía los datos. Lo que flota en órbita vale poco.
 4. **Aterrizas a mano** (si la misión es de aterrizaje), frenando contra la gravedad. Si tocas el suelo rápido, el cohete se avería y hay que buscar piezas para repararlo.
 5. **Exploras a pie** con oxígeno y traje limitados. El cohete recarga el oxígeno; las zonas peligrosas dañan el traje.
 6. **Cumples la misión** del lugar, recoges muestras y vuelves a casa a venderlas. En el pueblo, Villa Siderense, el mercado paga un 20 % más.
-7. **Lees el reporte de misión:** combustible gastado en cada fase, cómo fue el aterrizaje, qué trajiste, la lección del viaje y la **evaluación del diseño** (puntaje, estrellas, por qué salió así y a qué misión real se parece).
+7. **Ves el resultado:** estrellas y puntos, cuatro fichas (objetivo, ciencia, lo que ganaste y el combustible que sobró), lo que aprendimos según el Dr. Nova, por qué salió así y a qué misión real se parece tu diseño. Los números del viaje quedan a un clic.
 
 **Partidas guardadas:** hay **4 ranuras**, cada una con una partida distinta. El juego guarda solo cuando estás en el granero, y además puedes guardar **en cualquier momento**, incluso en órbita o explorando un planeta: desde la pausa (Esc → Guardar partida) o con la tecla **G** (guardado rápido). Al cargar una partida guardada en un planeta, apareces donde estabas, con el mismo oxígeno, traje, carga y averías. En la app de escritorio las partidas quedan en la propia app y se conservan al cerrarla.
 
@@ -177,7 +177,7 @@ src/
   eventos.js      eventos aleatorios en el espacio y en la superficie
   secundarias.js  puntos de las misiones secundarias y mochilas en el suelo
   diseno.js       diseño de misión: instrumentos, lanzadores, objetivos, datos, puntaje y modo equipo
-  laboratorio.js  pantalla del Laboratorio de Diseño de Misión y evaluación del reporte
+  laboratorio.js  Laboratorio de Diseño de Misión, paso a paso
   red.js          conexión del multijugador en línea (salas, mensajes y video), sin nada visual
   multijugador.js sala en el menú, compañeros en el granero y Control de Misión
   paisaje.js      cielo, nubes, pasto, flores, lago, mariposas y pájaros del granero
@@ -190,7 +190,7 @@ public/                    icono, manifiesto y service worker de la app instalab
   postpro.js      resplandor y viñeteado (calidad alta)
   objetos.js, particulas.js, ambiente.js   modelos de las muestras, partículas y fenómenos de cada bioma
   telefono.js     menú del teléfono
-  informe.js      reporte de misión y lección de cada viaje
+  informe.js      reporte de misión (pantalla de resultados) y lección de cada viaje
   guardado.js     4 ranuras de guardado, en casa o en plena misión
   menu.js         menú principal, pausa y opciones
   musica.js       música ambiental generada en el momento

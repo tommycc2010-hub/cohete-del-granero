@@ -53,9 +53,9 @@ Sirve para saber **qué tocar y qué se rompe** antes de editar. Si el código c
 | `dialogos.js` | Conversaciones con opciones y encargos de los vecinos |
 | `telefono.js` | Menú del teléfono: mapa, taller, misiones, logros |
 | `menu.js` | Menú principal, pausa, opciones y las 4 ranuras |
-| `informe.js` | Reporte de misión y la lección del viaje |
+| `informe.js` | Reporte de misión como pantalla de resultados (`htmlReporte`, `animarReporte`) y la lección del viaje |
 | `diseno.js` | **Diseño de misión** (sin nada visual): instrumentos, lanzadores, tipos de misión, objetivos, cálculo del diseño, datos y memoria, evaluación, récords y modo equipo |
-| `laboratorio.js` | Pantalla del Laboratorio de Diseño de Misión y la evaluación del reporte |
+| `laboratorio.js` | Laboratorio de Diseño de Misión paso a paso (`PASOS`): una decisión por pantalla, "Tu nave" con medidores y el Dr. Nova explicando cada paso. Cada persona navega los pasos por su cuenta; solo el diseño se comparte |
 | `tutorial.js`, `tactil.js` | Objetivos del tutorial · controles del celular |
 | `red.js` | **Red del multijugador** (sin nada visual): crear sala, unirse, enviar mensajes, video. Usa PeerJS (WebRTC) |
 | `multijugador.js` | Panel de la sala en el menú, compañeros caminando en el granero, Control de Misión de los invitados, radio |
@@ -101,7 +101,7 @@ Sirve para saber **qué tocar y qué se rompe** antes de editar. Si el código c
 - **Publicar:** `npm run empaquetar` → release en GitHub (el APK lo compila Actions solo).
 
 ## Flujo del diseño de misión
-`telefono.js` (elegir destino) → `laboratorio.js` (diseñar; `diseno.calcularDiseno`) → `reglas.iniciarMision(dest, diseno)` (cobra el diseño, crea la memoria de datos) → `main.observar()` cada fotograma en órbita y en el suelo (`diseno.pasoDatos`) → `main.volver()` → `diseno.evaluar` + `evaluarEquipo` → premio (`reglas.ganar`), récord y reporte (`laboratorio.htmlEvaluacion`).
+`telefono.js` (elegir destino) → `laboratorio.js` (diseñar; `diseno.calcularDiseno`) → `reglas.iniciarMision(dest, diseno)` (cobra el diseño, crea la memoria de datos) → `main.observar()` cada fotograma en órbita y en el suelo (`diseno.pasoDatos`) → `main.volver()` → `diseno.evaluar` + `evaluarEquipo` → premio (`reglas.ganar`), récord y reporte (`informe.htmlReporte`).
 
 ## Flujo del multijugador en línea
 Anfitrión: menú → *Jugar en línea* → `red.crearSala` (código de 4 letras). Invitados: `red.unirse(código)` → reciben la partida (`estado`) y la lista de la sala.

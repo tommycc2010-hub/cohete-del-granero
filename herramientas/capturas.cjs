@@ -50,7 +50,9 @@ window.T = (() => {
     // El mapa abre el laboratorio de diseño: se despega con el diseño propuesto (y la cámara, para tener datos)
     const lab = document.getElementById("laboratorio");
     if (lab.classList.contains("abierto")) {
+      lab.querySelector('[data-paso="1"]').click(); // el laboratorio va paso a paso
       lab.querySelector('[data-inst="camara"]').click();
+      lab.querySelector('[data-paso="4"]').click();
       lab.querySelector('[data-acc="despegar"]').click();
     }
     j.avanzar(4.2); await pausa(1300); ocultar();
@@ -170,7 +172,9 @@ const ESCENAS = [
     T.j.telefono.abrir("mapa"); await T.pausa(200);
     [...document.querySelectorAll(".tel-item")].find(b => b.textContent.includes("Marte")).click(); await T.pausa(300);
     const lab = document.getElementById("laboratorio");
-    for (const sel of ['[data-inst="radar"]', '[data-inst="camara"]', '[data-tipo="orbitador"]']) { lab.querySelector(sel).click(); await T.pausa(80); }
+    lab.querySelector('[data-paso="3"]').click(); lab.querySelector('[data-tipo="orbitador"]').click(); await T.pausa(80);
+    lab.querySelector('[data-paso="1"]').click();
+    for (const sel of ['[data-inst="radar"]', '[data-inst="camara"]']) { lab.querySelector(sel).click(); await T.pausa(80); }
   })()`, 900],
 
   ["12-sala-en-linea", `(async () => {
