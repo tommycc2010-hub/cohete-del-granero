@@ -65,7 +65,7 @@ La IA de video **inventa detalles**: puede cambiar el cohete, el HUD o los color
 Fondo con la toma 6 congelada y desenfocada, y encima:
 - **COHETE DEL GRANERO**
 - "Una misión de diseño espacial · NASA Space Apps 2026"
-- El enlace para jugar: tommycc2010-hub.github.io/cohete-del-granero
+- El enlace para jugar: granero-orbital.study
 - "Siderense Rocket Labs"
 
 **Voz:** "Granero Orbital. Diseñar una misión es decidir."

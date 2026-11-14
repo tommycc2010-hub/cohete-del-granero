@@ -31,6 +31,7 @@ Juego 3D (Three.js + Vite) para el NASA Space Apps 2026, reto *Space Mission Des
 
 ## Publicar
 - Código: `git push origin main` (la web se publica sola).
+- **Dominio:** https://granero-orbital.study (registrado en Porkbun; los registros DNS `A` a las 4 IP de GitHub Pages y `CNAME www` ya están puestos, y el dominio está configurado en Settings → Pages del repositorio con HTTPS obligatorio). Ojo: las partidas guardadas en el navegador viven en el almacenamiento de cada dirección, así que no pasan solas de `tommycc2010-hub.github.io` al dominio nuevo.
 - Apps: `npm run empaquetar`, crear la *release* en GitHub y subir el `.zip`; el APK lo compila y adjunta GitHub Actions solo.
 - Commits con autor `Siderense Rocket Labs` y el correo `noreply` de GitHub. Nunca poner correos personales en commits ni en servicios externos.
 - Las acciones de GitHub se hacen con la credencial guardada en el equipo; el usuario es quien inicia sesión.

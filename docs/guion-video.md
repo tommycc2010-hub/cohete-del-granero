@@ -4,7 +4,7 @@ Dos versiones: una corta para la entrega y una larga para la presentación. **Re
 
 ## Antes de grabar
 
-1. **Abran el modo demo:** https://tommycc2010-hub.github.io/cohete-del-granero/?demo
+1. **Abran el modo demo:** https://granero-orbital.study/?demo
    Empieza con dinero, mejoras y todos los destinos abiertos, y no toca su partida guardada.
 2. **Opciones del juego:** calidad **Alta**, música al 40 %, volumen general al 70 %.
 3. **Pantalla completa:** F11 en el navegador, resolución 1920×1080.

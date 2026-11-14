@@ -2,9 +2,9 @@
 
 **Juego 3D de diseño de misiones espaciales** para el reto *Space Mission Design Game* de NASA Space Apps Challenge 2026.
 
-**🌐 Página del juego:** https://tommycc2010-hub.github.io/cohete-del-granero/ (con imágenes, cómo se juega y descargas)
+**🌐 Página del juego:** https://granero-orbital.study/ (con imágenes, cómo se juega y descargas)
 
-**▶ Jugar en el navegador:** https://tommycc2010-hub.github.io/cohete-del-granero/jugar.html
+**▶ Jugar en el navegador:** https://granero-orbital.study/jugar.html
 
 **💻 Descargar para Windows:** [GraneroOrbital-windows.zip](https://github.com/tommycc2010-hub/cohete-del-granero/releases/latest/download/GraneroOrbital-windows.zip) (195 MB). Descomprímelo y abre `GraneroOrbital.exe`. Como la app no está firmada, Windows puede avisar: pulsa *Más información → Ejecutar de todas formas*.
 
@@ -219,7 +219,7 @@ npm run simular      # simular partidas para revisar el balance
 
 Cada cambio que se sube a la rama `main` se publica solo en GitHub Pages.
 
-**Modo demo:** agregando `?demo` a la dirección (https://tommycc2010-hub.github.io/cohete-del-granero/jugar.html?demo) el juego empieza con todo desbloqueado y no guarda el progreso. Sirve para presentar o grabar sin jugar desde el principio. El guion del video está en [`docs/guion-video.md`](docs/guion-video.md).
+**Modo demo:** agregando `?demo` a la dirección (https://granero-orbital.study/jugar.html?demo) el juego empieza con todo desbloqueado y no guarda el progreso. Sirve para presentar o grabar sin jugar desde el principio. El guion del video está en [`docs/guion-video.md`](docs/guion-video.md).
 
 `npm run capturas` vuelve a generar las capturas de `docs/capturas` y `npm run imagenes` las convierte en JPG ligeros para la página (`public/img`) (necesita internet para la de la sala en línea).
 
