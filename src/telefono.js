@@ -141,7 +141,7 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar, alDisenar, alPedir 
     const vistas = { inicio: vistaInicio, estado: vistaEstado, taller: vistaTaller, mapa: vistaMapa, misiones: () => vistaMisiones() + vistaEncargos(), logros: vistaLogros, mision: vistaMision, diario: vistaDiario, final: vistaFinal };
     const titulo = app === "inicio" ? "Mi teléfono" : app === "mision" ? "Misión" : app === "final" ? "Europa" : APPS[app].nombre;
     const atras = ["inicio", "mision", "final"].includes(app) ? "" : `<button class="tel-atras" data-acc="app:inicio">‹</button>`;
-    pantalla.innerHTML = `<div class="tel-barra">${atras}<span>${titulo}</span></div>
+    pantalla.innerHTML = `<div class="tel-barra">${atras}<span>${titulo}</span><button class="tel-cerrar" data-acc="cerrar" aria-label="Cerrar el teléfono y volver al juego">✕</button></div>
       <div class="tel-cuerpo">${vistas[app]()}</div>
       ${ultimo ? `<div class="tel-msg">${ultimo}</div>` : ""}`;
   }
@@ -150,6 +150,7 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar, alDisenar, alPedir 
     const b = e.target.closest("[data-acc]");
     if (!b || b.disabled) return;
     const [tipo, valor] = b.dataset.acc.split(":");
+    if (tipo === "cerrar") return cerrar(); // volver al juego (en el celular no hay Tab ni Esc)
     const pedido = (tipo === "mejora" || tipo === "esperar") && alPedir ? alPedir(tipo, valor) : null; // en línea lo compra el anfitrión
     if (tipo === "app") { app = valor; ultimo = ""; }
     else if (pedido) ultimo = pedido;
@@ -174,7 +175,15 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar, alDisenar, alPedir 
     pintar();
   });
 
+  // En el celular, tocar fuera del teléfono también lo cierra (poco después de abrirlo no, para no cerrarlo con el mismo toque)
+  let tAbierto = 0;
+  document.addEventListener("pointerdown", e => {
+    if (!abierto || !document.body.classList.contains("tactil") || performance.now() - tAbierto < 400) return;
+    if (!el.contains(e.target)) cerrar();
+  });
+
   function abrir(cual = "inicio") {
+    tAbierto = performance.now();
     app = cual;
     ultimo = "";
     abierto = true;

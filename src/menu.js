@@ -70,7 +70,7 @@ export function crearMenu(raiz, avisos) {
       <p class="menu-info"></p>
     </div>
     <div class="menu-panel tarjeta"></div>
-    <div class="menu-pie">Siderense Rocket Labs · v2.3</div>`;
+    <div class="menu-pie">Siderense Rocket Labs · v2.3.1</div>`;
   const botones = raiz.querySelector(".menu-botones");
   const cajaPanel = raiz.querySelector(".menu-panel");
   const info = raiz.querySelector(".menu-info");
