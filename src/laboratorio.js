@@ -13,17 +13,37 @@ import {
 const CML = ["Sin definir", "CML 1 · Idea", "CML 2 · Viabilidad", "CML 3 · Comparar opciones", "CML 4 · Diseño final"];
 const barra = (valor, max, clase = "") => `<div class="lab-barra ${clase}"><i style="width:${Math.min(100, 100 * valor / Math.max(1, max))}%"></i></div>`;
 
-// avisos: { alDespegar(diseno) -> true si despegó, alCancelar() }
+// Qué rol decide cada parte del diseño
+const PARTE_ROL = { objetivo: "direccion", inst: "ciencia", lanzador: "ingenieria", tipo: "operaciones" };
+
+// avisos: { alDespegar(diseno) -> true si despegó, alCancelar(),
+//           enLinea() -> null o { anfitrion, miIndice, equipo } (multijugador en línea),
+//           compartir(estadoLab) (anfitrión: manda el diseño a todos), pedir(accion) (invitado: pide un cambio al anfitrión) }
 export function crearLaboratorio(avisos) {
   const el = document.getElementById("laboratorio");
   let dest = null, sel = null, aprobado = {}, verMetas = false, armando = false;
   const recordados = {}; // último diseño de cada destino
 
+  const linea = () => (avisos.enLinea && avisos.enLinea()) || null;
+  const equipo = () => (linea() ? linea().equipo : estado.equipo);
   const responsable = rol => {
-    const j = quienTieneRol(estado.equipo, rol);
-    return j ? `<span class="lab-rol">${ROLES[rol].icono} ${j.nombre} · ${ROLES[rol].nombre}</span>` : "";
+    const j = quienTieneRol(equipo(), rol);
+    const yo = linea() && j === equipo().jugadores[linea().miIndice];
+    return j ? `<span class="lab-rol ${yo ? "yo" : ""}">${ROLES[rol].icono} ${yo ? "Tú" : j.nombre} · ${ROLES[rol].nombre}</span>` : "";
   };
-  const enEquipo = () => !!(estado.equipo && estado.equipo.activo);
+  const enEquipo = () => !!(equipo() && equipo().activo);
+  // ¿Puede la persona `quien` (índice en el equipo) cambiar esta parte? Sin red, todos pueden todo.
+  function puede(parte, quien) {
+    const L = linea();
+    if (!L) return true;
+    const j = equipo().jugadores[quien];
+    return !!j && j.roles.includes(PARTE_ROL[parte]);
+  }
+  const mia = parte => puede(parte, linea() ? linea().miIndice : 0);
+  function compartir() {
+    const L = linea();
+    if (L && L.anfitrion && avisos.compartir) avisos.compartir({ abierto: el.classList.contains("abierto"), dest, sel, aprobado });
+  }
 
   function abrir(d) {
     dest = d;
@@ -34,33 +54,42 @@ export function crearLaboratorio(avisos) {
     armando = false;
     el.classList.add("abierto");
     pintar();
+    compartir();
   }
-  function cerrar() { el.classList.remove("abierto"); }
+  function cerrar() { el.classList.remove("abierto"); compartir(); }
+  // Invitado: el anfitrión mandó el estado del diseño
+  function recibir(s) {
+    if (!s || !s.abierto || !Object.hasOwn(OBJETIVOS, s.dest) || !s.sel || !Array.isArray(s.sel.instrumentos)) return el.classList.remove("abierto");
+    dest = s.dest; sel = s.sel; aprobado = s.aprobado || {}; armando = false;
+    el.classList.add("abierto");
+    pintar();
+  }
 
   function pintar() {
     if (armando) return pintarEquipo();
     const c = calcularDiseno(dest, sel);
     const L = LANZADORES[sel.lanzador], P = DATOS_PLANETAS[dest];
     const obj = OBJETIVOS[dest].find(o => o.id === sel.objetivo);
-    const aprobados = enEquipo() ? estado.equipo.jugadores.every((j, i) => aprobado[i]) : true;
+    const aprobados = enEquipo() ? equipo().jugadores.every((j, i) => aprobado[i]) : true;
+    const red = linea(), bloq = parte => (mia(parte) ? "" : "disabled");
 
-    const objetivos = OBJETIVOS[dest].map(o => `<button class="lab-op ${sel.objetivo === o.id ? "sel" : ""}" data-objetivo="${o.id}">
+    const objetivos = OBJETIVOS[dest].map(o => `<button class="lab-op ${sel.objetivo === o.id ? "sel" : ""}" data-objetivo="${o.id}" ${bloq("objetivo")}>
       <b>${o.titulo}</b><small>${o.desc}</small>
       <small class="lab-necesita">Necesita ${o.necesita.map(id => INSTRUMENTOS[id].icono + " " + INSTRUMENTOS[id].nombre).join(" o ")} · ${o.datos} MB · premio ${premioObjetivo(dest)} 💰</small></button>`).join("");
 
     const instrumentos = Object.entries(INSTRUMENTOS).map(([id, I]) => {
       const on = sel.instrumentos.includes(id), util = obj && obj.necesita.includes(id);
       const sirveAqui = (I.donde.includes("orbita") && TIPOS[sel.tipo].orbita > 0) || (I.donde.includes("suelo") && TIPOS[sel.tipo].suelo > 0);
-      return `<button class="lab-inst ${on ? "sel" : ""} ${util ? "util" : ""} ${sirveAqui ? "" : "no-sirve"}" data-inst="${id}" title="${I.real}">
+      return `<button class="lab-inst ${on ? "sel" : ""} ${util ? "util" : ""} ${sirveAqui ? "" : "no-sirve"}" data-inst="${id}" title="${I.real}" ${bloq("inst")}>
         <span class="lab-icono">${I.icono}</span><b>${I.nombre}</b>${util ? `<em>objetivo</em>` : ""}
         <small>${I.desc}</small>
         <small class="lab-num">⚖ ${I.masa} kg · ⚡ ${I.potencia}/s · 💰 ${I.costo} · 💾 ${I.datos} MB/s · ⭐ ×${I.valor} · ${I.donde.map(x => x === "orbita" ? "órbita" : "suelo").join(" y ")}</small></button>`;
     }).join("");
 
-    const lanzadores = Object.entries(LANZADORES).map(([id, X]) => `<button class="lab-op ${sel.lanzador === id ? "sel" : ""} ${c.masa > X.capacidad ? "no-sirve" : ""}" data-lanzador="${id}">
+    const lanzadores = Object.entries(LANZADORES).map(([id, X]) => `<button class="lab-op ${sel.lanzador === id ? "sel" : ""} ${c.masa > X.capacidad ? "no-sirve" : ""}" data-lanzador="${id}" ${bloq("lanzador")}>
       <b>${X.nombre}</b><small>Lleva hasta ${X.capacidad} kg · ${X.costo ? X.costo + " 💰" : "gratis"}</small><small>${X.desc}</small></button>`).join("");
 
-    const tipos = Object.entries(TIPOS).map(([id, X]) => `<button class="lab-op ${sel.tipo === id ? "sel" : ""}" data-tipo="${id}">
+    const tipos = Object.entries(TIPOS).map(([id, X]) => `<button class="lab-op ${sel.tipo === id ? "sel" : ""}" data-tipo="${id}" ${bloq("tipo")}>
       <b>${X.icono} ${X.nombre}</b><small>${X.desc}</small><small class="lab-necesita">Combustible ×${X.combustible} · ${X.real}</small></button>`).join("");
 
     const fila = (icono, nombre, texto, b) => `<div class="lab-dato"><span>${icono} ${nombre}</span><b>${texto}</b>${b}</div>`;
@@ -76,16 +105,17 @@ export function crearLaboratorio(avisos) {
     const revision = c.errores.map(t => `<li class="mal">⛔ ${t}</li>`).join("") + c.avisos.map(t => `<li class="justo">⚠ ${t}</li>`).join("")
       || `<li class="bien">✅ Diseño equilibrado: cumple el objetivo, cabe en el lanzador y tiene energía y memoria de sobra.</li>`;
 
-    const aprobacion = enEquipo() ? `<div class="lab-aprobar"><b>👥 Todo el equipo debe aprobar:</b>${estado.equipo.jugadores.map((j, i) =>
-      `<label><input type="checkbox" data-aprueba="${i}" ${aprobado[i] ? "checked" : ""}> ${j.nombre} (${j.roles.map(r => ROLES[r].icono).join("")})</label>`).join("")}
+    const aprobacion = enEquipo() ? `<div class="lab-aprobar"><b>👥 Todo el equipo debe aprobar:</b>${equipo().jugadores.map((j, i) =>
+      `<label class="${red && i === red.miIndice ? "yo" : ""}"><input type="checkbox" data-aprueba="${i}" ${aprobado[i] ? "checked" : ""} ${red && i !== red.miIndice ? "disabled" : ""}> ${red && i === red.miIndice ? "Tú" : j.nombre} (${j.roles.map(r => ROLES[r].icono).join("")})</label>`).join("")}
       <button class="lab-link" data-acc="metas">${verMetas ? "Ocultar" : "Ver"} las metas de cada rol</button>
-      ${verMetas ? `<ul class="lab-metas">${Object.entries(ROLES).map(([id, R]) => `<li>${R.icono} <b>${R.nombre}</b> (${(quienTieneRol(estado.equipo, id) || {}).nombre || "—"}): ${R.meta}</li>`).join("")}</ul>` : ""}</div>` : "";
+      ${verMetas ? `<ul class="lab-metas">${Object.entries(ROLES).map(([id, R]) => `<li>${R.icono} <b>${R.nombre}</b> (${(quienTieneRol(equipo(), id) || {}).nombre || "—"}): ${R.meta}</li>`).join("")}</ul>` : ""}</div>` : "";
 
     el.innerHTML = `<div class="lab tarjeta">
       <div class="lab-cabeza">
         <h2>🧪 Laboratorio de Diseño de Misión · ${P.lugar}</h2>
         <div class="lab-cml">${[1, 2, 3, 4].map(n => `<i class="${c.cml >= n ? "on" : ""}"></i>`).join("")}<span>${CML[c.cml]}</span></div>
-        <button class="lab-link" data-acc="equipo">👥 ${enEquipo() ? "Equipo: " + estado.equipo.jugadores.map(j => j.nombre).join(", ") : "Modo equipo"}</button>
+        ${red ? `<span class="lab-link en-linea">🌐 Sala en línea · ${equipo().jugadores.length} ${equipo().jugadores.length === 1 ? "persona" : "personas"}</span>`
+          : `<button class="lab-link" data-acc="equipo">👥 ${enEquipo() ? "Equipo: " + estado.equipo.jugadores.map(j => j.nombre).join(", ") : "Modo equipo"}</button>`}
         <button class="lab-x" data-acc="cancelar" title="Volver">✕</button>
       </div>
       <div class="lab-cuerpo">
@@ -101,9 +131,11 @@ export function crearLaboratorio(avisos) {
           ${aprobacion}
           <div class="lab-botones">
             <button class="lab-boton" data-acc="cancelar">← Volver al mapa</button>
-            <button class="lab-boton principal" data-acc="despegar" ${c.valido && aprobados ? "" : "disabled"}>🚀 Despegar</button>
+            <button class="lab-boton principal" data-acc="despegar" ${c.valido && aprobados && (!red || red.anfitrion) ? "" : "disabled"}>🚀 Despegar</button>
           </div>
-          ${!c.valido ? `<p class="lab-nota">Corrige lo marcado con ⛔ para poder despegar.</p>` : !aprobados ? `<p class="lab-nota">Falta que todo el equipo apruebe el diseño.</p>` : ""}
+          ${!c.valido ? `<p class="lab-nota">Corrige lo marcado con ⛔ para poder despegar.</p>` : !aprobados ? `<p class="lab-nota">Falta que todo el equipo apruebe el diseño.</p>`
+            : red && !red.anfitrion ? `<p class="lab-nota">Todo aprobado: ${equipo().jugadores[0].nombre} (anfitrión) pulsa Despegar.</p>` : ""}
+          ${red ? `<p class="lab-nota">Cada persona solo cambia la parte de su rol; las demás se ven en gris.</p>` : ""}
         </div>
       </div></div>`;
     el._calculo = c;
@@ -144,38 +176,69 @@ export function crearLaboratorio(avisos) {
       if (b.dataset.acc === "volver") { armando = false; return pintar(); }
       return;
     }
-    const cambio = () => { aprobado = {}; recordados[dest] = sel; pintar(); }; // cualquier cambio pide aprobar de nuevo
-    if (b.dataset.objetivo) { sel = { ...sel, objetivo: b.dataset.objetivo }; return cambio(); }
-    if (b.dataset.inst) {
-      const id = b.dataset.inst;
-      sel = { ...sel, instrumentos: sel.instrumentos.includes(id) ? sel.instrumentos.filter(x => x !== id) : [...sel.instrumentos, id] };
-      return cambio();
-    }
-    if (b.dataset.lanzador) { sel = { ...sel, lanzador: b.dataset.lanzador }; return cambio(); }
-    if (b.dataset.tipo) { sel = { ...sel, tipo: b.dataset.tipo }; return cambio(); }
     const acc = b.dataset.acc;
-    if (acc === "cancelar") return avisos.alCancelar();
-    if (acc === "equipo") { armando = true; return pintar(); }
     if (acc === "metas") { verMetas = !verMetas; return pintar(); }
-    if (acc === "despegar") {
-      const c = el._calculo;
-      if (!c || !c.valido) return;
-      recordados[dest] = sel;
-      avisos.alDespegar(disenoParaMision(c));
+    if (acc === "cancelar") {
+      if (linea() && !linea().anfitrion) { el.classList.remove("abierto"); if (avisos.alCerrarVista) avisos.alCerrarVista(); return; } // el invitado solo deja de mirarlo
+      return avisos.alCancelar();
     }
+    if (acc === "equipo") { armando = true; return pintar(); }
+    const d = b.dataset;
+    const accion = d.objetivo ? { objetivo: d.objetivo } : d.inst ? { inst: d.inst } : d.lanzador ? { lanzador: d.lanzador }
+      : d.tipo ? { tipo: d.tipo } : acc === "despegar" ? { despegar: true } : null;
+    if (accion) hacer(accion);
   });
   el.addEventListener("change", e => {
     const i = e.target.dataset && e.target.dataset.aprueba;
-    if (i !== undefined) { aprobado[i] = e.target.checked; pintar(); }
+    if (i !== undefined) hacer({ aprueba: Number(i), valor: e.target.checked });
   });
+  // Un invitado pide el cambio al anfitrión; si no, se aplica aquí
+  function hacer(accion) {
+    const L = linea();
+    if (L && !L.anfitrion) { if (avisos.pedir) avisos.pedir(accion); return; }
+    aplicar(accion, L ? L.miIndice : 0);
+  }
+  // Aplicar un cambio de la persona `quien` (en línea, solo el anfitrión lo hace y luego lo comparte)
+  function aplicar(accion, quien) {
+    if (!dest || !el.classList.contains("abierto") || armando || !accion) return;
+    const cambio = () => { aprobado = {}; recordados[dest] = sel; pintar(); compartir(); }; // cualquier cambio pide aprobar de nuevo
+    const parte = ["objetivo", "inst", "lanzador", "tipo"].find(k => accion[k] !== undefined);
+    if (parte && !puede(parte, quien)) return;
+    const es = (tabla, k) => typeof k === "string" && Object.hasOwn(tabla, k); // nada de claves raras como "__proto__"
+    if (accion.objetivo && OBJETIVOS[dest].some(o => o.id === accion.objetivo)) { sel = { ...sel, objetivo: accion.objetivo }; return cambio(); }
+    if (accion.inst && es(INSTRUMENTOS, accion.inst)) {
+      const id = accion.inst;
+      sel = { ...sel, instrumentos: sel.instrumentos.includes(id) ? sel.instrumentos.filter(x => x !== id) : [...sel.instrumentos, id] };
+      return cambio();
+    }
+    if (accion.lanzador && es(LANZADORES, accion.lanzador)) { sel = { ...sel, lanzador: accion.lanzador }; return cambio(); }
+    if (accion.tipo && es(TIPOS, accion.tipo)) { sel = { ...sel, tipo: accion.tipo }; return cambio(); }
+    if (Number.isInteger(accion.aprueba)) {
+      if (linea() && accion.aprueba !== quien) return; // cada quien aprueba por sí mismo
+      aprobado = { ...aprobado, [accion.aprueba]: !!accion.valor };
+      pintar(); compartir();
+      return;
+    }
+    if (accion.despegar) {
+      const c = calcularDiseno(dest, sel);
+      const aprobados = enEquipo() ? equipo().jugadores.every((j, i) => aprobado[i]) : true;
+      if (!c.valido || !aprobados || (linea() && !linea().anfitrion)) return;
+      recordados[dest] = sel;
+      avisos.alDespegar(disenoParaMision(c));
+    }
+  }
 
-  return { abrir, cerrar, get abierto() { return el.classList.contains("abierto"); } };
+  return {
+    abrir, cerrar, recibir, aplicar,
+    refrescar() { if (el.classList.contains("abierto")) { aprobado = {}; pintar(); compartir(); } },
+    get abierto() { return el.classList.contains("abierto"); },
+  };
 }
 
 // ----- Resultado de la misión, para el reporte -----
 export function htmlEvaluacion(ev, eq, { premio = 0, record = false } = {}) {
   if (!ev) return "";
-  const estrellas = "⭐".repeat(ev.estrellas) + "☆".repeat(3 - ev.estrellas);
+  const estrellas = `<span class="inf-estrellas-fila">${[0, 1, 2].map(i => `<span class="inf-estrella">${i < ev.estrellas ? "⭐" : "☆"}</span>`).join("")}</span>`;
   const p = ev.puntos;
   const fila = (a, b) => `<div class="inf-fila"><span>${a}</span><b>${b}</b></div>`;
   const signo = x => (x > 0 ? "+" : "") + x;

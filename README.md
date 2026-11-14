@@ -39,7 +39,7 @@ En *Cohete del Granero* **el jugador siente cada trade-off en carne propia**. La
 | **Lanzador y órbita** | 3 lanzadores con distinta capacidad y precio: si la nave pesa más de lo que el lanzador lleva, no despega. 3 tipos de misión: sobrevuelo (barato y corto), orbitador (observa sin bajar) y aterrizaje (más ciencia y más riesgo). |
 | **Datos y comunicaciones** | Los instrumentos generan datos, que se guardan en una memoria limitada y la antena envía a la Tierra más despacio cuanto más lejos estás. Si la memoria se llena, se pierde ciencia. |
 | **Evaluación y puntaje** | Cada misión recibe un puntaje (ciencia, objetivo, presupuesto y riesgos) con 0 a 3 estrellas, un **"¿por qué salió así?"**, la misión real a la que se parece tu diseño y un récord por destino. |
-| **Equipos de hasta 4** | Modo equipo en el mismo dispositivo: Dirección, Ciencia, Ingeniería y Operaciones se reparten el diseño, cada rol tiene una meta que choca con las demás y el cohete solo despega si todo el equipo lo aprueba. |
+| **Equipos de hasta 4, en línea** | Cada persona juega desde su teléfono o computadora: una crea una **sala** con un código de 4 letras y las demás se unen. Dirección, Ciencia, Ingeniería y Operaciones se reparten el diseño: en el laboratorio cada quien solo cambia la parte de su rol, cada rol tiene una meta que choca con las demás y el cohete solo despega si todo el equipo lo aprueba. En el granero se ven caminando; durante el vuelo, los demás siguen la misión en vivo en el **Control de Misión** (imagen, telemetría) y mandan mensajes por radio, que tardan lo mismo que la señal real. También hay modo equipo en un solo dispositivo. |
 | **Objetivos de misión** | Además, cada destino tiene una misión principal basada en un hecho real y 5 secundarias. Cumplir la principal abre el siguiente destino. |
 | **Diseño de la nave** | Diez mejoras: motor, tanque, escudo térmico, sensores, antena, traje, tanque de oxígeno, paneles solares, batería y generador RTG. Cada una cambia el modelo 3D del cohete. |
 | **Instrumentos científicos** | 7 instrumentos para elegir (cámara, espectrómetro, radar, cámara infrarroja, magnetómetro, sismómetro y estación meteorológica), cada uno con su masa, energía, costo, datos por segundo y valor científico, y dónde funciona (órbita o suelo). Además, las misiones usan estación meteorológica, sismógrafo y antenas. |
@@ -62,7 +62,9 @@ En *Cohete del Granero* **el jugador siente cada trade-off en carne propia**. La
 | ![Antenas en Europa](docs/capturas/08-europa-antenas.png) | ![Final en Europa](docs/capturas/09-final-europa.png) |
 | Tres antenas triangulan la señal de Europa | El final bajo el hielo |
 | ![Villa Siderense](docs/capturas/10-pueblo.png) | ![Laboratorio de Diseño de Misión](docs/capturas/11-laboratorio-mision.png) |
-| El pueblo y su mercado | |
+| El pueblo, su mercado y sus huertos | Laboratorio de Diseño de Misión |
+| ![Sala en línea](docs/capturas/12-sala-en-linea.png) | |
+| Sala en línea: hasta 4 personas, cada una con su rol | |
 
 ## La ciencia detrás del juego
 
@@ -141,14 +143,19 @@ Los datos de los planetas están en [`src/datos.js`](src/datos.js). Son conocimi
 - **[Vite](https://vite.dev/)** para compilar la versión web.
 - **[Electron](https://www.electronjs.org/)** para la app de escritorio de Windows.
 - **Todo se genera con código:** modelos 3D, terrenos, texturas de planetas, sonidos y música (una pieza distinta para el granero, el espacio y cada planeta). El juego no usa archivos externos de arte ni audio.
-- **Cielos y paisajes:** cielo con degradado y halo alrededor del Sol (azulado en Marte, donde los atardeceres son azules), montañas en el horizonte, rocas low-poly con contorno y cientos de guijarros dibujados de una sola vez (instancias).
+- **Multijugador en línea:** conexión directa entre navegadores (WebRTC) con [PeerJS](https://peerjs.com/). Su servidor público gratuito solo sirve para que los jugadores se encuentren por el código de la sala; no guarda partidas ni datos personales. El anfitrión lleva la partida y la comparte; la imagen del vuelo se transmite como video en vivo.
+- **El granero vivo:** cielo por bandas con un sol con contorno, nubes esponjosas sombreadas en 3 tonos, miles de matas de pasto y flores que se mecen con el viento (instancias en la GPU), un lago con ondas, espuma, juncos y nenúfares, mariposas y bandadas de pájaros. El pueblo tiene huertos con cerca, árboles y adoquines alrededor de la fuente.
+- **El espacio:** nebulosas por bandas, la Vía Láctea y el Sol a lo lejos, estrellas de colores que titilan, polvo espacial que da sensación de velocidad, atmósferas alrededor de Venus, Marte y Júpiter, y sus lunas reales: Fobos y Deimos en Marte, y las cuatro galileanas (Ío, Europa, Ganímedes y Calisto) en Júpiter.
+- **Cohete y efectos:** llama de 3 capas (roja, naranja y un núcleo que brilla) con contorno, nubes de humo al despegar, polvo facetado al aterrizar y un cohete con más detalle (marco de la ventanilla, remaches, juntas, punta metálica y aros del motor según su nivel).
+- **Interfaz animada:** el menú y los paneles entran con un pequeño rebote, las estrellas de la evaluación aparecen una a una y las tarjetas del laboratorio se levantan al pasar el mouse. Si el sistema pide menos movimiento, las animaciones se apagan.
+- **Cielos de los planetas:** cielo con degradado y halo alrededor del Sol (azulado en Marte, donde los atardeceres son azules), montañas en el horizonte, rocas low-poly con contorno y cientos de guijarros dibujados de una sola vez (instancias).
 - **Texturas procedurales en el estilo de la lava:** el suelo de cada planeta tiene placas agrietadas con manchas de tono, las rocas y las laderas tienen costra con grietas, el granero tiene tablas de madera y el pasto tiene matices. Todo se calcula en la GPU (sin imágenes) y por bandas de color, para encajar con el sombreado toon.
 - **Lava creíble en estilo toon:** relieve en 3D (placas de costra levantadas con luz y sombra por facetas, grietas y lava fundida hundidas, bloques de costra flotando), placas que derivan despacio, grietas encendidas, zonas fundidas, una orilla que brilla (como el lago de lava Loki, en Ío), reborde de roca y brasas que suben. Cada lugar tiene su paleta: lava naranja en Venus, casi amarilla de tan caliente en Ío y roca al rojo vivo en Mercurio.
 - **HUD ordenado en los planetas:** arriba, dónde estás y qué llevas; abajo a la izquierda, un panel con oxígeno, traje y energía. La ayuda de controles se desvanece sola.
 - **Postprocesado:** antialiasing MSAA, resplandor (bloom) ajustado a cada escena, para que brillen la lava, los cristales y las llamas, y un viñeteado suave. Se activa con la calidad gráfica alta.
 - **Calidad automática:** si el juego va a menos de 32 imágenes por segundo durante 8 segundos, baja solo la calidad gráfica un nivel y avisa.
 - **Menú principal y opciones:** volumen, música, sensibilidad del mouse, campo de visión y tres niveles de calidad gráfica para computadoras modestas.
-- **Simulador de balance:** un script que juega miles de partidas con las reglas reales y mide cuántos viajes y minutos toma terminar. Hoy da unos 9 viajes y 35 minutos de media.
+- **Simulador de balance:** un script que juega miles de partidas con las reglas reales y mide cuántos viajes y minutos toma terminar. Hoy da unos 8,5 viajes y 32 minutos de media, y el 100 % de las partidas termina.
 
 ### Estructura
 
@@ -171,6 +178,10 @@ src/
   secundarias.js  puntos de las misiones secundarias y mochilas en el suelo
   diseno.js       diseño de misión: instrumentos, lanzadores, objetivos, datos, puntaje y modo equipo
   laboratorio.js  pantalla del Laboratorio de Diseño de Misión y evaluación del reporte
+  red.js          conexión del multijugador en línea (salas, mensajes y video), sin nada visual
+  multijugador.js sala en el menú, compañeros en el granero y Control de Misión
+  paisaje.js      cielo, nubes, pasto, flores, lago, mariposas y pájaros del granero
+  efectos.js      llama del cohete, humo del despegue y polvo del aterrizaje
   lava.js         charcos de lava: shader de costra y grietas, reborde y brasas
   tactil.js       controles táctiles para el celular (joystick, mirar y botones)
 android/                   app de Android (Capacitor); el APK lo compila GitHub Actions
@@ -207,7 +218,9 @@ Cada cambio que se sube a la rama `main` se publica solo en GitHub Pages.
 
 **Modo demo:** agregando `?demo` a la dirección (https://tommycc2010-hub.github.io/cohete-del-granero/?demo) el juego empieza con todo desbloqueado y no guarda el progreso. Sirve para presentar o grabar sin jugar desde el principio. El guion del video está en [`docs/guion-video.md`](docs/guion-video.md).
 
-`npm run capturas` vuelve a generar las capturas de `docs/capturas`.
+`npm run capturas` vuelve a generar las capturas de `docs/capturas` (necesita internet para la de la sala en línea).
+
+**Probar el multijugador:** abre el juego en dos pestañas (o en la computadora y el teléfono). En una, *Jugar en línea → Crear sala*; en la otra, *Unirse* con el código.
 
 **Tráiler narrado:** `herramientas/trailer` graba el juego cuadro a cuadro, añade la narración, subtítulos y la música del juego, y lo monta con ffmpeg en `salida/trailer-cohete-del-granero.mp4`:
 

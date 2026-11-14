@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { caja, toon } from "./estilo.js";
 import { crearCohete } from "./cohete.js";
 import { crearPlaneta } from "./espacio.js";
+import { crearLlama } from "./efectos.js";
 
 export const DURACION = 19; // segundos hasta que aparece la tarjeta final
 
@@ -118,7 +119,7 @@ export function crearFinal() {
   // Cohete flotando con la llama encendida
   const nave = new THREE.Group();
   scene.add(nave);
-  const llama = new THREE.Mesh(new THREE.ConeGeometry(0.55, 2.4, 10), new THREE.MeshBasicMaterial({ color: 0xffa726 }));
+  const llama = crearLlama(0.92);
   llama.rotation.x = Math.PI;
   let modelo = null, t = 0;
 
@@ -140,7 +141,7 @@ export function crearFinal() {
     const baja = suave(Math.min(1, t / 3.5));
     nave.position.set(10, 46 - 35 * baja + Math.sin(t * 1.4) * 0.3, 5);
     nave.rotation.z = Math.sin(t * 0.9) * 0.03;
-    llama.scale.set(1, 0.7 + Math.random() * 0.5, 1);
+    llama.scale.set(0.92, 0.92 * (0.75 + Math.random() * 0.4), 0.92);
 
     // La señal: ondas y brillo que laten
     const fuerza = Math.min(1, Math.max(0, (t - 1) / 3));

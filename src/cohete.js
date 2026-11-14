@@ -18,10 +18,35 @@ export function crearCohete(mejoras) {
   const punta = cono(0.8, 1.4, ROJO, 14);
   punta.position.y = largo / 2 + 0.7;
   g.add(punta);
+  const puntita = cilindro(0.06, 0.12, 0.35, 0xd8d8d8, 8); // punta metálica
+  puntita.position.y = largo / 2 + 1.5;
+  g.add(puntita);
+
+  // Juntas entre las placas del casco: líneas finas oscuras alrededor del cuerpo
+  for (const y of [largo / 2 - 1.1, -largo / 2 + 0.25]) {
+    const junta = cilindro(0.812, 0.812, 0.04, 0x9a9a9a, 14, false);
+    junta.position.y = y;
+    g.add(junta);
+  }
+  // Remaches: puntitos alrededor de la franja roja
+  for (let i = 0; i < 12; i++) {
+    const a = i / 12 * Math.PI * 2;
+    const remache = esfera(0.035, 0x7a7a7a, 5, false);
+    remache.position.set(Math.cos(a) * 0.83, largo / 2 - 0.2, Math.sin(a) * 0.83);
+    g.add(remache);
+  }
 
   const tobera = cilindro(0.45, 0.7, 0.6, mejoras.motor > 0 ? 0xffb14a : 0x777777, 12);
   tobera.position.y = -largo / 2 - 0.3;
   g.add(tobera);
+  const garganta = cilindro(0.3, 0.6, 0.02, 0x2a2a2a, 12, false); // el interior oscuro de la tobera
+  garganta.position.y = -largo / 2 - 0.6;
+  g.add(garganta);
+  for (let i = 0; i < mejoras.motor; i++) { // cada nivel de motor suma un aro de refuerzo
+    const aro = cilindro(0.5 + i * 0.06, 0.5 + i * 0.06, 0.07, 0xc98a2a, 12, false);
+    aro.position.y = -largo / 2 - 0.12 - i * 0.16;
+    g.add(aro);
+  }
 
   for (let i = 0; i < 4; i++) {
     const a = i * Math.PI / 2 + Math.PI / 4;
@@ -34,6 +59,12 @@ export function crearCohete(mejoras) {
   const ventana = esfera(0.3, AZUL, 12);
   ventana.position.set(0, largo / 4, 0.68);
   g.add(ventana);
+  const marco = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.06, 6, 16), new THREE.MeshBasicMaterial({ color: 0x8a8a8a }));
+  marco.position.set(0, largo / 4, 0.8);
+  g.add(marco);
+  const reflejo = esfera(0.07, 0xffffff, 6, false); // brillo en el vidrio
+  reflejo.position.set(-0.1, largo / 4 + 0.1, 0.96);
+  g.add(reflejo);
 
   if (mejoras.escudo === 0) {
     // Grietas del casco averiado

@@ -87,6 +87,65 @@ export function crearPueblo({ cx, cz, poner, col, interactuables }) {
     C(x, z, 2.4, 0.6);
   });
 
+  // ----- Huertos detrás de cada casa: cerca blanca, surcos y flores -----
+  CASAS.forEach(([x, z], i) => {
+    const enX = Math.abs(x) > Math.abs(z), s = enX ? -Math.sign(x) : -Math.sign(z); // s apunta a la plaza
+    const hx = enX ? x - s * 6.2 : x, hz = enX ? z : z - s * 6.2;                  // el huerto, detrás
+    const ancho = enX ? 4.4 : 6.4, fondo = enX ? 6.4 : 4.4;
+    for (const [dx, dz, w, d] of [[0, -fondo / 2, ancho, 0], [0, fondo / 2, ancho, 0], [-ancho / 2, 0, 0, fondo], [ancho / 2, 0, 0, fondo]]) {
+      const n = Math.round(Math.max(w, d) / 0.8);
+      for (let k = 0; k <= n; k++) {
+        const t = k / n - 0.5;
+        P(caja(0.14, 0.75, 0.14, CREMA), hx + dx + w * t, 0.37, hz + dz + d * t);
+      }
+      P(caja(w || 0.08, 0.09, d || 0.08, CREMA, false), hx + dx, 0.5, hz + dz);
+    }
+    const tierra = caja(ancho - 0.8, 0.16, fondo - 0.8, 0x7a4e2c);
+    P(tierra, hx, 0.08, hz);
+    for (let k = 0; k < 3; k++) { // surcos con plantas o flores
+      const t = (k - 1) * (enX ? 1.25 : 1.25);
+      for (let m = -2; m <= 2; m++) {
+        const px = enX ? hx + t : hx + m * 1.1, pz = enX ? hz + m * 1.1 : hz + t;
+        if ((i + k) % 2) P(esfera(0.26, [0xff6b6b, 0xffd23f, 0xe28bff, 0xff9ecf, 0xffffff][(m + k + i + 5) % 5], 6, false), px, 0.38, pz);
+        else { P(cono(0.22, 0.5, 0x4fae58, 5, false), px, 0.4, pz); P(esfera(0.12, 0xff8a2a, 5, false), px, 0.2, pz); } // zanahorias
+      }
+    }
+    C(hx, hz, ancho, fondo);
+  });
+
+  // ----- Árboles redondos de la plaza -----
+  [[-15, -18], [16, -16], [-17, 16], [17, 17], [0, -16]].forEach(([x, z], i) => {
+    P(cilindro(0.28, 0.38, 2.4, MADERA_OSC, 7), x, 1.2, z);
+    const copa = esfera(1.7 + (i % 2) * 0.3, [0x4fb561, 0x5fbf5a, 0x48a856][i % 3], 7);
+    copa.scale.y = 0.85;
+    P(copa, x, 3.4, z);
+    P(esfera(1.1, [0x5fc46b, 0x6fcf6c, 0x58b85a][i % 3], 6), x + 0.8, 3.0, z + 0.5);
+    C(x, z, 0.8, 0.8);
+  });
+
+  // ----- Adoquines alrededor de la fuente -----
+  {
+    const piedras = [];
+    for (let anillo = 0; anillo < 3; anillo++) {
+      const r = 3.6 + anillo * 0.95, n = Math.round(r * 5.2);
+      for (let k = 0; k < n; k++) piedras.push([Math.cos((k + anillo * 0.5) / n * Math.PI * 2) * r, Math.sin((k + anillo * 0.5) / n * Math.PI * 2) * r, (k * 7 + anillo) % 3]);
+    }
+    const geo = new THREE.CylinderGeometry(0.42, 0.46, 0.08, 6);
+    const mat = toon(0xffffff);
+    const malla = new THREE.InstancedMesh(geo, mat, piedras.length);
+    const tmp = new THREE.Object3D(), tonos = [0xb9bcc2, 0xa9adb5, 0xc9c6bd];
+    piedras.forEach(([x, z, t], k) => {
+      tmp.position.set(cx + x, 0.05, cz + z);
+      tmp.rotation.set(0, k * 1.3, 0);
+      tmp.updateMatrix();
+      malla.setMatrixAt(k, tmp.matrix);
+      malla.setColorAt(k, new THREE.Color(tonos[t]));
+    });
+    malla.receiveShadow = true;
+    poner(malla, 0, 0, 0);
+    malla.position.set(0, 0, 0);
+  }
+
   // ----- Mercado: aquí la carga se vende un 20 % más cara -----
   const mx = 12, mz = -6;
   P(caja(3.6, 0.15, 1.4, MADERA), mx, 0.95, mz);

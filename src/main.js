@@ -20,6 +20,7 @@ import { crearExtrasSuelo } from "./secundarias.js";
 import { crearLaboratorio, htmlEvaluacion } from "./laboratorio.js";
 import { pasoDatos, evaluar, evaluarEquipo, anotarRecord, premioObjetivo, memoriaNave, enlace, TIPOS } from "./diseno.js";
 import { esTactil, crearTactil, simularBloqueo } from "./tactil.js";
+import { crearMultijugador } from "./multijugador.js";
 import { DATOS_PLANETAS, SECUNDARIAS } from "./datos.js";
 import {
   estado, capacidad, comprarCombustible, vender, suscribir, regresar,
@@ -28,7 +29,7 @@ import {
   BONO_PUEBLO, VALOR_ORBITA, FUGA_POR_SEGUNDO, completarMision, exportarEstado, importarEstado, factorMasa,
   energiaMax, generacion, consumoSistemas, ENERGIA_RECARGA_OXI, retrasoSenal,
   LOGROS, logrosNuevos, desbloquearLogro, donarMuseo, ventana, desbloqueado, ORDEN, importarMision,
-  ganar, iniciarMision, soltarRecolectado, recuperarMochila, marcarPunto, revisarAterrizaje, avisosSecundarias, progresoSecundaria, secundariasHechas,
+  ganar, ponerEquipo, MEJORAS, comprarMejora, esperar, iniciarMision, soltarRecolectado, recuperarMochila, marcarPunto, revisarAterrizaje, avisosSecundarias, progresoSecundaria, secundariasHechas,
 } from "./reglas.js";
 
 // ----- Render -----
@@ -103,8 +104,9 @@ const VISTAS = {
   final: () => ({ escena: final.scene, camara: final.camera }),
 };
 const $ = id => document.getElementById(id);
+let multi = null; // multijugador en línea; se crea más abajo, junto al laboratorio
 // En pausa: el menú está abierto o se está diseñando una misión en el laboratorio
-const pausado = () => !$("inicio").classList.contains("oculto") || $("laboratorio").classList.contains("abierto");
+const pausado = () => !$("inicio").classList.contains("oculto") || $("laboratorio").classList.contains("abierto") || $("control").classList.contains("visible");
 
 function actualizarMusica() {
   if (modo === "granero" || modo === "despegue") sonido.musica("granero");
@@ -114,6 +116,7 @@ function actualizarMusica() {
 }
 function ponerModo(m) {
   modo = m;
+  if (multi) multi.cambioModo(m, estado.mision && estado.mision.dest);
   if (m !== "transicion") actualizarMusica();
   document.body.dataset.modo = m;
   $("aviso").classList.remove("visible"); // los avisos del modo anterior no se arrastran al nuevo
@@ -158,12 +161,13 @@ function datosPartida() {
 }
 // Guardado automático (solo en casa y si ya hay una ranura elegida)
 function guardarPartida() {
-  if (cargando || estado.mision || DEMO || !ranuraActual) return;
+  if (cargando || estado.mision || DEMO || !ranuraActual || (multi && multi.invitado)) return;
   guardarRanura(ranuraActual, datosPartida());
 }
 // Guardado a mano: devuelve el texto para mostrar
 function guardarEn(n) {
   if (DEMO) return "Modo demo: no se guarda el progreso.";
+  if (multi && multi.invitado) return "🌐 La partida es del anfitrión de la sala: él la guarda.";
   if (["despegue", "transicion", "final"].includes(modo)) return "⏳ Espera un momento: no se puede guardar en plena transición.";
   ranuraActual = n;
   const ok = guardarRanura(n, datosPartida());
@@ -210,6 +214,7 @@ function pintarHud() {
 // El cohete del granero se reconstruye cuando cambia alguna mejora.
 let firmaMejoras = JSON.stringify(estado.mejoras);
 suscribir(() => {
+  if (multi) multi.estadoCambio();
   pintarHud();
   granero.mostrarProgreso(estado);
   guardarPartida();
@@ -301,6 +306,7 @@ function revisarLogros() {
 const CALIDAD = { alta: { pr: 2, sombras: true, post: true }, media: { pr: 1, sombras: true, post: false }, baja: { pr: 0.75, sombras: false, post: false } };
 let calidadActual = null;
 const menu = crearMenu($("inicio"), {
+  pintarEnLinea: caja => multi.pintarPanel(caja),
   alJugar() {
     sonido.iniciar();
     if (!empezado) {
@@ -369,7 +375,7 @@ if (partida) menu.mostrarPartidas(); // venimos de "Cargar partida": el menú ab
 document.body.classList.add("en-menu"); // el HUD se oculta hasta empezar a jugar
 jugador.controls.addEventListener("lock", () => $("inicio").classList.add("oculto"));
 jugador.controls.addEventListener("unlock", () => {
-  if (!telefono.abierto && !tarjetaFinal && !laboratorio.abierto) { menu.refrescar(); $("inicio").classList.remove("oculto"); }
+  if (!telefono.abierto && !tarjetaFinal && !laboratorio.abierto && !$("control").classList.contains("visible")) { menu.refrescar(); $("inicio").classList.remove("oculto"); }
 });
 
 // ----- App instalable (PWA): guarda el juego para abrirlo sin internet. No en la app de escritorio. -----
@@ -405,13 +411,27 @@ const telefono = crearTelefono({
     jugador.controls.lock();
   },
   alLanzar: despegar,
-  alDisenar: dest => laboratorio.abrir(dest),
+  alDisenar(dest) {
+    if (multi.invitado) { // en una sala, el destino lo propone cualquiera pero el laboratorio lo abre el anfitrión
+      multi.proponer(dest);
+      aviso(`🌐 Propusiste ir a ${DATOS_PLANETAS[dest].nombre}. El laboratorio se abre para todo el equipo.`);
+      return jugador.controls.lock();
+    }
+    laboratorio.abrir(dest);
+  },
+  // Invitado: las compras las hace el anfitrión, que lleva el dinero de todo el equipo
+  alPedir(tipo, valor) {
+    if (!multi.invitado) return null;
+    multi.pedirAccion(tipo, valor);
+    return "🌐 Pedido enviado al anfitrión…";
+  },
 });
 
 // ----- Laboratorio de Diseño de Misión: se abre al elegir un destino en el mapa -----
 const laboratorio = crearLaboratorio({
   alDespegar(diseno) {
     const dineroInicial = estado.dinero;
+    if (multi.anfitrion && multi.equipo()) ponerEquipo(multi.equipo()); // las metas de rol se evalúan con el equipo de la sala
     const t = iniciarMisionConDiseno(diseno);
     if (!estado.mision) { aviso(t); sonido.reproducir("error"); return false; }
     estado.mision.dineroInicial = dineroInicial;
@@ -420,6 +440,54 @@ const laboratorio = crearLaboratorio({
     return true;
   },
   alCancelar() { laboratorio.cerrar(); telefono.abrir("mapa"); },
+  alCerrarVista() { jugador.controls.lock(); },
+  enLinea: () => multi && multi.enLinea(),
+  compartir: s => multi.compartirLab(s),
+  pedir: accion => multi.pedirLab(accion),
+});
+
+// ----- Multijugador en línea (salas con código, roles por persona, Control de Misión) -----
+multi = crearMultijugador({
+  scene, canvas: renderer.domElement, laboratorio,
+  modo: () => modo,
+  empezado: () => empezado,
+  posicion() {
+    const dir = camera.getWorldDirection(new THREE.Vector3());
+    return { x: camera.position.x, y: jugador.pie, z: camera.position.z, ry: Math.atan2(dir.x, dir.z) };
+  },
+  exportar: exportarEstado,
+  importar(d) { cargando = true; importarEstado(d); cargando = false; pintarHud(); if (telefono.abierto) telefono.pintar(); },
+  aviso, radio,
+  alEmpezar() { menu.jugar(); },
+  soltar() { if (jugador.controls.isLocked) jugador.controls.unlock(); },
+  capturar() { jugador.controls.lock(); },
+  mostrarPausa() { if (!jugador.controls.isLocked && empezado) { menu.refrescar(); $("inicio").classList.remove("oculto"); } },
+  abrirReporte(html) { abrirReporte(null, null, null, {}, html); },
+  proponerDestino(dest, quien) {
+    if (modo !== "granero" || estado.mision || laboratorio.abierto || reporteAbierto) return aviso(`🌐 ${quien} propone ir a ${DATOS_PLANETAS[dest].nombre}.`);
+    if (!Object.hasOwn(DATOS_PLANETAS, dest) || !desbloqueado(dest)) return aviso(`🌐 ${quien} propone ir a ${DATOS_PLANETAS[dest].nombre}, pero aún está bloqueado.`);
+    aviso(`🌐 ${quien} propone ir a ${DATOS_PLANETAS[dest].nombre}: se abrió el laboratorio.`);
+    if (telefono.abierto) telefono.cerrar();
+    laboratorio.abrir(dest);
+    if (jugador.controls.isLocked) jugador.controls.unlock();
+  },
+  accionRemota(tipo, valor) {
+    if (estado.mision) return "La nave está en misión: espera a que vuelva.";
+    if (tipo === "mejora" && typeof valor === "string" && Object.hasOwn(MEJORAS, valor)) return comprarMejora(valor);
+    if (tipo === "esperar") return esperar(Math.max(1, Math.min(30, Number(valor) | 0)));
+    if (tipo === "combustible") return comprarCombustible(10);
+    if (tipo === "vender") return vender(valor === "pueblo" ? BONO_PUEBLO : 1);
+    if (tipo === "museo") return donarMuseo();
+    return null;
+  },
+  telemetria() {
+    const m = estado.mision;
+    return {
+      modo, dest: m ? m.dest : null, combustible: estado.combustible, capacidad: capacidad(), energia, energiaMax: energiaMax(),
+      oxi: oxi / oxigenoMax() * 100, traje, velocidad: modo === "descenso" && desc ? Math.abs(desc.v) : undefined,
+      datos: m && m.datos ? textoDatos() : "", carga: estado.carga.length, senal: m ? retrasoSenal(m.dest) : 0,
+    };
+  },
 });
 
 addEventListener("keydown", e => {
@@ -481,6 +549,8 @@ function interactuar() {
   if (dialogo) return avanzarDialogo();
   if (!cercano) return;
   const c = cercano;
+  const pedido = { bomba: ["combustible"], venta: ["vender", "granero"], mercado: ["vender", "pueblo"], museo: ["museo"] }[c.id];
+  if (multi.invitado && pedido) { multi.pedirAccion(...pedido); sonido.reproducir("clic"); return aviso("🌐 Pedido enviado al anfitrión…"); }
   if (c.id === "bomba") { aviso(comprarCombustible(10)); sonido.reproducir("clic"); }
   else if (c.id === "venta") venderCarga(1);
   else if (c.id === "mercado") venderCarga(BONO_PUEBLO);
@@ -1256,9 +1326,10 @@ function volver() {
 
 // ----- Reporte de misión -----
 let reporteAbierto = false;
-function abrirReporte(datos, ev = null, eq = null, extra = {}) {
+function abrirReporte(datos, ev = null, eq = null, extra = {}, html = null) {
   const cerrar = '<p class="inf-cerrar"><kbd>E</kbd> continuar</p>'; // al final, después de la evaluación
-  $("informe-cuerpo").innerHTML = htmlInforme(datos).replace(cerrar, "") + htmlEvaluacion(ev, eq, extra) + cerrar;
+  $("informe-cuerpo").innerHTML = html || htmlInforme(datos).replace(cerrar, "") + htmlEvaluacion(ev, eq, extra) + cerrar;
+  if (!html) multi.compartirReporte($("informe-cuerpo").innerHTML);
   $("informe").classList.add("visible");
   reporteAbierto = true;
 }
@@ -1273,6 +1344,7 @@ let tMenu = 0;
 let relojSecundarias = 0;
 function paso(dt) {
   revisarLogros();
+  multi.actualizar(dt, camera.position);
   // Misiones secundarias cumplidas: se anuncian una a una, con su dato real
   relojSecundarias -= dt;
   if (avisosSecundarias.length && relojSecundarias <= 0) { aviso(avisosSecundarias.shift()); sonido.reproducir("vender"); relojSecundarias = 7; }
@@ -1388,6 +1460,7 @@ renderer.setAnimationLoop(bucle);
 // Acceso para pruebas desde la consola del navegador.
 window.__juego = {
   camera, jugador, granero, espacio, superficie, estado, telefono, interactuar, despegar, volver,
+  multi,
   get modo() { return modo; },
   get eventos() { return { lluviaActiva, impactosLluvia, tormenta, espacio: eventosEsp.actual, suelo: eventosSuelo.actual, sensoresApagados }; },
   eventosEsp, eventosSuelo,

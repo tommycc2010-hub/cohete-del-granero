@@ -6,6 +6,8 @@ import { crearCientifico, NOMBRE } from "./cientifico.js";
 import { crearPueblo } from "./pueblo.js";
 import { crearGranja } from "./granja.js";
 import { crearTerreno } from "./terreno.js";
+import { crearPaisaje } from "./paisaje.js";
+import { crearLlama, crearHumoDespegue } from "./efectos.js";
 import { fbm, ruido, paso, azarSemilla, distSegmento } from "./ruido.js";
 
 const ROJO = 0xe5483b, ROJO_OSC = 0xc93a2e, CREMA = 0xfff6e5, MADERA = 0xb07a45, MADERA_OSC = 0x8a5a2b;
@@ -53,7 +55,6 @@ export function crearGranero(scene, mejoras) {
   const poner = (obj, x, y, z) => { obj.position.set(x, y, z); scene.add(obj); return obj; };
 
   // ----- Cielo y luces -----
-  scene.background = new THREE.Color(0x8ed1f0);
   scene.fog = new THREE.Fog(0xbfe6f5, 170, 560);
   scene.add(new THREE.HemisphereLight(0xffffff, 0xcdbfa3, 1.6));
   const lampara = new THREE.PointLight(0xffe2b0, 18, 16, 1.6); // luz cálida dentro del granero
@@ -74,10 +75,6 @@ export function crearGranero(scene, mejoras) {
   lejos.rotation.x = -Math.PI / 2;
   lejos.position.y = -2.5;
   scene.add(lejos);
-  const agua = new THREE.Mesh(new THREE.CircleGeometry(33, 24), toon(0x4aa3e8));
-  agua.rotation.x = -Math.PI / 2;
-  agua.position.set(LAGO.x, -1.5, LAGO.z);
-  scene.add(agua);
 
   // ----- Granero (12 x 10 m, frente abierto hacia +Z) -----
   const Z0 = -8; // centro del granero
@@ -213,25 +210,27 @@ export function crearGranero(scene, mejoras) {
   // ----- Pueblo -----
   const pueblo = crearPueblo({ cx: PUEBLO.x, cz: PUEBLO.z, poner, col, interactuables });
 
-  // ----- Nubes -----
-  const nubes = [];
-  [[-20, 44, -35], [12, 50, -45], [30, 42, -10], [-34, 46, 15], [5, 52, 40], [-90, 48, 90], [100, 55, -80], [-120, 50, -60]].forEach(([x, y, z]) => {
-    const n = new THREE.Group();
-    [[0, 0, 0, 7], [5, -0.5, 0.6, 5], [-5, -0.6, -0.4, 4.5]].forEach(([dx, dy, dz, s]) => {
-      const b = new THREE.Mesh(new THREE.BoxGeometry(s, s * 0.5, s * 0.7), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false }));
-      b.position.set(dx, dy, dz);
-      n.add(b);
-    });
-    poner(n, x, y, z);
-    nubes.push(n);
-  });
+  // ----- Cielo, nubes, pasto, flores, lago y animales pequeños -----
+  const libre = (x, z) => {
+    if (Math.hypot(x - LAGO.x, z - LAGO.z) < 36 || Math.hypot(x - PUEBLO.x, z - PUEBLO.z) < 33) return false;
+    if (distCamino(x, z) < 3.2 || paso(75, 100, x) > 0.3) return false;
+    if (Math.abs(x) < 8 && z > Z0 - 7 && z < Z0 + 8) return false;   // dentro del granero
+    if (Math.hypot(x, z - 6) < 4.5) return false;                     // plataforma de lanzamiento
+    const h = alturaBase(x, z);
+    if (h > 16 || h < -0.8) return false;
+    for (const c of colisiones) if (x > c.minX - 0.7 && x < c.maxX + 0.7 && z > c.minZ - 0.7 && z < c.maxZ + 0.7) return false;
+    return true;
+  };
+  const paisaje = crearPaisaje({ scene, altura, libre, lago: { x: LAGO.x, z: LAGO.z, y: -1.5, r: 33 }, dirSol: new THREE.Vector3(14, 22, 12) });
 
   // ----- Despegue: un cohete en pie frente al granero que sube con llama -----
   const lanzadera = new THREE.Group();
   lanzadera.visible = false;
   scene.add(lanzadera);
-  const llama = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2.6, 10), new THREE.MeshBasicMaterial({ color: 0xffa726 }));
+  const llama = crearLlama(1.1);
   llama.rotation.x = Math.PI; // punta hacia abajo
+  const humoDespegue = crearHumoDespegue();
+  scene.add(humoDespegue.grupo);
   let coheteVuelo = null, alturaLanzadera = 0, despegando = false;
 
   function iniciarDespegue(m) {
@@ -252,7 +251,8 @@ export function crearGranero(scene, mejoras) {
     const s = Math.max(0, t - 0.9);
     lanzadera.position.set(Math.sin(t * 45) * 0.03, alturaLanzadera + 2.4 * s * s, 6);
     llama.visible = t > 0.4;
-    llama.scale.set(1, 0.7 + Math.random() * 0.6, 1);
+    llama.scale.set(1.1, 1.1 * (0.8 + Math.random() * 0.5 + Math.min(1, s) * 0.4), 1.1);
+    humoDespegue.actualizar(t - 0.4, 0, altura(0, 6), 6);
     humo.forEach((p, i) => {
       const f = Math.min(1, Math.max(0, t - 0.4) / 2.5 + p.userData.fase * 0.3);
       const a = i * 0.9;
@@ -266,6 +266,7 @@ export function crearGranero(scene, mejoras) {
 
   function terminarDespegue() {
     lanzadera.visible = false;
+    humoDespegue.ocultar();
     baseCohete.visible = true;
     despegando = false;
   }
@@ -287,7 +288,7 @@ export function crearGranero(scene, mejoras) {
       p.scale.setScalar(0.6 + f * 1.8);
       p.material.opacity = 0.45 * (1 - f);
     });
-    nubes.forEach(n => { n.position.x += dt * 0.6; if (n.position.x > 220) n.position.x = -220; });
+    paisaje.actualizar(dt);
   }
 
   return {

@@ -26,5 +26,8 @@
     "vite": "^8.3.7"
   },
   "main": "electron/main.cjs",
-  "description": "Juego de diseño de misiones espaciales para NASA Space Apps 2026"
+  "description": "Juego de diseño de misiones espaciales para NASA Space Apps 2026",
+  "dependencies": {
+    "peerjs": "^1.5.4"
+  }
 }

@@ -35,6 +35,7 @@ const COMO_JUGAR = `
     <li><b>Cumples la misión</b> del lugar y vuelves a vender lo que encontraste.</li>
   </ol>
   <p class="nota">Regla de oro: cada mejora añade masa, y más masa gasta más combustible.</p>
+  <p class="nota">🌐 <b>Jugar en línea:</b> una persona crea una sala y las demás (hasta 4) se unen con el código. Cada una decide su parte del diseño en el laboratorio y, durante el vuelo, ve la misión en vivo y manda mensajes por radio.</p>
   <table>
     <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>Caminar · impulso y dirección del cohete</td></tr>
     <tr><td>🖱</td><td>Mirar · dirigir el cohete</td></tr>
@@ -69,7 +70,7 @@ export function crearMenu(raiz, avisos) {
       <p class="menu-info"></p>
     </div>
     <div class="menu-panel tarjeta"></div>
-    <div class="menu-pie">Siderense Rocket Labs · v1.1</div>`;
+    <div class="menu-pie">Siderense Rocket Labs · v2.0</div>`;
   const botones = raiz.querySelector(".menu-botones");
   const cajaPanel = raiz.querySelector(".menu-panel");
   const info = raiz.querySelector(".menu-info");
@@ -77,8 +78,8 @@ export function crearMenu(raiz, avisos) {
   function pintar() {
     raiz.classList.toggle("pausa", enJuego);
     const lista = enJuego
-      ? [["jugar", "▶ Reanudar"], ...(demo ? [] : [["guardar", "💾 Guardar partida"], ["cargar", "📂 Cargar partida"]]), ["opciones", "⚙ Opciones"], ["ayuda", "❔ Cómo jugar"]]
-      : [["partidas", "▶ Jugar"], ["opciones", "⚙ Opciones"], ["ayuda", "❔ Cómo jugar"], ["creditos", "★ Créditos"]];
+      ? [["jugar", "▶ Reanudar"], ...(demo ? [] : [["guardar", "💾 Guardar partida"], ["cargar", "📂 Cargar partida"]]), ["enlinea", "🌐 Jugar en línea"], ["opciones", "⚙ Opciones"], ["ayuda", "❔ Cómo jugar"]]
+      : [["partidas", "▶ Jugar"], ["enlinea", "🌐 Jugar en línea"], ["opciones", "⚙ Opciones"], ["ayuda", "❔ Cómo jugar"], ["creditos", "★ Créditos"]];
     botones.innerHTML = lista.map(([id, txt]) =>
       `<button data-id="${id}" class="${id === "jugar" || id === "partidas" ? "principal" : ""} ${panel === id ? "activo" : ""}">${txt}</button>`).join("");
     info.textContent = enJuego ? "Juego en pausa" : demo ? "Modo demo: todo desbloqueado, no se guarda el progreso" : avisos.infoPartida() || "";
@@ -87,6 +88,7 @@ export function crearMenu(raiz, avisos) {
     else if (panel === "creditos") cajaPanel.innerHTML = CREDITOS;
     else if (panel === "opciones") pintarOpciones();
     else if (panel === "partidas" || panel === "guardar" || panel === "cargar") pintarRanuras();
+    else if (panel === "enlinea" && avisos.pintarEnLinea) avisos.pintarEnLinea(cajaPanel);
   }
 
   // Las 4 ranuras de guardado. Según el panel: empezar o continuar, guardar aquí, o cargar.
@@ -137,6 +139,7 @@ export function crearMenu(raiz, avisos) {
     const b = e.target.closest("button");
     if (!b) return;
     e.stopPropagation();
+    if (b.dataset.red !== undefined) return; // botones de la sala en línea: los maneja multijugador.js
     if (b.dataset.calidad) {
       opciones.calidad = b.dataset.calidad;
       guardarOpciones(opciones);
@@ -187,6 +190,8 @@ export function crearMenu(raiz, avisos) {
     opciones,
     get enJuego() { return enJuego; },
     refrescar() { mensaje = ""; confirmar = null; pintar(); },
+    // Empezar o volver al juego desde otro panel (la sala en línea)
+    jugar() { panel = null; confirmar = null; enJuego = true; pintar(); avisos.alJugar(); },
     // Tras recargar para cargar otra partida, el menú abre directamente las ranuras
     mostrarPartidas() { panel = "partidas"; pintar(); },
     // La calidad automática la baja si el juego va lento; queda guardada como si la eligiera el jugador.

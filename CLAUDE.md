@@ -15,7 +15,8 @@ Juego 3D (Three.js + Vite) para el NASA Space Apps 2026, reto *Space Mission Des
 ## Comandos
 - `npm run dev` → servidor local (puerto 5173; `?demo` = todo desbloqueado y sin guardar; `?movil` = controles táctiles)
 - `npm run simular` → simulador de balance (debe dar ~9 viajes y 100 % terminadas)
-- `npm run capturas` → capturas del README · `npm run iconos` → iconos · `npm run empaquetar` → app de Windows
+- `npm run capturas` → capturas del README (`npm run capturas -- carpeta solo=04,05` para algunas) · `npm run iconos` → iconos · `npm run empaquetar` → app de Windows
+- Multijugador: dos pestañas con `?demo`, una crea la sala y la otra se une. Si el panel del navegador no dibuja, el bucle no corre: avanzar con `__juego.avanzar(segundos)`
 - `npx electron herramientas/revisar.cjs vistas.json carpeta` → fotos de objetos concretos (la forma fiable de revisar lo visual)
 
 ## Reglas del proyecto
@@ -23,7 +24,8 @@ Juego 3D (Three.js + Vite) para el NASA Space Apps 2026, reto *Space Mission Des
 - **Las reglas no tocan lo visual:** economía y estado van en `reglas.js`. Si cambias números de balance, corre `npm run simular`.
 - **Guardado:** si añades algo a `estado`, agrégalo a `GUARDABLE` e `importarEstado` (validando el tipo), o se perderá al guardar.
 - **Datos científicos:** son de divulgación general. Cada dato debe ser real y decir de dónde viene; el final con vida en Europa es **ficción** y así se dice.
-- **Probar lo visual:** el panel del navegador a veces no dibuja; para revisar el resultado usa las capturas de Electron.
+- **Probar lo visual:** el panel del navegador a veces no dibuja; para revisar el resultado usa las capturas de Electron (leen el lienzo, así que funcionan aunque la pantalla esté apagada).
+- **Multijugador:** si añades un mensaje en `multijugador.js`, el anfitrión decide y los invitados solo piden; nunca confíes en lo que manda un invitado sin validarlo.
 
 ## Publicar
 - Código: `git push origin main` (la web se publica sola).

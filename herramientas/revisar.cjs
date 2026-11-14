@@ -60,8 +60,9 @@ app.whenReady().then(async () => {
       await js(`(() => { const j = window.__juego; j.jugador.colocar(j.granero, ${px}, ${pz}, ${tx}, ${tz}); j.avanzar(0.6);
         ${h !== undefined ? `j.camera.position.set(${px}, ${h}, ${pz});` : ""} j.camera.lookAt(${tx}, ${ty}, ${tz}); j.grabar.dibujar(0.016); return "ok"; })()`);
       await new Promise(r => setTimeout(r, 450));
-      const imagen = await ventana.webContents.capturePage();
-      fs.writeFileSync(path.join(SALIDA, nombre + ".png"), imagen.toPNG());
+      // Se lee la imagen del lienzo justo después de dibujar: funciona aunque la pantalla esté apagada o bloqueada
+      const datos = await js(`(() => { window.__juego.grabar.dibujar(0.016); return document.querySelector("canvas").toDataURL("image/png"); })()`);
+      fs.writeFileSync(path.join(SALIDA, nombre + ".png"), Buffer.from(datos.split(",")[1], "base64"));
       console.log("✔", nombre);
     } catch (err) {
       console.log("✘", nombre, err.message);

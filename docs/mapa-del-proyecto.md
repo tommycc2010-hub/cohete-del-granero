@@ -57,6 +57,14 @@ Sirve para saber **qué tocar y qué se rompe** antes de editar. Si el código c
 | `diseno.js` | **Diseño de misión** (sin nada visual): instrumentos, lanzadores, tipos de misión, objetivos, cálculo del diseño, datos y memoria, evaluación, récords y modo equipo |
 | `laboratorio.js` | Pantalla del Laboratorio de Diseño de Misión y la evaluación del reporte |
 | `tutorial.js`, `tactil.js` | Objetivos del tutorial · controles del celular |
+| `red.js` | **Red del multijugador** (sin nada visual): crear sala, unirse, enviar mensajes, video. Usa PeerJS (WebRTC) |
+| `multijugador.js` | Panel de la sala en el menú, compañeros caminando en el granero, Control de Misión de los invitados, radio |
+
+### Paisaje y efectos
+| Archivo | Qué hace |
+|---|---|
+| `paisaje.js` | Cielo por bandas con sol, nubes, pasto y flores con viento (instancias), lago con ondas, mariposas y pájaros. Lo crea `granero.js` |
+| `efectos.js` | `crearLlama` (la usan granero, espacio, superficie y final), humo del despegue, `geoBocanada` (polvo del aterrizaje) |
 
 ### Utilidades (casi nadie las importa a ellas)
 `estilo.js` (⚠ **el más compartido**), `objetos.js`, `cohete.js`, `particulas.js`, `terreno.js`, `ruido.js`, `jugador.js`, `manos.js`, `postpro.js`, `sonido.js`, `musica.js`, `guardado.js`.
@@ -76,6 +84,10 @@ Sirve para saber **qué tocar y qué se rompe** antes de editar. Si el código c
 | `main.js` | Es el único que importa `granero.js` y `superficie.js` | Probar los 6 modos |
 | `superficie.js` | Los 5 biomas | Aterrizar en 2 o 3 planetas |
 | `index.html` (HUD) | Todos los modos y el celular | Probar con `?movil` |
+| `laboratorio.js` (`aplicar`, `recibir`) | El laboratorio en línea: cada cambio pasa por el anfitrión | Probar con dos pestañas en una sala |
+| `red.js` / `multijugador.js` (tipos de mensaje) | Anfitrión e invitados deben hablar la misma versión | Probar crear sala y unirse en dos pestañas |
+| `crearPersona` (`cientifico.js`) | Dr. Nova, vecinos y compañeros en línea (`remoto: true`) | Ver el pueblo y una sala |
+| `paisaje.js` (`libre`) | Dónde sale pasto: si se añade un edificio con colisión, el pasto lo evita solo | `herramientas/revisar.cjs` |
 
 ## Recetas rápidas
 - **Añadir una mejora del cohete:** `reglas.js` (`MEJORAS`, `estado.mejoras`) → `telefono.js` (se lista sola) → `cohete.js` si se ve → `simular.mjs`.
@@ -91,5 +103,13 @@ Sirve para saber **qué tocar y qué se rompe** antes de editar. Si el código c
 ## Flujo del diseño de misión
 `telefono.js` (elegir destino) → `laboratorio.js` (diseñar; `diseno.calcularDiseno`) → `reglas.iniciarMision(dest, diseno)` (cobra el diseño, crea la memoria de datos) → `main.observar()` cada fotograma en órbita y en el suelo (`diseno.pasoDatos`) → `main.volver()` → `diseno.evaluar` + `evaluarEquipo` → premio (`reglas.ganar`), récord y reporte (`laboratorio.htmlEvaluacion`).
 
+## Flujo del multijugador en línea
+Anfitrión: menú → *Jugar en línea* → `red.crearSala` (código de 4 letras). Invitados: `red.unirse(código)` → reciben la partida (`estado`) y la lista de la sala.
+- **Partida compartida:** el anfitrión manda `estado` cuando cambia; las compras y ventas de un invitado se piden al anfitrión (`accion`), que las hace y responde.
+- **Laboratorio:** el invitado propone un destino (`proponer`); el anfitrión abre el laboratorio y lo comparte (`lab`). Cada cambio de un invitado viaja como `pedir` → `laboratorio.aplicar(accion, quien)` revisa el rol → se comparte de nuevo. Solo el anfitrión despega.
+- **Granero:** todos mandan su posición (`pos`) 10 veces por segundo; se dibujan con `crearPersona({ remoto: true })`.
+- **Vuelo:** el anfitrión manda `modo`, telemetría (`tele`) 3 veces por segundo y transmite la imagen del lienzo como video. Los invitados mandan `radio`, que al anfitrión le llega con el retraso real de la señal. Al volver se comparte el `reporte`.
+- Los invitados no guardan: la partida es del anfitrión.
+
 ## Pendiente por el reto
-Ya están el laboratorio, los datos, el puntaje y el modo equipo local. Quedan ideas como niveles de dificultad, modo sandbox, compartir y comparar diseños, y el modo equipo en línea (cada persona en su teléfono).
+Ya están el laboratorio, los datos, el puntaje, el modo equipo local y el multijugador en línea. Quedan ideas como niveles de dificultad, modo sandbox, y compartir y comparar diseños entre equipos.

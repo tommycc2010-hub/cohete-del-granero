@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import { caja, toon } from "./estilo.js";
 import { crearCohete } from "./cohete.js";
+import { crearLlama, geoBocanada } from "./efectos.js";
 import { crearPlaneta, crearObjeto } from "./espacio.js";
 import { crearTerreno } from "./terreno.js";
 import { fbm, ruido, paso, azarSemilla } from "./ruido.js";
@@ -147,12 +148,13 @@ export function crearSuperficie() {
   // Nube de polvo bajo el cohete al aterrizar
   const polvo = [];
   for (let i = 0; i < 16; i++) {
-    const p = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 }));
+    const p = new THREE.Mesh(geoBocanada(), new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: 0, depthWrite: false }));
+    p.rotation.set(Math.random() * 3, Math.random() * 3, 0);
     p.userData = { ang: i / 16 * Math.PI * 2 + Math.random() * 0.3, fase: Math.random() };
     p.visible = false;
     polvo.push(p);
   }
-  const llama = new THREE.Mesh(new THREE.ConeGeometry(0.55, 2.6, 10), new THREE.MeshBasicMaterial({ color: 0xffa726 }));
+  const llama = crearLlama();
   llama.rotation.x = Math.PI; // punta hacia abajo
 
   function iniciar(dest, mejoras, campo, misionHecha) {

@@ -11,6 +11,7 @@ export function crearPersona({
   x, z, y = 0, nombre, piel = 0xf2c9a0, ropa = 0xf4f4f4, pantalon = 0x34495e, pelo = 0xb9bcc2,
   cartel = "#4aa3e8", gafas = false, bigote = false, corbata = false, giro = 0, escala = 1,
   ruta = null, velocidad = 1.3, // ruta: puntos [x, z] por los que pasea, en orden
+  remoto = false, // un compañero en línea: va a donde diga la red (ir) en vez de pasear
 }) {
   const g = new THREE.Group();
   g.position.set(x, y, z);
@@ -63,6 +64,7 @@ export function crearPersona({
   g.add(letrero);
 
   let t = Math.random() * 6, paso = 0, destino = 0, espera = Math.random() * 3;
+  const meta = { x, y, z, ry: giro };
   const estado = { hablando: false };
 
   function mirarHacia(px, pz, dt, rapidez = 5) {
@@ -76,7 +78,20 @@ export function crearPersona({
     t += dt;
     const cerca = Math.hypot(jugadorPos.x - g.position.x, jugadorPos.z - g.position.z);
     let caminando = false;
-    if (ruta && !estado.hablando && cerca > 4.5) {
+    if (remoto) {
+      const dx = meta.x - g.position.x, dz = meta.z - g.position.z, d = Math.hypot(dx, dz);
+      if (d > 12) { g.position.x = meta.x; g.position.z = meta.z; } // se alejó mucho: aparece donde está
+      else if (d > 0.03) {
+        const v = Math.min(d, Math.max(2, d * 7) * dt);
+        g.position.x += dx / d * v;
+        g.position.z += dz / d * v;
+        caminando = d > 0.12;
+      }
+      let dif = meta.ry - g.rotation.y;
+      dif = Math.atan2(Math.sin(dif), Math.cos(dif));
+      g.rotation.y += dif * Math.min(1, dt * 10);
+      y += (meta.y - y) * Math.min(1, dt * 12);
+    } else if (ruta && !estado.hablando && cerca > 4.5) {
       if (espera > 0) espera -= dt;
       else {
         const [tx, tz] = ruta[destino];
@@ -91,7 +106,7 @@ export function crearPersona({
         }
       }
     }
-    if (!caminando && (cerca < 9 || estado.hablando)) mirarHacia(jugadorPos.x, jugadorPos.z, dt);
+    if (!remoto && !caminando && (cerca < 9 || estado.hablando)) mirarHacia(jugadorPos.x, jugadorPos.z, dt);
 
     // Piernas y brazos: paso al caminar; gestos al hablar; respiración en reposo.
     paso = caminando ? paso + dt * velocidad * 5.5 : paso * Math.exp(-10 * dt);
@@ -115,6 +130,7 @@ export function crearPersona({
 
   return {
     grupo: g, actualizar,
+    ir(nx, ny, nz, nry) { meta.x = nx; meta.y = ny; meta.z = nz; meta.ry = nry; },
     get hablando() { return estado.hablando; },
     set hablando(v) { estado.hablando = v; },
   };

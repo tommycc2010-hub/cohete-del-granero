@@ -14,7 +14,7 @@ const APPS = {
   diario: { icono: "📓", nombre: "Diario", color: "#5cc46b" },
 };
 
-export function crearTelefono({ alAbrir, alCerrar, alLanzar, alDisenar }) {
+export function crearTelefono({ alAbrir, alCerrar, alLanzar, alDisenar, alPedir }) {
   const el = document.getElementById("telefono");
   const pantalla = el.querySelector(".tel-pantalla");
   let app = "inicio", abierto = false, ultimo = "";
@@ -150,7 +150,9 @@ export function crearTelefono({ alAbrir, alCerrar, alLanzar, alDisenar }) {
     const b = e.target.closest("[data-acc]");
     if (!b || b.disabled) return;
     const [tipo, valor] = b.dataset.acc.split(":");
+    const pedido = (tipo === "mejora" || tipo === "esperar") && alPedir ? alPedir(tipo, valor) : null; // en línea lo compra el anfitrión
     if (tipo === "app") { app = valor; ultimo = ""; }
+    else if (pedido) ultimo = pedido;
     else if (tipo === "mejora") ultimo = comprarMejora(valor);
     else if (tipo === "esperar") ultimo = esperar(Number(valor));
     else if (tipo === "lanzar" && alDisenar) { // se diseña la misión en el laboratorio antes de despegar

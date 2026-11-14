@@ -7,7 +7,10 @@ const os = require("os");
 const path = require("path");
 
 const RAIZ = path.join(__dirname, "..", "dist");
-const SALIDA = path.join(__dirname, "..", "docs", "capturas");
+// Uso: npm run capturas [-- carpeta] [-- solo=04,05]  (por defecto, docs/capturas y todas las escenas)
+const ARGS = process.argv.slice(2).filter(a => !a.startsWith("-") && !a.endsWith(".cjs") && a !== ".");
+const SALIDA = ARGS.find(a => !a.startsWith("solo=")) || path.join(__dirname, "..", "docs", "capturas");
+const SOLO = (ARGS.find(a => a.startsWith("solo=")) || "").slice(5).split(",").filter(Boolean);
 const TIPOS = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css" };
 
 // Perfil temporal: sin partida guardada ni opciones previas.
@@ -169,6 +172,14 @@ const ESCENAS = [
     const lab = document.getElementById("laboratorio");
     for (const sel of ['[data-inst="radar"]', '[data-inst="camara"]', '[data-tipo="orbitador"]']) { lab.querySelector(sel).click(); await T.pausa(80); }
   })()`, 900],
+
+  ["12-sala-en-linea", `(async () => {
+    document.querySelector('#laboratorio [data-acc="cancelar"]').click(); T.j.telefono.cerrar(); await T.pausa(200);
+    T.j.jugador.controls.unlock(); document.getElementById("inicio").classList.remove("oculto"); T.j.menu.refrescar();
+    document.querySelector('[data-id="enlinea"]').click(); await T.pausa(200);
+    document.querySelector('[data-red-campo="nombre"]').value = "Ana";
+    document.querySelector('[data-red="crear"]').click(); await T.pausa(6000);
+  })()`, 900],
 ];
 
 app.whenReady().then(async () => {
@@ -186,8 +197,14 @@ app.whenReady().then(async () => {
     try {
       await js(codigo);
       await new Promise(r => setTimeout(r, espera));
-      const imagen = await ventana.webContents.capturePage();
-      fs.writeFileSync(path.join(SALIDA, nombre + ".png"), imagen.toPNG());
+      if (SOLO.length && !SOLO.some(n => nombre.startsWith(n))) { console.log("·", nombre); continue; }
+      let imagen = null;
+      try { imagen = await ventana.webContents.capturePage(); } catch { /* pantalla apagada o bloqueada */ }
+      if (imagen && !imagen.isEmpty()) fs.writeFileSync(path.join(SALIDA, nombre + ".png"), imagen.toPNG());
+      else { // sin pantalla: solo la imagen 3D del lienzo, sin la interfaz
+        const datos = await js(`(() => { window.__juego.grabar.dibujar(0.016); return document.querySelector("canvas").toDataURL("image/png"); })()`);
+        fs.writeFileSync(path.join(SALIDA, nombre + "-sin-hud.png"), Buffer.from(datos.split(",")[1], "base64"));
+      }
       console.log("✔", nombre);
     } catch (err) {
       console.log("✘", nombre, err.message);
