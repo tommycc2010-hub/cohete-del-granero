@@ -1,17 +1,17 @@
-# 🚀 Cohete del Granero
+# 🚀 Granero Orbital
 
 **Juego 3D de diseño de misiones espaciales** para el reto *Space Mission Design Game* de NASA Space Apps Challenge 2026.
 
-**▶ Jugar en el navegador:** https://tommycc2010-hub.github.io/cohete-del-granero/
+**🌐 Página del juego:** https://tommycc2010-hub.github.io/cohete-del-granero/ (con imágenes, cómo se juega y descargas)
 
-**💻 Descargar para Windows:** [CoheteDelGranero-windows.zip](https://github.com/tommycc2010-hub/cohete-del-granero/releases/latest/download/CoheteDelGranero-windows.zip) (195 MB). Descomprímelo y abre `CoheteDelGranero.exe`. Como la app no está firmada, Windows puede avisar: pulsa *Más información → Ejecutar de todas formas*.
+**▶ Jugar en el navegador:** https://tommycc2010-hub.github.io/cohete-del-granero/jugar.html
+
+**💻 Descargar para Windows:** [GraneroOrbital-windows.zip](https://github.com/tommycc2010-hub/cohete-del-granero/releases/latest/download/GraneroOrbital-windows.zip) (195 MB). Descomprímelo y abre `GraneroOrbital.exe`. Como la app no está firmada, Windows puede avisar: pulsa *Más información → Ejecutar de todas formas*.
 
 **📱 En el celular:**
-- **Android:** descarga [CoheteDelGranero-android.apk](https://github.com/tommycc2010-hub/cohete-del-granero/releases/latest/download/CoheteDelGranero-android.apk), ábrelo y acepta instalar apps de origen desconocido.
+- **Android:** descarga [GraneroOrbital-android.apk](https://github.com/tommycc2010-hub/cohete-del-granero/releases/latest/download/GraneroOrbital-android.apk), ábrelo y acepta instalar apps de origen desconocido.
 - **Android o iPhone sin instalar nada:** abre la página del juego en el navegador y elige *Añadir a la pantalla de inicio* (en iPhone, desde Safari → Compartir). Queda como una app, a pantalla completa y funciona sin internet.
 - Se juega en horizontal con controles táctiles: joystick a la izquierda, arrastrar a la derecha para mirar, y botones para usar (E), saltar, correr, el teléfono, guardar y pausa. En el cohete: 🔥 impulso, 🛑 frenar y 🏠 volver.
-
-**🎬 Ver el tráiler (1:20):** https://tommycc2010-hub.github.io/cohete-del-granero/trailer-cohete-del-granero.mp4
 
 **Equipo:** Siderense Rocket Labs
 
@@ -29,7 +29,7 @@ Cada destino es más lejano y más difícil que el anterior: **Mercurio, Venus, 
 
 Diseñar una misión espacial obliga a equilibrar demandas que compiten entre sí: objetivos, diseño de la nave, instrumentos, presupuesto, energía, masa, comunicaciones y restricciones del viaje. Para la mayoría de los estudiantes esos trade-offs se quedan en la teoría.
 
-En *Cohete del Granero* **el jugador siente cada trade-off en carne propia**. La regla central del juego es la misma que en una misión real: **cada mejora añade masa, y más masa gasta más combustible**. Un tanque más grande permite ir más lejos, pero pesa; un escudo protege la carga, pero también pesa. No hay una respuesta correcta: hay decisiones con consecuencias.
+En *Granero Orbital* **el jugador siente cada trade-off en carne propia**. La regla central del juego es la misma que en una misión real: **cada mejora añade masa, y más masa gasta más combustible**. Un tanque más grande permite ir más lejos, pero pesa; un escudo protege la carga, pero también pesa. No hay una respuesta correcta: hay decisiones con consecuencias.
 
 ## Cómo cubre el reto
 
@@ -161,6 +161,8 @@ Los datos de los planetas están en [`src/datos.js`](src/datos.js). Son conocimi
 ### Estructura
 
 ```
+index.html     página de presentación del juego (portada, imágenes, descargas)
+jugar.html     el juego
 src/
   main.js         bucle principal, modos de juego y pantalla
   reglas.js       economía, mejoras, combustible, oxígeno y misiones (sin nada visual)
@@ -208,22 +210,22 @@ Requiere [Node.js](https://nodejs.org/) 20 o más reciente.
 
 ```bash
 npm install
-npm run dev          # versión web para desarrollo (http://localhost:5173)
+npm run dev          # versión web para desarrollo: la página en http://localhost:5173 y el juego en /jugar.html
 npm run build        # versión web lista para publicar, en dist/
 npm run app          # abrir como app de escritorio
-npm run empaquetar   # crear salida/CoheteDelGranero-windows.zip
+npm run empaquetar   # crear salida/GraneroOrbital-windows.zip
 npm run simular      # simular partidas para revisar el balance
 ```
 
 Cada cambio que se sube a la rama `main` se publica solo en GitHub Pages.
 
-**Modo demo:** agregando `?demo` a la dirección (https://tommycc2010-hub.github.io/cohete-del-granero/?demo) el juego empieza con todo desbloqueado y no guarda el progreso. Sirve para presentar o grabar sin jugar desde el principio. El guion del video está en [`docs/guion-video.md`](docs/guion-video.md).
+**Modo demo:** agregando `?demo` a la dirección (https://tommycc2010-hub.github.io/cohete-del-granero/jugar.html?demo) el juego empieza con todo desbloqueado y no guarda el progreso. Sirve para presentar o grabar sin jugar desde el principio. El guion del video está en [`docs/guion-video.md`](docs/guion-video.md).
 
-`npm run capturas` vuelve a generar las capturas de `docs/capturas` (necesita internet para la de la sala en línea).
+`npm run capturas` vuelve a generar las capturas de `docs/capturas` y `npm run imagenes` las convierte en JPG ligeros para la página (`public/img`) (necesita internet para la de la sala en línea).
 
 **Probar el multijugador:** abre el juego en dos pestañas (o en la computadora y el teléfono). En una, *Jugar en línea → Crear sala*; en la otra, *Unirse* con el código.
 
-**Tráiler narrado:** `herramientas/trailer` graba el juego cuadro a cuadro, añade la narración, subtítulos y la música del juego, y lo monta con ffmpeg en `salida/trailer-cohete-del-granero.mp4`:
+**Tráiler narrado** (se grabó con el nombre anterior, *Cohete del Granero*; hay que volver a grabarlo): `herramientas/trailer` graba el juego cuadro a cuadro, añade la narración, subtítulos y la música del juego, y lo monta con ffmpeg en `salida/trailer-cohete-del-granero.mp4`:
 
 ```bash
 pip install piper-tts

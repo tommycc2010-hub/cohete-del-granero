@@ -1,9 +1,9 @@
 {
-  "name": "Cohete del Granero",
-  "short_name": "Cohete",
-  "description": "Juego 3D de diseño de misiones espaciales: repara el cohete del granero y llega hasta Europa.",
+  "name": "Granero Orbital",
+  "short_name": "Granero",
+  "description": "Juego 3D de diseño de misiones espaciales: repara el cohete de tu granero y llega hasta Europa.",
   "lang": "es",
-  "start_url": "./",
+  "start_url": "./jugar.html",
   "scope": "./",
   "display": "fullscreen",
   "orientation": "landscape",

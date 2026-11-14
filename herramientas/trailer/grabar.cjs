@@ -63,7 +63,7 @@ app.whenReady().then(async () => {
     width: 1280, height: 720, useContentSize: true, show: true, title: "Grabando tráiler…",
     webPreferences: { backgroundThrottling: false },
   });
-  await ventana.loadURL(`http://127.0.0.1:${puerto}/`);
+  await ventana.loadURL(`http://127.0.0.1:${puerto}/jugar.html`);
   const js = codigo => ventana.webContents.executeJavaScript(codigo, true);
   await new Promise(r => setTimeout(r, 1500));
   await js(fs.readFileSync(path.join(__dirname, "escenas.js"), "utf8"));

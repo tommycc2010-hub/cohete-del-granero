@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Cohete del Granero</string>
-    <string name="title_activity_main">Cohete del Granero</string>
+    <string name="app_name">Granero Orbital</string>
+    <string name="title_activity_main">Granero Orbital</string>
     <string name="package_name">com.siderenserocketlabs.cohetedelgranero</string>
     <string name="custom_url_scheme">com.siderenserocketlabs.cohetedelgranero</string>
 </resources>

@@ -193,7 +193,7 @@ app.whenReady().then(async () => {
     width: 1600, height: 900, useContentSize: true, show: true, title: "Capturas",
     webPreferences: { backgroundThrottling: false },
   });
-  await ventana.loadURL(`http://127.0.0.1:${puerto}/`);
+  await ventana.loadURL(`http://127.0.0.1:${puerto}/jugar.html`);
   const js = codigo => ventana.webContents.executeJavaScript(codigo, true);
   await new Promise(r => setTimeout(r, 1500));
   await js(AYUDAS);

@@ -26,13 +26,13 @@ jobs:
       - run: npm run build
       - run: npx cap sync android
       - run: chmod +x android/gradlew && cd android && ./gradlew assembleDebug --no-daemon
-      - run: cp android/app/build/outputs/apk/debug/app-debug.apk CoheteDelGranero-android.apk
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk GraneroOrbital-android.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CoheteDelGranero-android
-          path: CoheteDelGranero-android.apk
+          name: GraneroOrbital-android
+          path: GraneroOrbital-android.apk
       - name: Adjuntar el APK a la versión publicada
         if: github.event_name == 'release'
-        run: gh release upload "${{ github.event.release.tag_name }}" CoheteDelGranero-android.apk --clobber
+        run: gh release upload "${{ github.event.release.tag_name }}" GraneroOrbital-android.apk --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

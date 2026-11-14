@@ -37,7 +37,7 @@
     <div id="tr-franjas"></div><div id="tr-sub"></div><div id="tr-titulo"></div>
     <div id="tr-flash"></div><div id="tr-negro"></div>`);
 
-  const TITULO = `<div class="l1">COHETE</div><div class="l2">DEL GRANERO</div>`;
+  const TITULO = `<div class="l1">GRANERO</div><div class="l2">ORBITAL</div>`;
   const CIERRE = TITULO + `<div class="l3">Un juego de diseño de misiones espaciales</div>
     <div class="l4">▶ tommycc2010-hub.github.io/cohete-del-granero</div>
     <div class="l5">Siderense Rocket Labs · NASA Space Apps Challenge 2026</div>`;

@@ -1,5 +1,5 @@
 {
-  "name": "cohete-del-granero",
+  "name": "granero-orbital",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -9,11 +9,12 @@
     "preview": "vite preview",
     "simular": "node herramientas/simular.mjs",
     "app": "vite build && electron .",
-    "empaquetar": "vite build && electron-packager . CoheteDelGranero --platform=win32 --icon=electron/icono.ico --arch=x64 --out=salida --overwrite --asar --ignore=\"^/(src|herramientas|prototipo-2d|salida|\\.claude|\\.github|PLAN\\.md|index\\.html|vite\\.config\\.js)\" && powershell -NoProfile -Command \"Compress-Archive -Path salida/CoheteDelGranero-win32-x64 -DestinationPath salida/CoheteDelGranero-windows.zip -Force\"",
+    "empaquetar": "vite build && electron-packager . GraneroOrbital --platform=win32 --icon=electron/icono.ico --arch=x64 --out=salida --overwrite --asar --ignore=\"^/(src|herramientas|prototipo-2d|salida|\\.claude|\\.github|PLAN\\.md|index\\.html|jugar\\.html|vite\\.config\\.js)\" && powershell -NoProfile -Command \"Compress-Archive -Path salida/GraneroOrbital-win32-x64 -DestinationPath salida/GraneroOrbital-windows.zip -Force\"",
     "capturas": "vite build && electron herramientas/capturas.cjs",
     "trailer": "vite build && electron herramientas/trailer/grabar.cjs",
     "android": "vite build && cap sync android",
-    "iconos": "electron herramientas/iconos.cjs"
+    "iconos": "electron herramientas/iconos.cjs",
+    "imagenes": "electron herramientas/imagenes-web.cjs"
   },
   "devDependencies": {
     "@capacitor/android": "^8.6.2",

@@ -1,4 +1,4 @@
-# Tráiler con Higgsfield · Cohete del Granero
+# Tráiler con Higgsfield · Granero Orbital
 
 Paquete para hacer un tráiler de unos 40 segundos con Higgsfield. Las imágenes de partida son las capturas reales de [`docs/capturas`](capturas).
 
@@ -68,7 +68,7 @@ Fondo con la toma 6 congelada y desenfocada, y encima:
 - El enlace para jugar: tommycc2010-hub.github.io/cohete-del-granero
 - "Siderense Rocket Labs"
 
-**Voz:** "Cohete del Granero. Diseñar una misión es decidir."
+**Voz:** "Granero Orbital. Diseñar una misión es decidir."
 
 ## Armar el tráiler
 

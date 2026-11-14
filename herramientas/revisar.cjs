@@ -51,7 +51,7 @@ app.whenReady().then(async () => {
   fs.mkdirSync(SALIDA, { recursive: true });
   const puerto = await servir();
   const ventana = new BrowserWindow({ width: 1280, height: 720, useContentSize: true, show: true, webPreferences: { backgroundThrottling: false } });
-  await ventana.loadURL(`http://127.0.0.1:${puerto}/?demo`);
+  await ventana.loadURL(`http://127.0.0.1:${puerto}/jugar.html?demo`);
   const js = codigo => ventana.webContents.executeJavaScript(codigo, true);
   await new Promise(r => setTimeout(r, 1500));
   await js(PREPARAR);

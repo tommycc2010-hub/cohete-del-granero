@@ -1,4 +1,4 @@
-# Plan: Cohete del Granero 3D
+# Plan: Granero Orbital 3D
 
 Juego 3D en primera persona con estilo tipo Schedule I: modelos low-poly, colores planos, contornos marcados y un teléfono como menú.
 

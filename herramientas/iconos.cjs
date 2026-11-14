@@ -1,4 +1,4 @@
-// Dibuja el icono de Cohete del Granero (en el estilo del juego: colores planos y contorno negro grueso)
+// Dibuja el icono de Granero Orbital (en el estilo del juego: colores planos y contorno negro grueso)
 // y lo guarda en todos los formatos: npm run iconos
 //   public/          → web e instalación en el celular (PWA): 192, 512, "maskable" y Apple
 //   electron/        → app de Windows: icono.ico (varios tamaños) e icono.png (ventana)

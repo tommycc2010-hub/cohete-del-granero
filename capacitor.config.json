@@ -1,6 +1,6 @@
 {
   "appId": "com.siderenserocketlabs.cohetedelgranero",
-  "appName": "Cohete del Granero",
+  "appName": "Granero Orbital",
   "webDir": "dist",
   "backgroundColor": "#8ed1f0",
   "android": { "allowMixedContent": false }

@@ -1,9 +1,9 @@
 // Service worker: guarda el juego en el teléfono para que se abra rápido y funcione sin internet.
 // Primero intenta la red (para recibir las actualizaciones) y, si no hay conexión, usa lo guardado.
-const CACHE = "cohete-del-granero-v1";
+const CACHE = "granero-orbital-v1";
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(["./", "./index.html", "./manifest.webmanifest", "./icono-192.png", "./icono-512.png"])));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(["./", "./index.html", "./jugar.html", "./manifest.webmanifest", "./icono-192.png", "./icono-512.png"])));
   self.skipWaiting();
 });
 
@@ -18,6 +18,6 @@ self.addEventListener("fetch", e => {
   e.respondWith(
     fetch(e.request)
       .then(r => { if (r.ok) { const copia = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copia)); } return r; })
-      .catch(() => caches.match(e.request).then(r => r || caches.match("./index.html"))),
+      .catch(() => caches.match(e.request).then(r => r || caches.match("./jugar.html"))),
   );
 });

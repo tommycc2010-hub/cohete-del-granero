@@ -64,13 +64,13 @@ export function crearMenu(raiz, avisos) {
 
   raiz.innerHTML = `
     <div class="menu-lado">
-      <div class="logo"><span>COHETE</span><span>DEL GRANERO</span></div>
+      <div class="logo"><span>GRANERO</span><span>ORBITAL</span></div>
       <p class="lema">Una misión de diseño espacial · NASA Space Apps 2026</p>
       <div class="menu-botones"></div>
       <p class="menu-info"></p>
     </div>
     <div class="menu-panel tarjeta"></div>
-    <div class="menu-pie">Siderense Rocket Labs · v2.0</div>`;
+    <div class="menu-pie">Siderense Rocket Labs · v2.3</div>`;
   const botones = raiz.querySelector(".menu-botones");
   const cajaPanel = raiz.querySelector(".menu-panel");
   const info = raiz.querySelector(".menu-info");

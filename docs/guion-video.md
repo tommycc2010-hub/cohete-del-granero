@@ -1,4 +1,4 @@
-# Guion del video demo · Cohete del Granero
+# Guion del video demo · Granero Orbital
 
 Dos versiones: una corta para la entrega y una larga para la presentación. **Revisen en las reglas de NASA Space Apps 2026 la duración máxima del demo** antes de grabar; en ediciones anteriores pedían videos muy cortos.
 
@@ -23,7 +23,7 @@ Dos versiones: una corta para la entrega y una larga para la presentación. **Re
 | 0:09 – 0:14 | Mapa: un destino fuera de ventana con "+40 % combustible". | "Hay que esperar la alineación de los planetas, como en las misiones reales." |
 | 0:14 – 0:19 | Descenso en Ío frenando con W, Júpiter de fondo, la nube de polvo. | "La señal tarda 43 minutos en llegar a la Tierra: el aterrizaje es nuestro." |
 | 0:19 – 0:24 | En Europa: plantar la tercera antena y ver cruzarse los rayos. | "Con tres antenas triangulamos una señal bajo el hielo de Europa…" |
-| 0:24 – 0:30 | Escena final con las criaturas y el título. | "Cohete del Granero: diseñar una misión es decidir. Siderense Rocket Labs." |
+| 0:24 – 0:30 | Escena final con las criaturas y el título. | "Granero Orbital: diseñar una misión es decidir. Siderense Rocket Labs." |
 
 ---
 

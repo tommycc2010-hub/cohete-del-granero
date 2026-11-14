@@ -2,720 +2,484 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#1d1d1d">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Cohete">
-<link rel="manifest" href="./manifest.webmanifest">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Granero Orbital · Diseña misiones espaciales</title>
+<meta name="description" content="Granero Orbital: repara el cohete de tu granero, diseña misiones con instrumentos reales y llega hasta Europa. Gratis, en el navegador, con multijugador en línea. NASA Space Apps 2026.">
+<meta name="theme-color" content="#0e1628">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Granero Orbital · Diseña misiones espaciales">
+<meta property="og:description" content="De un granero al océano escondido de Europa. Diseña la misión, observa lugares reales y juega en equipo. Gratis y en el navegador.">
+<meta property="og:image" content="https://tommycc2010-hub.github.io/cohete-del-granero/img/vuelo-jupiter.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="./favicon.png">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<title>Cohete del Granero</title>
+<!-- Las apps (Windows y Android), la app instalada desde el navegador y los enlaces viejos con ?demo abren el juego directamente -->
+<script>
+(function () {
+  var c = window.Capacitor, ua = navigator.userAgent;
+  var instalada = (window.matchMedia && matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches) || navigator.standalone;
+  var enlaceViejo = /[?&](demo|movil)(&|$)/.test(location.search); // los enlaces de antes apuntaban al juego en la raíz
+  if ((c && c.isNativePlatform && c.isNativePlatform()) || location.protocol === "app:" || /Electron/.test(ua) || /; wv\)/.test(ua) || instalada || enlaceViejo) {
+    location.replace("jugar.html" + location.search);
+  }
+})();
+</script>
 <style>
-  :root { --ink:#1d1d1d; --paper:#fff6e5; --yellow:#ffd23f; --green:#5cc46b; --blue:#4aa3e8; --red:#f3a59e; }
+  :root { --ink:#1d1d1d; --paper:#fff6e5; --yellow:#ffd23f; --green:#5cc46b; --blue:#4aa3e8; --red:#e5483b; --pink:#f3a59e;
+          --noche:#0e1628; --noche2:#16244a; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #8ed1f0; color: var(--ink);
-    font-family: "Trebuchet MS", system-ui, sans-serif; }
-  #juego canvas { display: block; }
-  kbd { background: var(--ink); color: #fff; border-radius: 6px; padding: 1px 7px; font: inherit; font-weight: bold; }
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  body { margin: 0; background: var(--noche); color: var(--paper); font-family: "Trebuchet MS", system-ui, sans-serif; line-height: 1.5; }
+  a { color: inherit; }
+  img { max-width: 100%; display: block; }
+  .ancho { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+  h1, h2, h3 { line-height: 1.1; margin: 0; }
+  .oculto-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
-  .tarjeta { background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--ink); }
+  /* ----- Botones y tarjetas, como en el juego: colores planos, contorno negro y sombra dura ----- */
+  .boton { display: inline-flex; align-items: center; gap: 10px; font: inherit; font-weight: 800; font-size: 18px; text-decoration: none; cursor: pointer;
+    color: var(--ink); background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; padding: 12px 20px; box-shadow: 4px 4px 0 var(--ink);
+    transition: transform .1s, box-shadow .1s; }
+  .boton:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--ink); }
+  .boton:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+  .boton.amarillo { background: var(--yellow); font-size: 22px; padding: 14px 26px; }
+  .boton.verde { background: var(--green); }
+  .boton:focus-visible, .nav a:focus-visible, .mini:focus-visible { outline: 4px solid var(--blue); outline-offset: 3px; }
+  .tarjeta { background: var(--paper); color: var(--ink); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 5px 5px 0 var(--ink); }
 
-  /* ----- Qué se ve en cada modo ----- */
-  [data-en] { display: none; }
-  body[data-modo="granero"] [data-en~="granero"],
-  body[data-modo="espacio"] [data-en~="espacio"],
-  body[data-modo="superficie"] [data-en~="superficie"],
-  body[data-modo="descenso"] [data-en~="descenso"],
-  body[data-modo="final"] [data-en~="final"] { display: var(--ver, block); }
+  /* ----- Barra superior ----- */
+  .nav { position: sticky; top: 0; z-index: 20; background: rgba(14, 22, 40, .92); backdrop-filter: blur(6px); border-bottom: 3px solid var(--ink); }
+  .nav .ancho { display: flex; align-items: center; gap: 22px; height: 62px; }
+  .marca { display: flex; flex-direction: column; line-height: .85; font-weight: 900; text-decoration: none; letter-spacing: .02em; font-size: 17px;
+    color: var(--yellow); -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; text-shadow: 2px 2px 0 var(--ink); }
+  .marca span + span { color: #fff; font-size: 13px; letter-spacing: .24em; }
+  .nav nav { margin-left: auto; }
+  .nav ul { display: flex; gap: 4px; list-style: none; margin: 0; padding: 0; }
+  .nav li a { display: block; padding: 8px 12px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; }
+  .nav li a:hover { background: rgba(255, 255, 255, .12); }
+  .nav .boton { font-size: 15px; padding: 8px 16px; box-shadow: 3px 3px 0 var(--ink); }
+  @media (max-width: 860px) { .nav nav { display: none; } .nav .boton { margin-left: auto; } }
 
-  /* ----- HUD ----- */
-  .fila-hud { --ver: flex; position: fixed; top: 16px; left: 16px; right: 200px; gap: 10px; flex-wrap: wrap; align-items: center;
-    font-weight: bold; font-size: 17px; }
-  .fila-hud .tarjeta { padding: 8px 14px; }
-  #pista { position: fixed; top: 16px; right: 16px; padding: 8px 14px; font-weight: bold; }
-  #columna-derecha { position: fixed; top: 66px; right: 16px; width: 250px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-  #objetivo { padding: 8px 12px; font-size: 14px; line-height: 1.3; }
-  #mision { padding: 8px 12px; font-size: 14px; line-height: 1.3; background: #f6e6ff; }
-  /* HUD del planeta: fila superior compacta y panel de constantes vitales */
-  .fila-hud.compacta { font-size: 15px; gap: 8px; }
-  .fila-hud.compacta .tarjeta { padding: 6px 11px; box-shadow: 3px 3px 0 var(--ink); }
-  #vitales { --ver: grid; position: fixed; left: 16px; bottom: 16px; width: 290px; padding: 10px 12px; gap: 7px; }
-  .vital { display: flex; align-items: center; gap: 8px; font-size: 18px; }
-  .vital b { width: 24px; text-align: center; }
-  #vitales .medidor { flex: 1; min-width: 0; max-width: none; height: 26px; border: 2.5px solid var(--ink); border-radius: 9px; font-size: 13px; font-weight: bold; }
-  #vitales .medidor .relleno { border-right-width: 2.5px; transition: width .25s; }
-  #vitales .alerta .relleno, #vitales .medidor.alerta .relleno { background: var(--red); }
-  #vitales .alerta { animation: latido .8s ease-in-out infinite; }
-  .medidor.morado .relleno { background: #d9b3ff; }
-  @keyframes latido { 50% { transform: scale(1.03); } }
-  /* La ayuda de controles se desvanece sola tras unos segundos */
-  .ayuda[data-en~="superficie"], .ayuda[data-en~="espacio"] { animation: desvanecer .8s 9s forwards; }
-  .ayuda[data-en~="superficie"] { left: 322px; }
-  @keyframes desvanecer { to { opacity: 0; visibility: hidden; } }
-  #secundarias { padding: 8px 12px; font-size: 13px; line-height: 1.35; background: #fff3c4; }
-  #secundarias > b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #9a6a00; margin-bottom: 2px; }
-  .sec-fila span { display: inline-block; width: 20px; }
-  .sec-fila i { font-style: normal; font-weight: bold; color: #9a6a00; }
-  .sec-fila.hecha { opacity: .55; text-decoration: line-through; }
-  .tel-secundarias { margin: -4px 0 10px 14px; padding: 6px 8px; border-left: 3px solid #ffd23f; font-size: 12px; }
-  .tel-secundarias > b { display: block; margin-bottom: 4px; }
-  .tel-secundarias > div { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 5px; }
-  .tel-secundarias > div > div { flex: 1; }
-  .tel-secundarias small { display: block; opacity: .8; }
-  .tel-secundarias i { font-style: normal; font-weight: bold; color: #9a6a00; }
-  .tel-secundarias em { font-style: normal; font-weight: bold; white-space: nowrap; }
-  .tel-secundarias .hecha { opacity: .65; }
-  #mision b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #8a3fb5; }
-  .marcador.mision { background: #6a2f8f; border-color: #e28bff; }
-  .tel-mision { align-items: flex-start; }
-  .tel-mision.hecha { background: #e6f7e9; }
-  .tel-mision small { display: block; margin-top: 3px; font-weight: normal; opacity: .85; }
-  .tel-mision .tel-dato { font-style: italic; }
-  .tel-mision .tel-precio { float: none; white-space: nowrap; }
-  #objetivo b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #1c6fb5; }
+  /* ----- Portada ----- */
+  .portada { position: relative; overflow: hidden; padding: 56px 0 0; background:
+      radial-gradient(ellipse at 78% 18%, #2c4a9a 0%, transparent 55%),
+      linear-gradient(180deg, #0e1628 0%, #1a2c61 62%, #3b64b8 100%); }
+  .estrellas { position: absolute; inset: 0; pointer-events: none; }
+  .estrellas i { position: absolute; width: 4px; height: 4px; background: #fff6e5; border-radius: 50%; animation: titilar 3s ease-in-out infinite; }
+  @keyframes titilar { 50% { opacity: .25; transform: scale(.6); } }
+  .portada-grid { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; align-items: center; padding-bottom: 170px; }
+  @media (max-width: 900px) { .portada-grid { grid-template-columns: 1fr; padding-bottom: 150px; } }
+  .insignia { display: inline-block; font-weight: 800; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink);
+    background: var(--green); border: 3px solid var(--ink); border-radius: 999px; padding: 4px 14px; box-shadow: 3px 3px 0 var(--ink); }
+  .titulo { display: flex; flex-direction: column; margin: 18px 0 14px; font-weight: 900; line-height: .86; letter-spacing: .02em; transform: rotate(-2.5deg); transform-origin: left; }
+  .titulo span { font-size: clamp(56px, 11vw, 116px); color: var(--yellow); -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; text-shadow: 7px 7px 0 var(--ink); }
+  .titulo span + span { font-size: clamp(40px, 7.8vw, 80px); color: #fff; letter-spacing: .12em; }
+  .gancho { font-size: clamp(18px, 2.2vw, 23px); max-width: 30em; margin: 0 0 26px; }
+  .gancho b { color: var(--yellow); }
+  .acciones { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .datos-rapidos { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 22px 0 0; padding: 0; list-style: none; font-size: 14px; font-weight: 700; opacity: .9; }
+  .datos-rapidos li::before { content: "✔"; color: var(--green); margin-right: 6px; }
 
-  .medidor { position: relative; flex: 1; min-width: 190px; max-width: 320px; height: 40px; padding: 0 !important; overflow: hidden; background: #fff; }
-  .medidor .relleno { position: absolute; inset: 0 auto 0 0; background: var(--green); border-right: 3px solid var(--ink); }
-  .medidor.azul .relleno { background: #8fd6f5; }
-  .medidor.amarillo { min-width: 150px; max-width: 200px; }
-  .medidor.amarillo .relleno { background: #ffe066; }
-  .medidor.aviso .relleno { background: var(--yellow); }
-  .medidor.alerta .relleno { background: var(--red); }
-  .fila-hud .rojo { background: var(--red); }
-  #averia { background: #ffcf9e; }
-  .medidor span { position: absolute; inset: 0; display: grid; place-items: center; }
-  #barra-reserva { position: absolute; top: 0; bottom: 0; width: 0; border-left: 3px dashed var(--ink); }
+  .ventana { position: relative; background: var(--ink); border: 3px solid var(--ink); border-radius: 16px; box-shadow: 8px 8px 0 rgba(0, 0, 0, .5); transform: rotate(1.6deg); }
+  .ventana-barra { display: flex; gap: 7px; padding: 8px 12px; }
+  .ventana-barra i { width: 11px; height: 11px; border-radius: 50%; background: var(--pink); }
+  .ventana-barra i:nth-child(2) { background: var(--yellow); } .ventana-barra i:nth-child(3) { background: var(--green); }
+  .ventana-pantalla { position: relative; aspect-ratio: 16 / 9; border-radius: 0 0 11px 11px; overflow: hidden; background: #0e1628; }
+  .ventana-pantalla img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .8s; }
+  .ventana-pantalla img.on { opacity: 1; }
 
-  #mira { position: fixed; top: 50%; left: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px;
-    background: #fff; border: 2px solid var(--ink); border-radius: 50%; }
-  #accion { --ver: none; position: fixed; left: 50%; bottom: 22%; transform: translateX(-50%); padding: 10px 16px;
-    font-weight: bold; font-size: 18px; background: var(--yellow); }
-  #accion.visible { --ver: block; }
-  #accion b { display: inline-block; background: var(--ink); color: #fff; border-radius: 6px; padding: 0 8px; margin-right: 6px; }
+  .escena { position: absolute; left: 0; right: 0; bottom: -2px; width: 100%; height: auto; display: block; pointer-events: none; }
+  .cohete-sube { transform-box: fill-box; animation: despegar 7s ease-in infinite; }
+  @keyframes despegar { 0%, 12% { transform: translateY(0); } 100% { transform: translateY(-460px); opacity: 0; } }
+  .llama { transform-box: fill-box; transform-origin: top; animation: llama .18s ease-in-out infinite alternate; }
+  @keyframes llama { from { transform: scaleY(.8); } to { transform: scaleY(1.25); } }
 
-  #aviso { position: fixed; left: 50%; bottom: 8%; transform: translateX(-50%); padding: 10px 16px; z-index: 6;
-    font-weight: bold; max-width: min(680px, 92vw); text-align: center; opacity: 0; transition: opacity .2s; pointer-events: none; }
-  #aviso.visible { opacity: 1; }
-  #alerta { position: fixed; top: 76px; left: 50%; transform: translateX(-50%); padding: 8px 14px; font-weight: bold;
-    background: var(--red); max-width: 92vw; text-align: center; opacity: 0; transition: opacity .2s; }
-  #alerta.visible { opacity: 1; }
-  .ayuda { --ver: flex; position: fixed; left: 16px; bottom: 16px; padding: 8px 14px; gap: 12px; flex-wrap: wrap; font-size: 14px; font-weight: bold; }
+  /* ----- Secciones ----- */
+  section { padding: 84px 0; }
+  .claro { background: var(--paper); color: var(--ink); }
+  .oscuro { background: var(--noche2); }
+  .etiqueta { display: inline-block; font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--ink); background: var(--yellow);
+    border: 3px solid var(--ink); border-radius: 8px; padding: 2px 10px; transform: rotate(-1.5deg); }
+  h2 { font-size: clamp(30px, 4.6vw, 50px); margin: 14px 0 12px; }
+  .lead { font-size: 19px; max-width: 40em; margin: 0 0 40px; opacity: .92; }
 
-  /* ----- Marcadores ----- */
-  .marcador { position: fixed; top: 0; left: 0; margin: -44px 0 0 -6px; padding: 2px 8px; font-size: 13px; font-weight: bold;
-    white-space: nowrap; color: #fff; background: rgba(29, 29, 29, .75); border: 2px solid #fff; border-radius: 8px; pointer-events: none; }
-  .marcador i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 50%; background: #888; border: 1px solid #fff; }
-  .baliza { margin: -16px 0 0 -70px; font-size: 15px; z-index: 5; }
-  .baliza.objetivo { background: var(--yellow); border-color: var(--ink); }
-  .lc-sitios { font-size: 12px; line-height: 1.35; padding: 5px 8px; background: #fff8dc; border: 1.5px dashed var(--ink); border-radius: 8px; }
-  #marcador-pista { background: #2f7d3a; border-color: #6ee37a; }
-  #marcador-senal { background: #0e6f8f; border-color: #4de3ff; }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; }
+  .caract { padding: 22px; transition: transform .12s, box-shadow .12s; }
+  .caract:hover { transform: translate(-3px, -3px) rotate(-.4deg); box-shadow: 8px 8px 0 var(--ink); }
+  .caract .icono { display: grid; place-items: center; width: 56px; height: 56px; font-size: 30px; margin-bottom: 12px; border: 3px solid var(--ink); border-radius: 14px; background: var(--yellow); }
+  .caract:nth-child(3n+2) .icono { background: var(--blue); } .caract:nth-child(3n) .icono { background: var(--green); }
+  .caract h3 { font-size: 21px; margin-bottom: 6px; }
+  .caract p { margin: 0; font-size: 15.5px; }
 
-  /* ----- Casco del traje ----- */
-  #visor { position: fixed; inset: 0; pointer-events: none; border-radius: 26% / 34%;
-    box-shadow: 0 0 0 200px rgba(10, 12, 20, .92), inset 0 0 90px 30px rgba(10, 12, 20, .55); }
-  body.traje-roto #visor { box-shadow: 0 0 0 200px rgba(10, 12, 20, .92), inset 0 0 110px 40px rgba(200, 30, 20, .6); }
+  /* Galería */
+  .galeria { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  .visor { position: relative; border: 3px solid var(--ink); border-radius: 18px; overflow: hidden; background: #000; box-shadow: 6px 6px 0 var(--ink); aspect-ratio: 16 / 9; }
+  .visor img { width: 100%; height: 100%; object-fit: cover; }
+  .visor-pie { position: absolute; left: 0; right: 0; bottom: 0; padding: 38px 20px 16px; color: #fff; font-size: 17px; font-weight: 700;
+    background: linear-gradient(transparent, rgba(0, 0, 0, .82)); }
+  .flecha { position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; font-size: 22px; font-weight: 900; cursor: pointer;
+    color: var(--ink); background: var(--yellow); border: 3px solid var(--ink); border-radius: 50%; box-shadow: 3px 3px 0 var(--ink); }
+  .flecha:hover { transform: translateY(-50%) scale(1.08); } .flecha.izq { left: 12px; } .flecha.der { right: 12px; }
+  .miniaturas { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  @media (max-width: 700px) { .miniaturas { grid-template-columns: repeat(4, 1fr); } }
+  .mini { padding: 0; cursor: pointer; border: 3px solid var(--ink); border-radius: 10px; overflow: hidden; background: #000; aspect-ratio: 16 / 9; opacity: .6; transition: opacity .15s, transform .15s; }
+  .mini img { width: 100%; height: 100%; object-fit: cover; }
+  .mini:hover { opacity: 1; transform: translateY(-2px); } .mini.on { opacity: 1; outline: 4px solid var(--yellow); }
 
-  /* ----- Diálogo ----- */
-  #dialogo { --ver: none; position: fixed; left: 50%; bottom: 6%; transform: translateX(-50%); width: min(620px, calc(100vw - 32px));
-    padding: 14px 16px; z-index: 10; }
-  #dialogo.visible { --ver: block; }
-  #dialogo h4 { display: inline-block; margin: -30px 0 8px; padding: 3px 12px; font-size: 15px; background: var(--blue);
-    border: 3px solid var(--ink); border-radius: 10px; }
-  #dialogo-texto { margin: 0; font-size: 17px; line-height: 1.35; }
-  #dialogo-confianza { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: bold; border-radius: 8px; }
-  #dialogo-confianza.alta, #dialogo-confianza.media { padding: 2px 8px; border: 2px solid var(--ink); }
-  #dialogo-confianza.alta { background: var(--green); }
-  #dialogo-confianza.media { background: var(--yellow); }
-  #dialogo-opciones { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
-  #dialogo-opciones div { padding: 6px 10px; font-weight: bold; background: #fff; border: 2px solid var(--ink); border-radius: 10px; }
-  #dialogo-opciones b { display: inline-block; min-width: 22px; margin-right: 6px; text-align: center; color: #fff; background: var(--ink); border-radius: 6px; }
-  #logro { position: fixed; top: 70px; left: 50%; z-index: 9; display: flex; gap: 12px; align-items: center; padding: 10px 18px;
-    background: #fff3c4; transform: translate(-50%, -140%); transition: transform .35s ease-out; }
-  #logro.visible { transform: translate(-50%, 0); }
-  #logro span { font-size: 34px; }
-  #logro b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #b5651d; }
-  #logro small { display: block; font-size: 13px; opacity: .8; }
-  .tel-logros { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .tel-logro { padding: 8px; text-align: center; background: #fff; border: 3px solid var(--ink); border-radius: 12px; font-size: 13px; }
-  .tel-logro span { display: block; font-size: 28px; }
-  .tel-logro small { display: block; opacity: .75; margin-top: 2px; }
-  .tel-logro.bloqueado { opacity: .5; }
-  #dialogo-sigue { float: right; margin-top: 8px; font-size: 13px; font-weight: bold; }
-  #dialogo-sigue b { background: var(--ink); color: #fff; border-radius: 6px; padding: 0 7px; }
+  /* Cómo se juega */
+  .pasos { display: grid; gap: 18px; counter-reset: paso; }
+  .paso { position: relative; display: grid; grid-template-columns: 76px 1fr; gap: 18px; align-items: start; padding: 18px 22px 18px 18px; }
+  .paso::before { counter-increment: paso; content: counter(paso); display: grid; place-items: center; width: 64px; height: 64px; font-size: 34px; font-weight: 900;
+    color: var(--ink); background: var(--yellow); border: 3px solid var(--ink); border-radius: 50%; box-shadow: 3px 3px 0 var(--ink); }
+  .paso:nth-child(even)::before { background: var(--blue); }
+  .paso h3 { font-size: 22px; margin-bottom: 4px; } .paso p { margin: 0; font-size: 16px; }
+  .consejo { margin-top: 26px; padding: 16px 20px; font-size: 17px; background: #fff3c4; }
 
-  /* ----- Final ----- */
-  #fundido { position: fixed; inset: 0; z-index: 30; background: #000; opacity: 0; pointer-events: none; transition: opacity .45s; }
-  #fundido.activo { opacity: 1; }
-  #subtitulo { --ver: none; position: fixed; left: 50%; bottom: 9%; transform: translateX(-50%); width: min(640px, calc(100vw - 32px));
-    padding: 12px 16px; font-size: 18px; text-align: center; }
-  #subtitulo.visible { --ver: block; }
-  #subtitulo b { color: #1c6fb5; }
-  #subtitulo small { display: block; margin-top: 6px; opacity: .7; font-weight: bold; }
-  #tarjeta-final { position: fixed; inset: 0; z-index: 25; display: none; align-items: center; justify-content: center;
-    padding: 16px; background: rgba(7, 11, 31, .55); }
-  #tarjeta-final.visible { display: flex; }
-  #tarjeta-final .tarjeta { max-width: 520px; padding: 24px 28px; text-align: center; }
-  #tarjeta-final h1 { margin: 0 0 10px; font-size: 30px; }
-  #tarjeta-final p { margin: 8px 0; line-height: 1.4; }
-  #tarjeta-final .real { font-size: 14px; background: #fff; border: 3px dashed var(--ink); border-radius: 12px; padding: 8px 10px; text-align: left; }
-  #tarjeta-final button { font: inherit; font-weight: bold; margin: 10px 5px 0; padding: 10px 18px; cursor: pointer; color: var(--ink);
-    background: var(--yellow); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); }
-  #tarjeta-final button.verde { background: var(--green); }
+  /* Destinos */
+  .destinos { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 18px; }
+  .destino { padding: 18px; text-align: center; }
+  .planeta { width: 86px; height: 86px; margin: 0 auto 12px; border-radius: 50%; border: 3px solid var(--ink); box-shadow: inset -14px -10px 0 rgba(0, 0, 0, .2), 4px 4px 0 var(--ink); animation: girar 5s ease-in-out infinite alternate; }
+  @keyframes girar { to { transform: rotate(8deg) translateY(-4px); } }
+  .destino h3 { font-size: 21px; } .destino small { display: block; font-weight: 700; opacity: .65; margin: 2px 0 8px; }
+  .destino p { margin: 0; font-size: 14.5px; }
+  .nota { margin-top: 22px; font-size: 14px; opacity: .8; }
 
-  /* ----- Teléfono ----- */
-  #telefono { position: fixed; left: 50%; bottom: 0; z-index: 20; width: 350px; max-width: calc(100vw - 32px);
-    height: min(620px, 88vh); padding: 12px 12px 0; background: var(--ink); border-radius: 34px 34px 0 0;
-    transform: translate(-50%, 105%); transition: transform .22s ease-out; }
-  #telefono.abierto { transform: translate(-50%, 0); }
-  .tel-pantalla { height: 100%; display: flex; flex-direction: column; background: var(--paper);
-    border-radius: 24px 24px 0 0; overflow: hidden; }
-  .tel-barra { display: flex; align-items: center; gap: 8px; padding: 12px 14px; font-weight: bold; font-size: 18px;
-    background: var(--ink); color: #fff; }
-  .tel-atras { background: var(--yellow); border: 0; border-radius: 8px; width: 30px; height: 30px;
-    font-size: 22px; font-weight: bold; line-height: 1; cursor: pointer; }
-  .tel-cuerpo { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-  .tel-cuerpo h3 { margin: 8px 0 0; font-size: 15px; }
-  .tel-cuerpo p { margin: 0; }
-  .tel-nota { font-size: 13px; opacity: .75; }
-  .tel-apps { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 12px; }
-  .tel-app { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: 0;
-    font: inherit; font-weight: bold; cursor: pointer; color: var(--ink); }
-  .tel-app span { display: grid; place-items: center; width: 84px; height: 84px; font-size: 40px;
-    border: 3px solid var(--ink); border-radius: 22px; box-shadow: 4px 4px 0 var(--ink); }
-  .tel-app:active span { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
-  .tel-fila { display: flex; justify-content: space-between; gap: 10px; align-items: center; background: #fff;
-    border: 3px solid var(--ink); border-radius: 12px; padding: 7px 10px; }
-  .tel-fila i { display: inline-block; width: 12px; height: 12px; margin-right: 6px; border: 2px solid var(--ink); border-radius: 50%; }
-  .tel-item, .tel-boton { font: inherit; text-align: left; cursor: pointer; color: var(--ink); background: #fff;
-    border: 3px solid var(--ink); border-radius: 12px; padding: 9px 10px; box-shadow: 3px 3px 0 var(--ink); }
-  .tel-item:active, .tel-boton:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
-  .tel-item:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
-  .tel-item em { font-style: normal; font-size: 13px; opacity: .7; }
-  .tel-item small { display: block; margin-top: 3px; opacity: .8; }
-  .tel-precio { float: right; font-weight: bold; background: var(--green); border: 2px solid var(--ink);
-    border-radius: 8px; padding: 0 6px; }
-  .tel-precio.caro { background: var(--red); }
-  .tel-destino { display: flex; flex-direction: column; gap: 4px; }
-  .tel-ventana { display: block; margin-top: 4px; font-size: 13px; font-weight: bold; color: #b5301f; }
-  .tel-ventana.abierta { color: #2f7d3a; }
-  .tel-esperar { font: inherit; font-size: 13px; font-weight: bold; padding: 6px 10px; cursor: pointer; color: var(--ink);
-    background: #e9f4ff; border: 2px solid var(--ink); border-radius: 10px; }
-  .tel-boton { font-weight: bold; background: var(--yellow); }
-  .tel-boton.azul { background: var(--blue); }
-  .tel-boton.verde { background: var(--green); }
-  .tel-msg { margin: 0 12px 12px; padding: 8px 10px; font-size: 14px; font-weight: bold; background: #fff;
-    border: 3px dashed var(--ink); border-radius: 12px; }
+  /* Descargas */
+  .descargas { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; align-items: stretch; }
+  .descarga { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 24px; }
+  .descarga .icono-grande { font-size: 44px; line-height: 1; }
+  .descarga h3 { font-size: 24px; } .descarga p { margin: 0; font-size: 15px; }
+  .descarga .boton { margin-top: auto; justify-content: center; }
+  .descarga small { font-size: 12.5px; opacity: .7; }
+  .recomendado { position: absolute; top: -14px; right: 18px; display: none; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em;
+    background: var(--green); border: 3px solid var(--ink); border-radius: 999px; padding: 3px 12px; transform: rotate(3deg); }
+  .descarga.sugerida .recomendado { display: block; }
+  .descarga.sugerida { background: #fff3c4; }
 
-  /* ----- Inicio / pausa ----- */
-  /* ----- Reporte de misión ----- */
-  #informe { position: fixed; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center;
-    padding: 16px; background: rgba(20, 30, 50, .4); cursor: pointer; }
-  #informe.visible { display: flex; }
-  #informe .tarjeta { width: min(560px, 100%); padding: 18px 20px; max-height: 92vh; overflow-y: auto; }
-  .inf-diseno { margin-top: 12px; padding-top: 10px; border-top: 3px dashed var(--ink); }
-  .inf-diseno h3 { margin: 0 0 4px; }
-  .inf-estrellas { font-size: 20px; margin: 4px 0 8px; }
-  .inf-estrellas small { font-size: 12px; opacity: .7; }
-  .inf-record { white-space: nowrap; background: var(--yellow); border: 2px solid var(--ink); border-radius: 8px; padding: 1px 8px; font-size: 13px; font-weight: bold; }
-  .inf-porque { margin-top: 8px; font-size: 13px; }
-  .inf-porque ul { margin: 4px 0 0; padding-left: 18px; }
-  .inf-porque li { margin-bottom: 3px; }
-  .inf-parecido { margin-top: 8px; font-size: 13px; padding: 8px 10px; background: #e8f4ff; border: 2px solid var(--ink); border-radius: 10px; }
-  .tel-disenar { color: #8a3fb5; font-weight: bold; }
-  .tel-record { margin: -6px 0 8px 14px; font-size: 12px; font-weight: bold; color: #9a6a00; }
+  /* Controles */
+  .controles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; margin-top: 34px; }
+  .controles table { width: 100%; border-collapse: collapse; font-size: 15.5px; }
+  .controles td { padding: 7px 4px; border-top: 2px solid rgba(29, 29, 29, .12); }
+  .controles td:first-child { white-space: nowrap; padding-right: 14px; }
+  kbd { background: var(--ink); color: #fff; border-radius: 6px; padding: 1px 8px; font: inherit; font-weight: 800; font-size: 14px; }
 
-  /* ----- Laboratorio de Diseño de Misión ----- */
-  #laboratorio { display: none; position: fixed; inset: 0; z-index: 16; background: rgba(14, 22, 40, .72); padding: 14px; overflow: auto; }
-  #laboratorio.abierto { display: grid; place-items: start center; }
-  .lab { width: min(1180px, 100%); padding: 14px 16px; }
-  .lab-cabeza { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 3px solid var(--ink); padding-bottom: 8px; margin-bottom: 8px; }
-  .lab-cabeza h2 { margin: 0; font-size: 20px; flex: 1; min-width: 240px; }
-  .lab-cml { display: flex; align-items: center; gap: 4px; font-weight: bold; font-size: 13px; }
-  .lab-cml i { width: 22px; height: 10px; border: 2px solid var(--ink); border-radius: 4px; background: #fff; }
-  .lab-cml i.on { background: var(--green); }
-  .lab-cml span { margin-left: 6px; }
-  .lab-x { font: inherit; font-size: 18px; font-weight: bold; width: 36px; height: 36px; border: 3px solid var(--ink); border-radius: 50%; background: #fff; cursor: pointer; }
-  .lab-link { font: inherit; font-size: 13px; font-weight: bold; border: 2px solid var(--ink); border-radius: 10px; background: #fff; padding: 5px 10px; cursor: pointer; }
-  .lab-cuerpo { display: grid; grid-template-columns: 1.55fr 1fr; gap: 16px; }
-  @media (max-width: 860px) { .lab-cuerpo { grid-template-columns: 1fr; } }
-  .lab-pasos h3, .lab-lado h3 { margin: 12px 0 6px; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .lab-rol { font-size: 12px; background: #f6e6ff; border: 2px solid var(--ink); border-radius: 8px; padding: 1px 7px; }
-  .lab-ops { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
-  .lab-insts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px; }
-  .lab-op, .lab-inst { font: inherit; text-align: left; padding: 8px 10px; border: 3px solid var(--ink); border-radius: 12px; background: #fff; cursor: pointer; box-shadow: 3px 3px 0 var(--ink); }
-  .lab-op b, .lab-inst b { display: block; font-size: 14px; }
-  .lab-op small, .lab-inst small { display: block; font-size: 12px; opacity: .85; margin-top: 2px; }
-  .lab-op.sel, .lab-inst.sel { background: var(--yellow); }
-  .lab-inst.util { border-color: #8a3fb5; }
-  .lab-inst em { font-style: normal; font-size: 11px; font-weight: bold; color: #fff; background: #8a3fb5; border-radius: 6px; padding: 0 6px; }
-  .lab-op.no-sirve, .lab-inst.no-sirve { opacity: .55; }
-  .lab-icono { float: right; font-size: 22px; }
-  .lab-necesita { color: #6a2f8f; }
-  .lab-num { font-weight: bold; opacity: 1 !important; }
-  .lab-nota { font-size: 12px; opacity: .8; margin: 2px 0 6px; }
-  .lab-dato { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 13px; margin-bottom: 6px; }
-  .lab-dato b { text-align: right; }
-  .lab-barra { grid-column: 1 / -1; height: 10px; border: 2px solid var(--ink); border-radius: 6px; background: #fff; overflow: hidden; }
-  .lab-barra i { display: block; height: 100%; background: var(--green); }
-  .lab-barra.justo i { background: var(--yellow); }
-  .lab-barra.mal i { background: var(--red); }
-  .lab-revision { list-style: none; padding: 0; margin: 0; font-size: 13px; }
-  .lab-revision li { padding: 6px 8px; margin-bottom: 5px; border: 2px solid var(--ink); border-radius: 10px; }
-  .lab-revision .mal { background: #ffd9d3; } .lab-revision .justo { background: #fff3c4; } .lab-revision .bien { background: #d6f5dc; }
-  .lab-aprobar { margin-top: 10px; padding: 8px 10px; border: 2px solid var(--ink); border-radius: 10px; background: #f6e6ff; font-size: 13px; }
-  .lab-aprobar label { display: block; margin: 4px 0; cursor: pointer; }
-  .lab-metas { font-size: 12px; padding-left: 18px; }
-  .lab-botones { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
-  .lab-boton { font: inherit; font-weight: bold; font-size: 15px; padding: 9px 16px; border: 3px solid var(--ink); border-radius: 12px; background: #fff; cursor: pointer; box-shadow: 3px 3px 0 var(--ink); }
-  .lab-boton.principal { background: var(--green); font-size: 17px; }
-  .lab-boton:disabled { opacity: .45; cursor: not-allowed; }
-  .lab-equipo { width: min(640px, 100%); }
-  .lab-equipo p { font-size: 14px; }
-  .lab-nombres { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin: 10px 0; }
-  .lab-nombres label { font-size: 13px; font-weight: bold; }
-  .lab-nombres input { display: block; width: 100%; font: inherit; padding: 6px 8px; border: 2px solid var(--ink); border-radius: 8px; margin-top: 3px; }
-  .lab-op:disabled, .lab-inst:disabled { cursor: default; filter: grayscale(.85); opacity: .5; box-shadow: none; }
-  .lab-rol.yo, .lab-aprobar label.yo { background: var(--yellow); }
-  .lab-aprobar label.yo { border: 2px solid var(--ink); border-radius: 8px; padding: 2px 6px; font-weight: bold; }
-  .lab-link.en-linea { background: #d6f5dc; cursor: default; }
-  body.tactil #laboratorio { padding: 6px; }
+  /* Reto y equipo */
+  .reto { display: grid; grid-template-columns: 1.2fr 1fr; gap: 30px; align-items: start; }
+  @media (max-width: 800px) { .reto { grid-template-columns: 1fr; } }
+  .aviso-legal { padding: 20px; font-size: 14.5px; }
+  .aviso-legal b { display: block; margin-bottom: 4px; font-size: 16px; }
 
-  /* ----- Multijugador en línea ----- */
-  .sala-codigo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 14px; margin-bottom: 6px;
-    background: var(--yellow); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); }
-  .sala-codigo b { font-size: 40px; letter-spacing: 10px; font-family: "Courier New", monospace; }
-  .sala-lista { display: grid; gap: 6px; margin: 8px 0; }
-  .sala-jugador { display: grid; grid-template-columns: 22px 1fr; gap: 0 8px; align-items: center; padding: 6px 10px; background: #fff;
-    border: 2px solid var(--ink); border-radius: 10px; }
-  .sala-jugador i { grid-row: span 2; width: 18px; height: 18px; border: 2px solid var(--ink); border-radius: 50%; }
-  .sala-jugador small { font-size: 12px; opacity: .8; }
-  .sala-jugador.vacio { opacity: .5; border-style: dashed; }
-  .sala-jugador.vacio i { background: #fff; }
-  .sala-campo { display: grid; gap: 4px; font-weight: bold; margin: 8px 0; }
-  .sala-campo input, .sala-caja input { font: inherit; font-size: 16px; padding: 8px 10px; border: 3px solid var(--ink); border-radius: 10px; }
-  .sala-caja input { text-transform: uppercase; letter-spacing: 6px; font-family: "Courier New", monospace; font-weight: bold; font-size: 22px; text-align: center; }
-  .sala-dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  @media (max-width: 520px) { .sala-dos { grid-template-columns: 1fr; } }
-  .sala-caja { display: flex; flex-direction: column; gap: 6px; padding: 10px; background: #fff; border: 3px solid var(--ink); border-radius: 12px; }
-  .sala-caja small { font-size: 12px; opacity: .8; flex: 1; }
-  .sala-caja button, .sala-botones button { font: inherit; font-weight: bold; font-size: 16px; padding: 9px 14px; cursor: pointer;
-    background: #fff; border: 3px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); }
-  .sala-caja button.principal, .sala-botones button.principal { background: var(--green); }
-  .sala-caja button:disabled { opacity: .5; }
-  .sala-botones { display: flex; gap: 10px; flex-wrap: wrap; }
-  #red-insignia { display: none; position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 14; align-items: center; gap: 5px;
-    padding: 5px 10px; font-weight: bold; font-size: 14px; }
-  #red-insignia.visible { display: flex; }
-  body.en-menu #red-insignia { display: none; }
-  #red-insignia i { display: grid; place-items: center; width: 24px; height: 24px; font-style: normal; font-size: 12px; color: #fff;
-    border: 2px solid var(--ink); border-radius: 50%; text-shadow: 1px 1px 0 var(--ink); }
-  #red-insignia button { font: inherit; font-size: 13px; font-weight: bold; padding: 3px 9px; margin-left: 4px; cursor: pointer;
-    background: var(--yellow); border: 2px solid var(--ink); border-radius: 8px; }
-  #control { display: none; position: fixed; inset: 0; z-index: 17; background: rgba(14, 22, 40, .78); padding: 14px; overflow: auto; }
-  #control.visible { display: grid; place-items: start center; }
-  #control .tarjeta { width: min(1100px, 100%); padding: 12px 16px; }
-  .control-cabeza { display: flex; align-items: center; gap: 10px; border-bottom: 3px solid var(--ink); padding-bottom: 8px; margin-bottom: 10px; }
-  .control-titulo { margin: 0; font-size: 20px; flex: 1; }
-  .control-cuerpo { display: grid; grid-template-columns: 1.7fr 1fr; gap: 14px; }
-  @media (max-width: 760px) { .control-cuerpo { grid-template-columns: 1fr; } }
-  .control-pantalla { position: relative; aspect-ratio: 16 / 9; background: #0e1628; border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; }
-  .control-pantalla video { width: 100%; height: 100%; object-fit: contain; display: none; }
-  #control.con-video .control-pantalla video { display: block; }
-  #control.con-video .control-sin-video { display: none; }
-  .control-sin-video { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-weight: bold; text-align: center; padding: 20px; }
-  .control-vivo { position: absolute; top: 8px; left: 8px; padding: 2px 8px; font-size: 12px; font-weight: bold; color: #fff; background: #e5483b;
-    border: 2px solid var(--ink); border-radius: 8px; animation: parpadeo 1.4s infinite; }
-  @keyframes parpadeo { 50% { opacity: .55; } }
-  .control-frases { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .control-frases button { font: inherit; font-size: 13px; font-weight: bold; padding: 6px 10px; cursor: pointer; background: #fff;
-    border: 2px solid var(--ink); border-radius: 10px; box-shadow: 2px 2px 0 var(--ink); }
-  .control-frases button:active { transform: translate(2px, 2px); box-shadow: none; }
-  body.invitado .tel-item[data-acc^="mejora"]::after { content: "🌐 lo compra el anfitrión"; display: block; font-size: 11px; opacity: .7; }
-  body.tactil .lab { padding: 10px; }
-  #informe h2 { margin: 0; font-size: 24px; }
-  .inf-destino { margin: 2px 0 12px; font-weight: bold; opacity: .7; }
-  .inf-fila { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 2px solid rgba(29, 29, 29, .12); }
-  .inf-fila b { text-align: right; }
-  .inf-leccion { margin-top: 12px; padding: 10px 12px; line-height: 1.4; background: #e9f4ff; border: 3px solid var(--ink); border-radius: 12px; }
-  .inf-leccion b { display: block; margin-bottom: 4px; color: #1c6fb5; }
-  .inf-cerrar { margin: 10px 0 0; text-align: right; font-size: 13px; font-weight: bold; opacity: .8; }
+  footer { padding: 36px 0 46px; background: #080e1c; font-size: 14px; border-top: 3px solid var(--ink); }
+  footer .ancho { display: flex; flex-wrap: wrap; gap: 14px 30px; align-items: center; justify-content: space-between; }
+  footer ul { display: flex; flex-wrap: wrap; gap: 6px 20px; list-style: none; margin: 0; padding: 0; }
+  footer a { text-decoration-thickness: 2px; text-underline-offset: 3px; }
 
-  /* ----- Menú principal y pausa ----- */
-  body.en-menu .fila-hud, body.en-menu #pista, body.en-menu #objetivo, body.en-menu #mira, body.en-menu #accion { display: none; }
-  #inicio { position: fixed; inset: 0; z-index: 15; display: flex; align-items: center; gap: 28px; padding: 32px 48px;
-    background: linear-gradient(90deg, rgba(14, 22, 40, .82) 0%, rgba(14, 22, 40, .55) 40%, rgba(14, 22, 40, 0) 72%); }
-  #inicio.pausa { background: rgba(14, 22, 40, .6); }
-  #inicio.oculto { display: none; }
-  .menu-lado { display: flex; flex-direction: column; gap: 10px; width: min(360px, 100%); }
-  .logo { display: flex; flex-direction: column; line-height: .92; font-weight: 900; letter-spacing: .02em; transform: rotate(-3deg);
-    margin-bottom: 4px; }
-  .logo span { font-size: 64px; color: var(--yellow); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill;
-    text-shadow: 5px 5px 0 var(--ink); }
-  .logo span + span { font-size: 40px; color: #fff; }
-  .lema { margin: 4px 0 12px; color: #fff; font-weight: bold; text-shadow: 2px 2px 0 var(--ink); }
-  .menu-botones { display: flex; flex-direction: column; gap: 10px; }
-  .menu-botones button { font: inherit; font-size: 19px; font-weight: bold; text-align: left; padding: 11px 16px; cursor: pointer;
-    color: var(--ink); background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--ink);
-    transition: transform .08s; }
-  .menu-botones button:hover { transform: translateX(6px); }
-  .menu-botones button:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
-  .menu-botones button.principal { background: var(--yellow); font-size: 22px; }
-  .menu-botones button.peligro { background: var(--red); }
-  .menu-botones button.activo { background: #e8f4ff; }
-  /* Ranuras de guardado */
-  .ranuras { display: grid; gap: 10px; margin: 10px 0; }
-  .ranura { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 3px solid var(--ink); border-radius: 12px; background: #fff; }
-  .ranura.vacia { background: #f3efe6; }
-  .ranura.actual { box-shadow: 0 0 0 3px var(--yellow); }
-  .ranura-num { width: 36px; height: 36px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: bold; font-size: 18px; flex: none; }
-  .ranura-txt { flex: 1; min-width: 0; }
-  .ranura-txt b { display: block; }
-  .ranura-txt small { display: block; opacity: .75; }
-  .ranura-acciones { display: flex; gap: 6px; flex: none; }
-  .ranura-acciones button { font: inherit; font-weight: bold; padding: 7px 11px; border: 3px solid var(--ink); border-radius: 10px; background: #fff; cursor: pointer; box-shadow: 2px 2px 0 var(--ink); }
-  .ranura-acciones button.principal { background: var(--yellow); }
-  .ranura-acciones button.peligro { background: var(--red); }
-  .ranura-mensaje { font-weight: bold; }
-  #dialogo-opciones [data-k] { cursor: pointer; }
-
-  /* ----- Celular: controles táctiles e interfaz más compacta ----- */
-  #tactil { position: fixed; inset: 0; z-index: 8; pointer-events: none; user-select: none; -webkit-user-select: none; }
-  #tactil.oculto { display: none; }
-  #tactil > div, #tactil button { pointer-events: auto; touch-action: none; }
-  .tc-joy { position: absolute; left: 0; bottom: 0; width: 42%; height: 62%; }
-  .tc-base { position: absolute; left: 110px; top: calc(100% - 110px); width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
-    background: rgba(255, 246, 229, .22); border: 3px solid rgba(29, 29, 29, .55); }
-  .tc-base.activo { background: rgba(255, 246, 229, .35); }
-  .tc-palo { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%;
-    background: var(--paper); border: 3px solid var(--ink); box-shadow: 2px 2px 0 var(--ink); }
-  .tc-mirar { position: absolute; right: 0; top: 0; width: 58%; height: 100%; }
-  .tc-arriba { position: absolute; top: 8px; right: 10px; display: flex; gap: 8px; }
-  .tc-botones { position: absolute; right: 14px; bottom: 14px; display: grid; grid-template-columns: repeat(2, auto); gap: 10px; align-items: end; justify-items: end; }
-  #tactil button { font: inherit; font-size: 22px; font-weight: bold; width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--ink);
-    background: rgba(255, 246, 229, .85); box-shadow: 3px 3px 0 var(--ink); color: var(--ink); }
-  #tactil button.grande { width: 74px; height: 74px; font-size: 28px; background: rgba(255, 210, 63, .9); }
-  #tactil button.on { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); background: var(--yellow); }
-  .tc-arriba button { width: 44px !important; height: 44px !important; font-size: 18px !important; }
-  .tc-girar { display: none; }
-  @media (orientation: portrait) {
-    body.tactil .tc-girar { display: grid; place-items: center; position: fixed; inset: 0; z-index: 30; padding: 24px; text-align: center;
-      background: rgba(14, 22, 40, .92); color: #fff; font-size: 22px; font-weight: bold; pointer-events: auto; }
+  /* Aparecen al hacer scroll */
+  .revela { opacity: 0; transform: translateY(26px); transition: opacity .55s, transform .55s; }
+  .revela.visto { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .revela { opacity: 1; transform: none; }
   }
-  body.tactil .ayuda, body.tactil #pista, body.tactil #mira { display: none !important; }
-  body.tactil .fila-hud { right: 210px; font-size: 13px; gap: 6px; }
-  body.tactil .fila-hud .tarjeta { padding: 4px 8px; box-shadow: 2px 2px 0 var(--ink); }
-  body.tactil #columna-derecha { width: 190px; top: 64px; transform: scale(.85); transform-origin: top right; }
-  body.tactil #vitales { top: 52px; bottom: auto; width: 200px; padding: 6px 8px; gap: 4px; transform: scale(.85); transform-origin: top left; }
-  body.tactil #accion { bottom: auto; top: 38%; font-size: 14px; }
-  body.tactil #aviso { bottom: auto; top: 22%; font-size: 13px; max-width: 60vw; }
-  body.tactil #dialogo { max-width: 70vw; font-size: 14px; }
-  body.tactil #dialogo-opciones [data-k] { padding: 8px 10px; margin: 4px 0; border: 2px solid var(--ink); border-radius: 10px; background: #fff; }
-  body.tactil #logro { top: 6px; padding: 5px 12px; gap: 8px; font-size: 12px; }
-  body.tactil #logro span { font-size: 22px; }
-  body.tactil #logro small { display: none; }
-  body.tactil .fila-hud .medidor { min-width: 120px; height: 30px; }
-  body.tactil .fila-hud .medidor.amarillo { min-width: 100px; }
-  body.tactil .marcador { font-size: 11px; }
-  .menu-info { min-height: 1.2em; margin: 6px 0 0; color: #fff; font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 var(--ink); }
-  .menu-panel { width: min(470px, 100%); max-height: calc(100vh - 64px); overflow-y: auto; padding: 18px 22px; }
-  .menu-panel h3 { margin: 0 0 10px; font-size: 22px; }
-  .menu-panel ol { padding-left: 20px; margin: 0 0 8px; line-height: 1.4; }
-  .menu-panel table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .menu-panel td { padding: 4px 6px; border-top: 2px solid rgba(29, 29, 29, .1); }
-  .menu-panel .nota { font-size: 13px; opacity: .75; }
-  .opcion { display: grid; grid-template-columns: 1fr 1.2fr 52px; align-items: center; gap: 10px; margin: 10px 0; font-weight: bold; }
-  .opcion input { width: 100%; accent-color: #e5483b; }
-  .opcion b { text-align: right; }
-  .segmentos { display: flex; gap: 6px; grid-column: 2 / 4; }
-  .segmentos button { flex: 1; font: inherit; font-weight: bold; padding: 6px; cursor: pointer; color: var(--ink);
-    background: #fff; border: 3px solid var(--ink); border-radius: 10px; }
-  .segmentos button.activo { background: var(--yellow); }
-  .menu-pie { position: absolute; left: 48px; bottom: 18px; color: #fff; font-size: 13px; font-weight: bold; opacity: .8; }
-  @media (max-width: 760px) {
-    #inicio { flex-direction: column; align-items: stretch; overflow-y: auto; padding: 20px 16px; }
-    .logo span { font-size: 44px; } .logo span + span { font-size: 28px; }
-    .menu-pie { position: static; }
-  }
-
-  /* ----- Animaciones de la interfaz (rápidas y con rebote, como de caricatura) ----- */
-  @keyframes aparecer { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
-  @keyframes entrar-izq { from { opacity: 0; transform: translateX(-34px); } to { opacity: 1; transform: none; } }
-  @keyframes fundirse { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes flotar { 0%, 100% { transform: rotate(-3deg) translateY(0); } 50% { transform: rotate(-1.5deg) translateY(-7px); } }
-  @keyframes saltito { 0% { transform: translateX(-50%) scale(.8); opacity: 0; } 60% { transform: translateX(-50%) scale(1.06); opacity: 1; } 100% { transform: translateX(-50%) scale(1); } }
-  @keyframes estrella { 0% { transform: scale(0) rotate(-60deg); } 70% { transform: scale(1.35) rotate(12deg); } 100% { transform: scale(1) rotate(0); } }
-  @keyframes destello { 0%, 70% { left: -40%; } 100% { left: 140%; } }
-  .logo { animation: flotar 4.5s ease-in-out infinite; }
-  .logo span:first-child { position: relative; }
-  #inicio:not(.oculto) .menu-botones button { animation: entrar-izq .38s cubic-bezier(.2, 1.4, .4, 1) backwards; }
-  .menu-botones button:nth-child(2) { animation-delay: .05s; } .menu-botones button:nth-child(3) { animation-delay: .1s; }
-  .menu-botones button:nth-child(4) { animation-delay: .15s; } .menu-botones button:nth-child(5) { animation-delay: .2s; }
-  .menu-botones button:nth-child(6) { animation-delay: .25s; } .menu-botones button:nth-child(7) { animation-delay: .3s; }
-  .menu-botones button.principal { position: relative; overflow: hidden; }
-  .menu-botones button.principal::after { content: ""; position: absolute; top: 0; bottom: 0; width: 30%; left: -40%;
-    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .7), transparent); animation: destello 3.2s ease-in-out infinite; }
-  .menu-panel { animation: aparecer .28s cubic-bezier(.2, 1.3, .4, 1); }
-  #inicio:not(.pausa) { background: radial-gradient(ellipse at 70% 50%, transparent 40%, rgba(14, 22, 40, .35)); }
-  #informe.visible .tarjeta, #tarjeta-final .tarjeta { animation: aparecer .32s cubic-bezier(.2, 1.3, .4, 1); }
-  #laboratorio.abierto, #control.visible { animation: fundirse .2s; }
-  #aviso.visible { animation: saltito .32s cubic-bezier(.2, 1.4, .4, 1); }
-  #logro.visible { box-shadow: 4px 4px 0 var(--ink), 0 0 0 4px #ffd23f88; }
-  .lab-op, .lab-inst { position: relative; transition: transform .1s, box-shadow .1s, background .15s; }
-  .lab-op:not(:disabled):hover, .lab-inst:not(:disabled):hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 var(--ink); }
-  .lab-op:not(:disabled):active, .lab-inst:not(:disabled):active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
-  .lab-op.sel::after, .lab-inst.sel::after { content: "✓"; position: absolute; top: -9px; right: -9px; width: 22px; height: 22px;
-    display: grid; place-items: center; font-weight: 900; font-size: 13px; background: var(--green); border: 2px solid var(--ink); border-radius: 50%; }
-  .lab-cml i.on { box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .15); }
-  .lab-boton.principal:not(:disabled) { animation: latido 1.6s ease-in-out infinite; }
-  .lab-boton:not(:disabled):hover, .sala-botones button:hover, .sala-caja button:not(:disabled):hover, .control-frases button:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
-  .inf-estrella { display: inline-block; animation: estrella .45s cubic-bezier(.2, 1.5, .4, 1) backwards; }
-  .inf-estrella:nth-child(2) { animation-delay: .15s; } .inf-estrella:nth-child(3) { animation-delay: .3s; }
-  .tel-app span { transition: transform .12s; }
-  .tel-app:hover span { transform: scale(1.08) rotate(-4deg); }
-  .tel-item:not(:disabled):hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
-  .sala-codigo b { animation: aparecer .4s cubic-bezier(.2, 1.4, .4, 1); }
-  /* ----- Laboratorio paso a paso ----- */
-  .lab { width: min(1120px, 100%); padding: 14px 18px; }
-  .lab .lab-cuerpo { grid-template-columns: 1fr 290px; gap: 18px; align-items: start; }
-  @media (max-width: 860px) { .lab .lab-cuerpo { grid-template-columns: 1fr; } }
-  .lab-pasos-barra { display: flex; align-items: center; gap: 4px; margin: 4px 0 12px; overflow-x: auto; padding: 4px 2px 6px; }
-  .lp { flex: 0 0 auto; display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: 7px; align-items: center;
-    font: inherit; text-align: left; cursor: pointer; padding: 5px 12px 5px 6px; background: #fff; border: 2.5px solid var(--ink); border-radius: 30px; }
-  .lp b { font-size: 14px; } .lp small { grid-column: 2; font-size: 11px; opacity: .75; } .lp small.yo { opacity: 1; background: var(--yellow); border-radius: 6px; padding: 0 4px; }
-  .lp-num { grid-row: span 2; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid var(--ink); font-weight: 900; font-size: 14px; background: #eee; }
-  .lp.ok .lp-num { background: var(--green); } .lp.aviso .lp-num { background: var(--yellow); } .lp.mal .lp-num { background: var(--red); }
-  .lp.actual { background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); transform: translateY(-2px); }
-  .lp.actual .lp-num { background: #fff; font-size: 16px; }
-  .lp-linea { flex: 1 0 14px; height: 3px; background: var(--ink); opacity: .35; border-radius: 2px; }
-  .lab-pregunta { display: flex; flex-direction: column; margin: 0 0 8px !important; font-size: 24px !important; }
-  .lab-pregunta span { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; opacity: .6; }
-  .lab-nova { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
-  .lab-nova-cara { flex: 0 0 auto; display: grid; place-items: center; width: 44px; height: 44px; font-size: 26px; background: #bfe9ff; border: 2.5px solid var(--ink); border-radius: 50%; }
-  .lab-nova p { position: relative; margin: 0; padding: 9px 12px; font-size: 14px; line-height: 1.35; background: #fff; border: 2.5px solid var(--ink); border-radius: 14px; animation: aparecer .25s; }
-  .lab-nova p::before { content: ""; position: absolute; left: -9px; top: 14px; width: 12px; height: 12px; background: #fff; border-left: 2.5px solid var(--ink); border-bottom: 2.5px solid var(--ink); transform: rotate(45deg); }
-  .lab-ajeno { margin-bottom: 10px; padding: 8px 12px; font-size: 14px; background: #f6e6ff; border: 2.5px dashed var(--ink); border-radius: 12px; }
-  .lc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 12px; }
-  .lc-grid.tres { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-  .lc-grid.cuatro { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin: 10px 0; }
-  .lc { position: relative; display: flex; flex-direction: column; gap: 5px; font: inherit; text-align: left; color: var(--ink); cursor: pointer;
-    padding: 12px 13px; background: #fff; border: 3px solid var(--ink); border-radius: 16px; box-shadow: 4px 4px 0 var(--ink); transition: transform .1s, box-shadow .1s, background .15s; }
-  .lc:not(:disabled):hover { transform: translate(-2px, -3px); box-shadow: 6px 7px 0 var(--ink); }
-  .lc:not(:disabled):active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
-  .lc.sel { background: #fff3c4; border-color: var(--ink); box-shadow: 4px 4px 0 var(--ink), inset 0 0 0 3px var(--yellow); }
-  .lc.sel::after { content: "✓"; position: absolute; top: -10px; right: -10px; width: 26px; height: 26px; display: grid; place-items: center; font-weight: 900;
-    background: var(--green); border: 2.5px solid var(--ink); border-radius: 50%; animation: estrella .3s; }
-  .lc.apagado { opacity: .55; }
-  .lc:disabled { cursor: default; filter: grayscale(.7); opacity: .6; box-shadow: none; }
-  .lc b { font-size: 16px; } .lc p { margin: 0; font-size: 13px; line-height: 1.3; opacity: .85; }
-  .lc-icono { font-size: 34px; line-height: 1.1; }
-  .lc.chico .lc-icono { font-size: 28px; }
-  .lc-dibujo { font-size: 28px; letter-spacing: 4px; padding: 6px 0; text-align: center; background: #0e1628; border-radius: 10px; border: 2px solid var(--ink); }
-  .lc-real { font-size: 11px; opacity: .65; }
-  .lc-sello { position: absolute; top: -11px; left: 10px; font-style: normal; font-size: 11px; font-weight: bold; color: #fff; background: #8a3fb5; border: 2px solid var(--ink); border-radius: 8px; padding: 1px 7px; }
-  .lc-sello.gris { background: #8a8a8a; }
-  .lc-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; padding-top: 4px; }
-  .lchip { font-size: 11.5px; font-weight: bold; padding: 2px 7px; background: #eef2f6; border: 1.5px solid var(--ink); border-radius: 20px; }
-  .lchip.oro { background: #fff0b8; } .lchip.morado { background: #efdcff; } .lchip.claro { background: #e3f4ff; }
-  .lchip.verde { background: #c9f0cf; } .lchip.rojo { background: #ffd2cb; }
-  .lc-accion { font-size: 12px; font-weight: bold; text-align: center; padding: 4px; border-radius: 8px; background: #eef9ef; border: 1.5px dashed var(--ink); }
-  .lc.sel .lc-accion { background: var(--green); border-style: solid; }
-  .lc-cabe small { font-size: 12px; font-weight: bold; }
-  .lab-nave { position: sticky; top: 0; padding: 12px; background: #eaf5ff; border: 3px solid var(--ink); border-radius: 16px; }
-  .lab-nave h3 { margin: 0 0 8px !important; font-size: 17px !important; }
-  .ln-bodega small { font-size: 11px; font-weight: bold; text-transform: uppercase; opacity: .65; }
-  .ln-bodega div { display: flex; flex-wrap: wrap; gap: 5px; margin: 3px 0 10px; }
-  .ln-bodega span { display: grid; place-items: center; width: 38px; height: 38px; font-size: 22px; background: #fff; border: 2.5px solid var(--ink); border-radius: 10px; animation: estrella .3s; }
-  .ln-bodega span.vacio { border-style: dashed; opacity: .4; animation: none; }
-  .lm { margin-bottom: 9px; }
-  .lm-cab { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; }
-  .lm-cab b { font-size: 12px; padding: 0 6px; border-radius: 8px; }
-  .lm.bien .lm-cab b { background: #c9f0cf; } .lm.justo .lm-cab b { background: #fff0b8; } .lm.mal .lm-cab b { background: #ffd2cb; }
-  .lm small { font-size: 11.5px; opacity: .75; }
-  .lm-barra { height: 13px; margin: 3px 0 1px; background: #fff; border: 2.5px solid var(--ink); border-radius: 8px; overflow: hidden; }
-  .lm-barra i { display: block; height: 100%; width: var(--a); background: var(--green); animation: llenar .45s cubic-bezier(.2, 1.3, .4, 1); }
-  .lm.justo .lm-barra i { background: var(--yellow); } .lm.mal .lm-barra i, .lm-barra i.mal { background: var(--red); }
-  @keyframes llenar { from { width: var(--de); } to { width: var(--a); } }
-  .ln-viaje { margin: 6px 0 0; font-size: 12px; font-weight: bold; opacity: .75; }
-  .lab-cambio { position: absolute; right: 12px; top: 10px; font-size: 13px; font-weight: 900; padding: 2px 8px; border: 2px solid var(--ink); border-radius: 10px;
-    animation: cambio 1.8s forwards; pointer-events: none; }
-  .lab-cambio.sube { background: #fff0b8; } .lab-cambio.baja { background: #c9f0cf; }
-  @keyframes cambio { 0% { opacity: 0; transform: translateY(8px); } 15%, 70% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-10px); } }
-  .lab-pie { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 3px solid var(--ink); }
-  .lab-pie-nota { flex: 1; font-size: 13px; font-weight: bold; opacity: .75; text-align: right; }
-  .lab-boton.siguiente { background: var(--yellow); font-size: 17px; }
-  .lr { display: grid; gap: 12px; }
-  .lr-plan { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
-  .lr-fila { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #fff; border: 2.5px solid var(--ink); border-radius: 12px; }
-  .lr-fila > div { flex: 1; min-width: 0; } .lr-fila small { display: block; font-size: 11px; opacity: .65; font-weight: bold; text-transform: uppercase; }
-  .lr-fila b { font-size: 14px; }
-  .lr-icono { font-size: 24px; }
-  .lr-cambiar { font: inherit; font-size: 12px; font-weight: bold; cursor: pointer; padding: 3px 9px; background: #eef2f6; border: 2px solid var(--ink); border-radius: 8px; }
-  .lr-madurez small { font-size: 12px; font-weight: bold; opacity: .7; }
-  .lr-madurez div { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
-  .lr-madurez span { font-size: 13px; font-weight: bold; padding: 3px 10px; border: 2px solid var(--ink); border-radius: 20px; background: #fff; opacity: .55; }
-  .lr-madurez span.on { background: var(--green); opacity: 1; } .lr-madurez i { font-style: normal; opacity: .5; }
-  .la-lista { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
-  .la { display: flex !important; align-items: center; gap: 5px; padding: 5px 10px; background: #fff; border: 2px solid var(--ink); border-radius: 20px; cursor: pointer; font-weight: bold; }
-  .la input { display: none; } .la.si { background: #c9f0cf; } .la.yo { box-shadow: 0 0 0 3px var(--yellow); }
-  .la small { font-size: 12px; }
-
-  /* ----- Reporte de misión como pantalla de resultados ----- */
-  #informe { cursor: default; }
-  #informe .tarjeta { width: min(640px, 100%); padding: 0; }
-  .rep { padding: 18px 20px; display: grid; gap: 12px; }
-  .rep-cabeza { display: flex; align-items: center; gap: 14px; }
-  .rep-cabeza small { font-size: 12px; font-weight: bold; opacity: .65; }
-  .rep-cabeza h2 { margin: 0; font-size: 28px; }
-  .rep-planeta { flex: 0 0 auto; width: 54px; height: 54px; border-radius: 50%; background: var(--c); border: 3px solid var(--ink);
-    box-shadow: inset -9px -7px 0 rgba(0, 0, 0, .18), 3px 3px 0 var(--ink); animation: estrella .5s; }
-  .rep-puntos { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 14px; background: #fff3c4; border: 3px solid var(--ink); border-radius: 16px; }
-  .rep-estrellas { font-size: 34px; letter-spacing: 2px; }
-  .inf-estrella.vacia { opacity: .4; }
-  .rep-total { font-size: 34px; }
-  .rep-puntos small { font-size: 12px; opacity: .7; }
-  .rep-fichas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  @media (max-width: 560px) { .rep-fichas { grid-template-columns: repeat(2, 1fr); } }
-  .rf { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 10px 6px; background: #fff; border: 3px solid var(--ink); border-radius: 14px;
-    box-shadow: 3px 3px 0 var(--ink); animation: aparecer .35s backwards; }
-  .rf:nth-child(2) { animation-delay: .08s; } .rf:nth-child(3) { animation-delay: .16s; } .rf:nth-child(4) { animation-delay: .24s; }
-  .rf.bien { background: #e3f8e6; } .rf.justo { background: #fff6d6; } .rf.mal { background: #ffe3de; }
-  .rf-icono { font-size: 26px; } .rf small { font-size: 11px; font-weight: bold; text-transform: uppercase; opacity: .65; }
-  .rf b { font-size: 19px; } .rf em { font-style: normal; font-size: 11.5px; opacity: .75; line-height: 1.2; }
-  .rep-nova { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: #e9f4ff; border: 3px solid var(--ink); border-radius: 14px; }
-  .rep-nova-cara { flex: 0 0 auto; display: grid; place-items: center; width: 42px; height: 42px; font-size: 24px; background: #fff; border: 2.5px solid var(--ink); border-radius: 50%; }
-  .rep-nova b { color: #1c6fb5; } .rep-nova p { margin: 2px 0 0; font-size: 14px; line-height: 1.35; }
-  .rep-bloque h3 { margin: 0 0 4px; font-size: 16px; }
-  .rep-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
-  .rep-lista li { padding: 6px 9px; background: #fff; border: 2px solid rgba(29, 29, 29, .25); border-radius: 10px; }
-  .rep-parecido { display: flex; gap: 10px; align-items: center; padding: 10px 12px; background: #0e1628; color: #fff; border: 3px solid var(--ink); border-radius: 14px; }
-  .rep-parecido > span { font-size: 28px; } .rep-parecido small { display: block; font-size: 11px; opacity: .7; } .rep-parecido b { font-size: 13.5px; }
-  .rep-detalles { border: 2.5px solid var(--ink); border-radius: 12px; padding: 4px 12px; background: #fff; }
-  .rep-detalles summary { cursor: pointer; font-weight: bold; padding: 6px 0; }
-  .rep-seguir { justify-self: end; font: inherit; font-size: 17px; font-weight: bold; cursor: pointer; padding: 9px 18px; background: var(--green);
-    border: 3px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); }
-  .rep-seguir:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
-  .rep-seguir kbd { font-size: 12px; }
-
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
-<div id="juego"></div>
-<div id="visor" data-en="superficie"></div>
 
-<!-- Granero -->
-<div id="hud" class="fila-hud" data-en="granero">
-  <div class="tarjeta">💰 <span id="dinero"></span></div>
-  <div class="tarjeta">⛽ <span id="combustible"></span></div>
-  <div class="tarjeta">📦 <span id="carga"></span></div>
-  <div class="tarjeta">📅 Día <span id="dia"></span></div>
-</div>
-<div id="pista" class="tarjeta" data-en="granero"><kbd>Tab</kbd> teléfono</div>
-<div id="columna-derecha">
-  <div id="objetivo" class="tarjeta" data-en="granero espacio descenso superficie"></div>
-  <div id="mision" class="tarjeta" data-en="superficie"></div>
-  <div id="secundarias" class="tarjeta" data-en="superficie"></div>
-</div>
-<div id="mira" data-en="granero superficie"></div>
-<div id="accion" class="tarjeta" data-en="granero superficie espacio"></div>
-<div id="dialogo" class="tarjeta" data-en="granero">
-  <h4 id="dialogo-nombre"></h4>
-  <p id="dialogo-texto"></p>
-  <span id="dialogo-confianza"></span>
-  <div id="dialogo-opciones"></div>
-  <span id="dialogo-sigue"></span>
-</div>
-
-<!-- Vuelo -->
-<div id="hud-espacio" class="fila-hud" data-en="espacio">
-  <div class="tarjeta" id="destino"></div>
-  <div class="tarjeta medidor" id="barra"><div class="relleno" id="barra-comb"></div><div id="barra-reserva"></div><span id="txt-comb"></span></div>
-  <div class="tarjeta medidor amarillo" id="en-esp"><div class="relleno" id="en-esp-relleno"></div><span id="en-esp-txt"></span></div>
-  <div class="tarjeta" id="recolectado"></div>
-  <div class="tarjeta" id="velocidad"></div>
-  <div class="tarjeta" id="datos-esp"></div>
-  <div class="tarjeta" id="senal-esp"></div>
-</div>
-<div class="tarjeta ayuda" data-en="espacio">
-  <span><kbd>W</kbd> impulso</span><span><kbd>S</kbd> frenar</span><span>🖱 o <kbd>A</kbd><kbd>D</kbd><kbd>↑</kbd><kbd>↓</kbd> dirigir</span><span><kbd>R</kbd> volver a casa</span>
-</div>
-
-<!-- Descenso -->
-<div id="hud-descenso" class="fila-hud" data-en="descenso">
-  <div class="tarjeta" id="lugar-desc"></div>
-  <div class="tarjeta" id="desc-altura"></div>
-  <div class="tarjeta medidor" id="m-vel"><div class="relleno" id="vel-relleno"></div><span id="desc-vel"></span></div>
-  <div class="tarjeta" id="desc-comb"></div>
-  <div class="tarjeta medidor amarillo" id="en-desc"><div class="relleno" id="en-desc-relleno"></div><span id="en-desc-txt"></span></div>
-</div>
-<div class="tarjeta ayuda" data-en="descenso">
-  <span>Mantén <kbd>W</kbd> para frenar</span><span>🟢 hasta 3 m/s: suave</span><span>🟡 hasta 7 m/s: avería</span><span>🔴 más de 7 m/s: pata rota</span>
-</div>
-
-<!-- A pie en un planeta -->
-<!-- Arriba: dónde estás y lo que llevas. Abajo a la izquierda: lo que te mantiene con vida. -->
-<div id="hud-suelo" class="fila-hud compacta" data-en="superficie">
-  <div class="tarjeta" id="lugar"></div>
-  <div class="tarjeta" id="suelo-comb"></div>
-  <div class="tarjeta" id="recolectado-suelo"></div>
-  <div class="tarjeta" id="senal-suelo"></div>
-  <div class="tarjeta" id="datos-suelo"></div>
-  <div class="tarjeta" id="averia"></div>
-</div>
-<div id="vitales" class="tarjeta" data-en="superficie">
-  <div class="vital"><b>🫁</b><div class="medidor azul" id="m-oxi"><div class="relleno" id="oxi-relleno"></div><span id="oxi-txt"></span></div></div>
-  <div class="vital"><b>🛡</b><div class="medidor" id="m-traje"><div class="relleno" id="traje-relleno"></div><span id="traje-txt"></span></div></div>
-  <div class="vital"><b>🔋</b><div class="medidor amarillo" id="en-suelo"><div class="relleno" id="en-suelo-relleno"></div><span id="en-suelo-txt"></span></div></div>
-  <div class="vital" id="m-mision"><b>🎯</b><div class="medidor morado"><div class="relleno" id="mision-relleno"></div><span id="mision-txt"></span></div></div>
-</div>
-<div class="tarjeta ayuda" data-en="superficie">
-  <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> caminar</span><span><kbd>Espacio</kbd> saltar</span><span><kbd>Shift</kbd> correr (gasta más oxígeno)</span><span>El cohete recarga el oxígeno</span>
-</div>
-
-<div id="balizas-mision" data-en="superficie"></div>
-<div id="marcadores" data-en="espacio superficie"></div>
-<div id="marcador-pista" class="marcador baliza" data-en="espacio superficie"></div>
-<div id="marcador-senal" class="marcador baliza" data-en="superficie"></div>
-<div id="marcador-sitio" class="marcador baliza objetivo" data-en="espacio superficie"></div>
-<div id="alerta" class="tarjeta" data-en="espacio superficie"></div>
-<div id="laboratorio"></div>
-<div id="red-insignia" class="tarjeta"></div>
-<div id="control"><div class="tarjeta">
-  <div class="control-cabeza"><h2 class="control-titulo">🛰 Control de misión</h2><button class="lab-x" data-control="cerrar" title="Volver al granero">✕</button></div>
-  <div class="control-cuerpo">
-    <div>
-      <div class="control-pantalla"><video autoplay playsinline muted></video><span class="control-vivo">● EN VIVO</span>
-        <div class="control-sin-video">📡 Recibiendo la imagen de la nave…<br><small>Si no llega, la telemetría sigue funcionando.</small></div></div>
-      <p class="lab-nota">📻 Radio con la nave: el mensaje tarda lo mismo que la señal real en llegar.</p>
-      <div class="control-frases"></div>
-    </div>
-    <div><h3>📊 Telemetría</h3><div class="control-tele"></div></div>
-  </div></div></div>
-<div id="aviso" class="tarjeta"></div>
-<div id="logro" class="tarjeta"></div>
-
-<!-- Final -->
-<div id="subtitulo" class="tarjeta" data-en="final"><b>📻 Dr. Nova:</b> <span id="subtitulo-texto"></span><small><kbd>E</kbd> saltar</small></div>
-<div id="tarjeta-final">
-  <div class="tarjeta">
-    <h1>🛸 ¡Vida en Europa!</h1>
-    <p>Reparaste un cohete abandonado en un granero, cruzaste el sistema solar y escuchaste lo que había bajo el hielo.</p>
-    <p id="final-dias"></p>
-    <p class="real"><b>¿Y en la realidad?</b> Este final es ficción: hoy no hay evidencia de vida en Europa. Lo que sí indican los datos es un océano de agua salada bajo el hielo, y por eso la NASA envió la misión Europa Clipper a estudiar si podría ser habitable.</p>
-    <button id="final-seguir" class="verde">Volver al granero</button>
-    <button id="final-reiniciar">Jugar de nuevo</button>
+<header class="nav">
+  <div class="ancho">
+    <a class="marca" href="#inicio" aria-label="Granero Orbital, inicio"><span>GRANERO</span><span>ORBITAL</span></a>
+    <nav aria-label="Secciones"><ul>
+      <li><a href="#que-es">El juego</a></li>
+      <li><a href="#galeria">Imágenes</a></li>
+      <li><a href="#como-se-juega">Cómo se juega</a></li>
+      <li><a href="#destinos">Destinos</a></li>
+      <li><a href="#descargas">Descargas</a></li>
+      <li><a href="#reto">El reto</a></li>
+    </ul></nav>
+    <a class="boton amarillo" href="jugar.html">▶ Jugar</a>
   </div>
-</div>
+</header>
 
-<div id="informe"><div class="tarjeta" id="informe-cuerpo"></div></div>
-<div id="fundido"></div>
-<div id="telefono"><div class="tel-pantalla"></div></div>
+<main>
+<!-- ===== Portada ===== -->
+<section class="portada" id="inicio">
+  <div class="estrellas" id="estrellas" aria-hidden="true"></div>
+  <div class="ancho portada-grid">
+    <div>
+      <span class="insignia">NASA Space Apps 2026 · Gratis</span>
+      <h1 class="titulo" aria-label="Granero Orbital"><span>GRANERO</span><span>ORBITAL</span></h1>
+      <p class="gancho">Repara el cohete que dormía en tu granero y <b>diseña misiones espaciales de verdad</b>: elige instrumentos, observa lugares reales de Mercurio a Europa y llega hasta el océano escondido bajo el hielo.</p>
+      <div class="acciones">
+        <a class="boton amarillo" href="jugar.html">▶ Jugar ahora en el navegador</a>
+        <a class="boton" href="#descargas">⬇ Descargar</a>
+      </div>
+      <ul class="datos-rapidos">
+        <li>Sin instalar nada</li><li>Multijugador de 2 a 4</li><li>Unos 30 minutos por partida</li><li>En español</li>
+      </ul>
+    </div>
+    <div class="ventana revela" aria-hidden="true">
+      <div class="ventana-barra"><i></i><i></i><i></i></div>
+      <div class="ventana-pantalla" id="pantalla-portada">
+        <img class="on" src="./img/vuelo-jupiter.jpg" alt="">
+        <img src="./img/pueblo.jpg" alt="" loading="lazy">
+        <img src="./img/marte-rover.jpg" alt="" loading="lazy">
+        <img src="./img/laboratorio-mision.jpg" alt="" loading="lazy">
+      </div>
+    </div>
+  </div>
 
-<div id="inicio"></div>
+  <!-- Colinas, el granero y el cohete que despega, dibujados con código -->
+  <svg class="escena" viewBox="0 0 1440 230" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <g stroke="#1d1d1d" stroke-width="4" stroke-linejoin="round">
+      <path d="M0 150 Q180 60 380 120 T760 100 T1100 120 T1440 90 L1440 230 L0 230Z" fill="#4fb561"/>
+      <path d="M0 190 Q260 120 520 175 T1000 165 T1440 150 L1440 230 L0 230Z" fill="#6fcf6c"/>
+      <!-- granero -->
+      <rect x="1020" y="132" width="150" height="84" fill="#e5483b"/>
+      <polygon points="1010,134 1095,76 1180,134" fill="#c93a2e"/>
+      <rect x="1068" y="166" width="54" height="50" fill="#fff6e5"/>
+      <path d="M1068 166 L1122 216 M1122 166 L1068 216" fill="none" stroke-width="3"/>
+      <!-- árboles -->
+      <polygon points="880,205 905,140 930,205" fill="#3f9c4f"/><polygon points="890,175 905,128 920,175" fill="#4fb561"/>
+      <polygon points="1230,210 1252,150 1274,210" fill="#3f9c4f"/>
+      <!-- cohete -->
+      <g class="cohete-sube">
+        <g transform="translate(1250 -20)">
+          <path class="llama" d="M12 150 L0 188 L12 176 L22 200 L32 176 L44 188 L32 150Z" fill="#ffa726" stroke-width="3"/>
+          <polygon points="-8,142 14,108 14,146" fill="#e5483b" stroke-width="3"/><polygon points="52,142 30,108 30,146" fill="#e5483b" stroke-width="3"/>
+          <rect x="6" y="52" width="32" height="100" rx="10" fill="#fff6e5" stroke-width="3"/>
+          <path d="M6 70 Q22 -4 38 70Z" fill="#e5483b" stroke-width="3"/>
+          <circle cx="22" cy="92" r="9" fill="#4aa3e8" stroke-width="3"/>
+        </g>
+      </g>
+    </g>
+  </svg>
+</section>
 
-<script type="module" src="/src/main.js"></script>
+<!-- ===== Qué es ===== -->
+<section class="claro" id="que-es">
+  <div class="ancho">
+    <span class="etiqueta">El juego</span>
+    <h2>Cada decisión pesa. Literalmente.</h2>
+    <p class="lead">En una misión real, <b>cada kilo que sumas gasta más combustible</b>. Granero Orbital te deja sentir esa regla: un tanque más grande llega más lejos, pero pesa; un instrumento nuevo da ciencia, pero gasta energía. No hay una respuesta correcta, hay decisiones con consecuencias.</p>
+    <div class="grid3">
+      <article class="tarjeta caract revela"><div class="icono">🧪</div><h3>Laboratorio de diseño</h3><p>Antes de despegar diseñas la misión paso a paso: objetivo, instrumentos, lanzador y ruta. Unos medidores te muestran si la nave pesa de más o se queda sin energía.</p></article>
+      <article class="tarjeta caract revela"><div class="icono">📷</div><h3>Lugares reales</h3><p>Cada objetivo tiene 3 lugares que existen: el cráter Hokusai, Loki Patera, Conamara Chaos… Rodea el planeta, acércate y toma tú la foto, el escaneo o la medición.</p></article>
+      <article class="tarjeta caract revela"><div class="icono">🛬</div><h3>Aterriza a mano</h3><p>Frena contra la gravedad de cada mundo, baja por debajo de 3 m/s y explora a pie con oxígeno, traje y energía limitados.</p></article>
+      <article class="tarjeta caract revela"><div class="icono">👥</div><h3>Juega en equipo</h3><p>Hasta 4 personas, cada una en su teléfono o computadora. Dirección, Ciencia, Ingeniería y Operaciones deciden cada una su parte y siguen el vuelo en el Control de Misión.</p></article>
+      <article class="tarjeta caract revela"><div class="icono">🪐</div><h3>Ciencia de verdad</h3><p>Ventanas de lanzamiento, retraso de la señal, memoria y antena para enviar datos a la Tierra. Cada dato dice de dónde viene.</p></article>
+      <article class="tarjeta caract revela"><div class="icono">🏘</div><h3>Un mundo para explorar</h3><p>El granero, el pueblo con su mercado y su museo, encargos de los vecinos, 25 misiones secundarias y logros. Todo hecho con código, sin imágenes ni sonidos externos.</p></article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Galería ===== -->
+<section class="oscuro" id="galeria">
+  <div class="ancho">
+    <span class="etiqueta">Imágenes</span>
+    <h2>Así se ve</h2>
+    <p class="lead">Capturas reales del juego, sin retoques.</p>
+    <div class="galeria">
+      <div class="visor">
+        <img id="visor-img" src="./img/vuelo-jupiter.jpg" alt="Vuelo hacia Júpiter con el cohete frente al planeta">
+        <button class="flecha izq" id="ant" aria-label="Imagen anterior">‹</button>
+        <button class="flecha der" id="sig" aria-label="Imagen siguiente">›</button>
+        <div class="visor-pie" id="visor-pie">Vuelo hacia Júpiter, con la ayuda de los paneles solares.</div>
+      </div>
+      <div class="miniaturas" id="minis"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Cómo se juega ===== -->
+<section class="claro" id="como-se-juega">
+  <div class="ancho">
+    <span class="etiqueta">Cómo se juega</span>
+    <h2>Del granero a Europa en 5 pasos</h2>
+    <p class="lead">Una partida completa dura unos 30 minutos, y puedes guardarla en 4 ranuras.</p>
+    <div class="pasos">
+      <div class="tarjeta paso revela"><div><h3>Prepara tu cohete</h3><p>En el granero compras combustible, vendes muestras y mejoras el cohete desde el taller. El Dr. Nova te aconseja según cómo vaya tu partida.</p></div></div>
+      <div class="tarjeta paso revela"><div><h3>Diseña la misión</h3><p>Elige a qué planeta ir y, en el laboratorio, qué quieres descubrir, con qué instrumentos, en qué lanzador y de qué manera: sobrevuelo, orbitador o aterrizaje.</p></div></div>
+      <div class="tarjeta paso revela"><div><h3>Vuela y observa</h3><p>Da la vuelta al planeta, sigue los marcadores 🎯 y pulsa <kbd>E</kbd> cerca de cada lugar para fotografiarlo, escanearlo o medirlo. Los datos llenan la memoria y la antena los envía a la Tierra.</p></div></div>
+      <div class="tarjeta paso revela"><div><h3>Aterriza y explora</h3><p>Baja con cuidado, camina por la superficie, cumple la misión del lugar y vuelve a tu cohete antes de que se acabe el oxígeno.</p></div></div>
+      <div class="tarjeta paso revela"><div><h3>Mira tu resultado</h3><p>Al volver recibes estrellas y puntos, la lección del Dr. Nova, por qué salió así y a qué misión real se parece tu diseño. Con eso, ¡a mejorarlo!</p></div></div>
+    </div>
+    <div class="tarjeta consejo revela"><b>Regla de oro:</b> cada mejora añade masa, y más masa gasta más combustible. Antes de comprar, piensa qué es lo que hoy te frena.</div>
+  </div>
+</section>
+
+<!-- ===== Destinos ===== -->
+<section class="oscuro" id="destinos">
+  <div class="ancho">
+    <span class="etiqueta">Destinos</span>
+    <h2>Cinco mundos, cinco retos</h2>
+    <p class="lead">Cada lugar tiene su propio terreno, su cielo, sus peligros y su misión. Cumplir una abre la siguiente.</p>
+    <div class="destinos">
+      <div class="tarjeta destino revela"><div class="planeta" style="background:#a79a8a"></div><h3>Mercurio</h3><small>Calor extremo, sin atmósfera</small><p>Hielo escondido en cráteres que nunca ven el Sol.</p></div>
+      <div class="tarjeta destino revela"><div class="planeta" style="background:linear-gradient(#e8c372 0 30%,#f0d28e 30% 55%,#dcb25e 55%)"></div><h3>Venus</h3><small>465 °C bajo nubes de ácido</small><p>Lagos de lava y un suelo que derrite las sondas.</p></div>
+      <div class="tarjeta destino revela"><div class="planeta" style="background:#c1440e"></div><h3>Marte</h3><small>Polvo, rovers y hielo</small><p>Un rover olvidado, martemotos y agua bajo el suelo.</p></div>
+      <div class="tarjeta destino revela"><div class="planeta" style="background:linear-gradient(#e8c14a 0 35%,#d9a838 35% 65%,#b5432a 65%)"></div><h3>Ío</h3><small>La luna de Júpiter</small><p>El lugar más volcánico del sistema solar, con radiación intensa.</p></div>
+      <div class="tarjeta destino revela"><div class="planeta" style="background:#dcebf5"></div><h3>Europa</h3><small>El destino final</small><p>Un océano escondido bajo el hielo. Hay que triangular una señal.</p></div>
+    </div>
+    <p class="nota">Los datos son de divulgación general y se pueden comprobar en los sitios de la NASA. El final con vida en Europa es <b>ficción</b>, y así se dice en el juego.</p>
+  </div>
+</section>
+
+<!-- ===== Descargas ===== -->
+<section class="claro" id="descargas">
+  <div class="ancho">
+    <span class="etiqueta">Jugar</span>
+    <h2>Elige cómo jugar</h2>
+    <p class="lead">Es gratis. El juego funciona sin cuenta ni registro.</p>
+    <div class="descargas">
+      <article class="tarjeta descarga revela" id="d-web">
+        <span class="recomendado">Recomendado para ti</span>
+        <div class="icono-grande">🌐</div><h3>En el navegador</h3>
+        <p>Abre y juega al instante en Chrome, Edge o Firefox, en computadora o celular. También puedes instalarlo como app desde el menú del navegador.</p>
+        <small>En el celular, mejor con la pantalla en horizontal.</small>
+        <a class="boton amarillo" href="jugar.html">▶ Jugar ahora</a>
+      </article>
+      <article class="tarjeta descarga revela" id="d-windows">
+        <span class="recomendado">Recomendado para ti</span>
+        <div class="icono-grande">💻</div><h3>Windows</h3>
+        <p>Descarga el .zip (unos 200 MB), descomprímelo y abre <b>GraneroOrbital.exe</b>. Guarda tus partidas en tu equipo.</p>
+        <small>Como la app no está firmada, Windows puede avisar: pulsa «Más información → Ejecutar de todas formas».</small>
+        <a class="boton verde" href="https://github.com/tommycc2010-hub/cohete-del-granero/releases/latest/download/GraneroOrbital-windows.zip">⬇ Descargar para Windows</a>
+      </article>
+      <article class="tarjeta descarga revela" id="d-android">
+        <span class="recomendado">Recomendado para ti</span>
+        <div class="icono-grande">📱</div><h3>Android</h3>
+        <p>Descarga el archivo .apk, ábrelo y acepta instalar apps de origen desconocido. Trae controles táctiles hechos para el juego.</p>
+        <small>No está en Google Play: se instala directo desde el archivo.</small>
+        <a class="boton verde" href="https://github.com/tommycc2010-hub/cohete-del-granero/releases/latest/download/GraneroOrbital-android.apk">⬇ Descargar para Android</a>
+      </article>
+    </div>
+
+    <div class="controles">
+      <div class="tarjeta" style="padding:20px">
+        <h3 style="margin-bottom:8px">⌨ Teclado y mouse</h3>
+        <table>
+          <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>Caminar · impulso y dirección del cohete</td></tr>
+          <tr><td>Mouse</td><td>Mirar · dirigir el cohete</td></tr>
+          <tr><td><kbd>E</kbd></td><td>Usar, hablar, reparar, observar un lugar</td></tr>
+          <tr><td><kbd>Espacio</kbd></td><td>Saltar · <kbd>Shift</kbd> correr</td></tr>
+          <tr><td><kbd>Tab</kbd></td><td>Teléfono (mapa, taller, misiones)</td></tr>
+          <tr><td><kbd>R</kbd></td><td>Volver a casa desde la órbita</td></tr>
+          <tr><td><kbd>G</kbd> · <kbd>Esc</kbd></td><td>Guardar rápido · pausa</td></tr>
+        </table>
+      </div>
+      <div class="tarjeta" style="padding:20px">
+        <h3 style="margin-bottom:8px">📱 En el celular</h3>
+        <p style="margin:0 0 10px;font-size:15.5px">Aparecen controles táctiles solos: un joystick para moverte, deslizar para mirar y botones para actuar, impulsar y volver.</p>
+        <h3 style="margin:14px 0 8px">🌐 Jugar en línea</h3>
+        <p style="margin:0;font-size:15.5px">En el menú, <b>Jugar en línea</b>: una persona crea una sala con un código de 4 letras y las demás se unen. Necesita internet.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Reto y equipo ===== -->
+<section class="oscuro" id="reto">
+  <div class="ancho reto">
+    <div>
+      <span class="etiqueta">El reto</span>
+      <h2>Hecho para el NASA Space Apps Challenge 2026</h2>
+      <p class="lead" style="margin-bottom:18px">Granero Orbital responde al reto <b>Space Mission Design Game</b>: un juego donde diseñar una misión es tomar decisiones con límites reales de masa, energía, presupuesto, combustible, datos y comunicaciones, solo o en equipo.</p>
+      <p style="font-size:17px;margin:0 0 22px">Lo hizo <b>Siderense Rocket Labs</b>, con ayuda de Claude, un asistente de IA de Anthropic, bajo la dirección del equipo.</p>
+      <div class="acciones">
+        <a class="boton" href="https://github.com/tommycc2010-hub/cohete-del-granero">💾 Código en GitHub</a>
+        <a class="boton" href="https://www.spaceappschallenge.org/">🚀 Space Apps Challenge</a>
+      </div>
+    </div>
+    <div class="tarjeta aviso-legal revela">
+      <b>Aviso</b>
+      Granero Orbital es un proyecto de divulgación hecho por aficionados. <b style="display:inline">NASA no respalda este proyecto.</b>
+      Los datos científicos son de divulgación general y las misiones reales que se mencionan son solo una referencia. El final con vida en Europa es una historia inventada.
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="ancho">
+    <div><b>Granero Orbital</b> · Siderense Rocket Labs · 2026</div>
+    <ul>
+      <li><a href="jugar.html">Jugar</a></li>
+      <li><a href="#descargas">Descargas</a></li>
+      <li><a href="https://github.com/tommycc2010-hub/cohete-del-granero/releases">Versiones</a></li>
+      <li><a href="https://github.com/tommycc2010-hub/cohete-del-granero">Código</a></li>
+    </ul>
+  </div>
+</footer>
+
+<script>
+  // Estrellas de fondo de la portada
+  (function () {
+    var caja = document.getElementById("estrellas"), html = "";
+    for (var i = 0; i < 70; i++) {
+      html += '<i style="left:' + (Math.random() * 100).toFixed(1) + '%;top:' + (Math.random() * 78).toFixed(1) + '%;animation-delay:' + (Math.random() * 3).toFixed(1) + 's;transform:scale(' + (0.5 + Math.random()).toFixed(2) + ')"></i>';
+    }
+    caja.innerHTML = html;
+  })();
+
+  // Imágenes que cambian solas en la portada
+  (function () {
+    var fotos = document.querySelectorAll("#pantalla-portada img"), k = 0;
+    if (!fotos.length) return;
+    setInterval(function () { fotos[k].classList.remove("on"); k = (k + 1) % fotos.length; fotos[k].classList.add("on"); }, 4200);
+  })();
+
+  // Galería
+  (function () {
+    var FOTOS = [
+      ["vuelo-jupiter", "Vuelo hacia Júpiter, con la ayuda de los paneles solares."],
+      ["granero-dr-nova", "En el granero, el Dr. Nova te aconseja según cómo vaya tu partida."],
+      ["laboratorio-mision", "El laboratorio de diseño: cada decisión cambia el peso, la energía y el dinero de tu nave."],
+      ["telefono-mapa", "El mapa del teléfono: ventanas de lanzamiento, luz solar y retraso de la señal."],
+      ["descenso", "Descenso en Ío: frena contra su gravedad antes de tocar el suelo."],
+      ["marte-rover", "En Marte hay un rover abandonado que reactivar."],
+      ["europa-antenas", "En Europa, tres antenas triangulan una señal que viene de abajo del hielo."],
+      ["reporte-mision", "El resultado de la misión: estrellas, puntos y lo que aprendiste."],
+      ["sala-en-linea", "Salas en línea con código: hasta 4 personas, cada una con su rol."],
+      ["pueblo", "Villa Siderense: mercado, museo, café y vecinos con encargos."],
+      ["final-europa", "El final bajo el hielo de Europa (es ficción)."],
+      ["menu-principal", "El menú principal, con el granero de fondo."]
+    ];
+    var img = document.getElementById("visor-img"), pie = document.getElementById("visor-pie"), minis = document.getElementById("minis"), k = 0, auto;
+    FOTOS.forEach(function (f, i) {
+      var b = document.createElement("button");
+      b.className = "mini"; b.type = "button"; b.setAttribute("aria-label", "Ver imagen " + (i + 1));
+      b.innerHTML = '<img src="./img/' + f[0] + '.jpg" alt="" loading="lazy">';
+      b.onclick = function () { ir(i, true); };
+      minis.appendChild(b);
+    });
+    function ir(i, manual) {
+      k = (i + FOTOS.length) % FOTOS.length;
+      img.src = "./img/" + FOTOS[k][0] + ".jpg"; img.alt = FOTOS[k][1]; pie.textContent = FOTOS[k][1];
+      [].forEach.call(minis.children, function (m, j) { m.classList.toggle("on", j === k); });
+      if (manual) clearInterval(auto);
+    }
+    document.getElementById("ant").onclick = function () { ir(k - 1, true); };
+    document.getElementById("sig").onclick = function () { ir(k + 1, true); };
+    addEventListener("keydown", function (e) { var r = document.getElementById("galeria").getBoundingClientRect(); if (r.top < innerHeight && r.bottom > 0) { if (e.key === "ArrowLeft") ir(k - 1, true); if (e.key === "ArrowRight") ir(k + 1, true); } });
+    ir(0);
+    auto = setInterval(function () { ir(k + 1); }, 6000);
+  })();
+
+  // Marca la descarga que le sirve a este dispositivo
+  (function () {
+    var ua = navigator.userAgent, id = /Android/.test(ua) ? "d-android" : /Windows/.test(ua) ? "d-windows" : "d-web";
+    if (/iPhone|iPad/.test(ua)) id = "d-web";
+    document.getElementById(id).classList.add("sugerida");
+  })();
+
+  // Las tarjetas aparecen al llegar a ellas
+  (function () {
+    var cosas = document.querySelectorAll(".revela");
+    if (!("IntersectionObserver" in window)) { [].forEach.call(cosas, function (c) { c.classList.add("visto"); }); return; }
+    var o = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("visto"); o.unobserve(e.target); } }); }, { threshold: 0.12 });
+    [].forEach.call(cosas, function (c) { o.observe(c); });
+  })();
+</script>
 </body>
 </html>

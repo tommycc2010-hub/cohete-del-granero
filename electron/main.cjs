@@ -15,7 +15,7 @@ protocol.registerSchemesAsPrivileged([
 app.whenReady().then(() => {
   protocol.handle("app", async req => {
     const ruta = decodeURIComponent(new URL(req.url).pathname);
-    const archivo = path.normalize(path.join(RAIZ, ruta === "/" ? "index.html" : ruta));
+    const archivo = path.normalize(path.join(RAIZ, ruta === "/" ? "jugar.html" : ruta)); // la app abre el juego, no la página de presentación
     if (!archivo.startsWith(RAIZ)) return new Response("Prohibido", { status: 403 }); // nada fuera de dist
     try {
       const datos = await fs.promises.readFile(archivo);
@@ -28,7 +28,7 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
   const ventana = new BrowserWindow({
     width: 1280, height: 760, minWidth: 900, minHeight: 560,
-    title: "Cohete del Granero", backgroundColor: "#8ed1f0", show: false,
+    title: "Granero Orbital", backgroundColor: "#8ed1f0", show: false,
     icon: path.join(__dirname, "icono.png"),
     webPreferences: { contextIsolation: true, sandbox: true },
   });

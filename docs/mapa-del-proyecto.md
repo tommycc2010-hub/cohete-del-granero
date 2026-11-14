@@ -1,4 +1,4 @@
-# Mapa del proyecto · Cohete del Granero
+# Mapa del proyecto · Granero Orbital
 
 Generado con el grafo de Graphify (commit `b3c755d`, 642 nodos, 1599 relaciones, 45 comunidades) y revisado a mano.
 Sirve para saber **qué tocar y qué se rompe** antes de editar. Si el código cambia mucho, se vuelve a consultar Graphify.
@@ -27,6 +27,7 @@ Sirve para saber **qué tocar y qué se rompe** antes de editar. Si el código c
 ### Núcleo
 | Archivo | Qué hace | Lo usa |
 |---|---|---|
+| `index.html` · `jugar.html` | La **presentación** del juego y **el juego** (el HUD y todo lo demás vive en `jugar.html`). Las apps y la PWA abren `jugar.html` | Vite compila las dos (`vite.config.js`) |
 | `src/main.js` (~1300 líneas) | Bucle, modos, HUD, guardado, eventos, mochila, radio con retraso, calidad automática | `index.html` |
 | `src/reglas.js` | **Estado del juego** y toda la economía: mejoras, combustible, energía, ventanas de lanzamiento, misiones, encargos, logros, secundarias, museo | main, telefono, cientifico, dialogos, `simular.mjs` |
 | `src/datos.js` | Planetas (gravedad, luz, señal…), misiones, `SECUNDARIAS` (25), objetos | 10 archivos |
