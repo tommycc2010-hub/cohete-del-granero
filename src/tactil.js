@@ -25,7 +25,7 @@ export function crearTactil(avisos) {
       <button data-accion="pausa" title="Pausa">⏸</button>
     </div>
     <div class="tc-botones">
-      <button class="grande" data-tecla="KeyE" data-en="granero superficie">E</button>
+      <button class="grande" data-tecla="KeyE" data-en="granero superficie espacio">E</button>
       <button data-tecla="Space" data-en="granero superficie" data-mantener>⤒</button>
       <button data-tecla="ShiftLeft" data-en="granero superficie" data-alternar>🏃</button>
       <button class="grande" data-tecla="KeyW" data-en="espacio descenso" data-mantener>🔥</button>

@@ -18,7 +18,7 @@ import { crearPostpro } from "./postpro.js";
 import { crearEventosEspacio, crearEventosSuelo } from "./eventos.js";
 import { crearExtrasSuelo } from "./secundarias.js";
 import { crearLaboratorio } from "./laboratorio.js";
-import { pasoDatos, evaluar, evaluarEquipo, anotarRecord, premioObjetivo, memoriaNave, enlace, TIPOS } from "./diseno.js";
+import { pasoDatos, evaluar, evaluarEquipo, anotarRecord, premioObjetivo, memoriaNave, enlace, TIPOS, INSTRUMENTOS, OBJETIVOS, sitiosDe, observarSitio, instrumentoObjetivo } from "./diseno.js";
 import { esTactil, crearTactil, simularBloqueo } from "./tactil.js";
 import { crearMultijugador } from "./multijugador.js";
 import { DATOS_PLANETAS, SECUNDARIAS } from "./datos.js";
@@ -503,6 +503,7 @@ addEventListener("keydown", e => {
   } else if (e.code === "Escape" && telefono.abierto) telefono.cerrar();
   else if (e.code === "KeyE" && !e.repeat && (modo === "granero" || modo === "superficie")) interactuar();
   else if (e.code === "KeyE" && !e.repeat && modo === "final") tFinal = Math.max(tFinal, DURACION); // saltar la escena
+  else if (e.code === "KeyE" && !e.repeat && modo === "espacio" && sitioEnAlcance >= 0) empezarObservacion(sitioEnAlcance);
   else if (e.code === "KeyR" && !e.repeat && modo === "espacio") volver();
   else if (e.code === "KeyG" && !e.repeat && empezado && !telefono.abierto) {
     aviso(ranuraActual || DEMO ? guardarEn(ranuraActual) : "Elige una ranura: pausa (Esc) → Guardar partida.");
@@ -560,6 +561,7 @@ function interactuar() {
   else if (c.id === "vecino") hablar(c.nombre, conversacionVecino(c.nombre), c.x, c.z);
   else if (c.id === "despegar") usarCohete();
   else if (c.id === "mision") usarMision(c.clave);
+  else if (c.id === "sitio") empezarObservacion(c.i);
   else if (c.id === "museo") { const t = donarMuseo(); aviso(t); sonido.reproducir(t.includes("Donaste") ? "vender" : "clic"); }
   else if (c.id === "tablon" || c.id === "tablero") telefono.abrir("misiones");
   else if (c.id === "vitrina") telefono.abrir("logros");
@@ -617,14 +619,69 @@ function entrarAlEspacio() {
     $("destino").textContent = `🪐 ${DATOS_PLANETAS[dest].nombre}`;
     ponerModo("espacio");
     $("senal-esp").textContent = `📡 ${retrasoSenal(dest)} min`;
+    espacio.pista.visible = tipoMision() === "aterrizaje";
+    const enOrbita = sitiosEnOrbita();
+    espacio.ponerSitios(enOrbita, tipoMision() === "sobrevuelo");
+    (estado.mision.datos ? estado.mision.datos.sitios : []).forEach(i => espacio.marcarSitio(i));
+    const obj = objetivoMision(), pendientes = enOrbita.length - (estado.mision.datos ? estado.mision.datos.sitios.length : 0);
     if (lluviaActiva) {
       setTimeout(() => { if (modo === "espacio") aviso("☄️ ¡Alerta! Lluvia de micrometeoritos en la ruta de aterrizaje. Esquiva las rocas."); }, 3500);
       radio(`📻 ${NOMBRE}: Cuidado con esas rocas: un micrometeorito del tamaño de un grano de arena viaja a más de 10 km por segundo. Esquívalas.`);
-    } else if (tipoMision() === "sobrevuelo") radio(`📻 ${NOMBRE}: Es un sobrevuelo: tienes ${TIPOS.sobrevuelo.ventana} segundos cerca del planeta. Los instrumentos observan solos; luego volvemos a casa.`);
-    else if (tipoMision() === "orbitador") radio(`📻 ${NOMBRE}: Estamos en órbita. Los instrumentos observan y la antena envía los datos a la Tierra. Pulsa R para volver cuando quieras.`);
+    }
+    if (obj && enOrbita.length && pendientes > 0) {
+      const inst = instrumentoObjetivo(estado.mision);
+      setTimeout(() => { if (modo === "espacio") aviso(`🎯 Objetivo: ${obj.titulo}. Sigue el marcador 🎯 hasta los ${enOrbita.length} lugares del planeta, acércate y pulsa E para ${inst ? VERBO[inst][0].toLowerCase() : "observar"}.`); }, lluviaActiva ? 7000 : 600);
+    } else if (lluviaActiva) { /* ya avisó de las rocas */ }
+    else if (tipoMision() === "sobrevuelo") radio(`📻 ${NOMBRE}: Es un sobrevuelo: tienes ${TIPOS.sobrevuelo.ventana} segundos cerca del planeta; luego volvemos a casa.`);
+    else if (tipoMision() === "orbitador") radio(`📻 ${NOMBRE}: Estamos en órbita. Puedes dar la vuelta al planeta. Pulsa R para volver cuando quieras.`);
     else radio(`📻 ${NOMBRE}: Lo que flota en órbita vale poco. Sigue el marcador 🛬 para aterrizar en ${DATOS_PLANETAS[dest].lugar}.`);
-    espacio.pista.visible = tipoMision() === "aterrizaje";
+    if (obj && enOrbita.length && tipoMision() === "aterrizaje") setTimeout(() => { if (modo === "espacio") radio(`📻 ${NOMBRE}: Observa los lugares del objetivo desde órbita antes de bajar: una vez en el suelo ya no se ven.`); }, 6000);
   });
+}
+
+// ----- Lugares del objetivo: se observan de cerca (foto, escaneo o medición) -----
+// [lo que se hace, lo que se está haciendo, lo que se obtuvo]
+const VERBO = {
+  camara: ["Fotografiar", "Fotografiando", "📷 ¡Foto"], espectrometro: ["Analizar la luz de", "Analizando", "🌈 ¡Espectro"],
+  radar: ["Escanear con radar", "Escaneando", "📡 ¡Escaneo de radar"], termico: ["Tomar imagen infrarroja de", "Midiendo el calor de", "🌡 ¡Imagen infrarroja"],
+  magnetometro: ["Medir el campo magnético en", "Midiendo", "🧲 ¡Medición magnética"], sismometro: ["Instalar el sismómetro en", "Escuchando temblores en", "〰 ¡Registro sísmico"],
+  meteo: ["Instalar la estación en", "Midiendo el tiempo en", "🌬 ¡Medición del tiempo"],
+};
+const objetivoMision = () => { const d = estado.mision && estado.mision.diseno; return d ? OBJETIVOS[d.dest].find(o => o.id === d.objetivo) : null; };
+const sitiosMision = () => { const d = estado.mision && estado.mision.diseno; return d ? sitiosDe(d.dest, d.objetivo) : []; };
+const sitiosEnOrbita = () => { const l = sitiosMision(); return l.length && !l.every(s => s.suelo) ? l : []; };
+const sitiosEnSuelo = () => { const l = sitiosMision(); return l.length && l.every(s => s.suelo) ? l : []; };
+let medir = null; // observación en curso: { i, t, dur }
+function empezarObservacion(i) {
+  const m = estado.mision, s = sitiosMision()[i], inst = instrumentoObjetivo(m);
+  if (!s || medir) return;
+  if (!inst) { const o = objetivoMision(); aviso(`Para observar ${s.nombre} necesitas ${o.necesita.map(id => INSTRUMENTOS[id].nombre.toLowerCase()).join(" o ")}, y no lo trajiste.`); return sonido.reproducir("error"); }
+  if (sinEnergia()) { aviso("🔋 Sin energía los instrumentos no funcionan."); return sonido.reproducir("error"); }
+  medir = { i, t: 0, dur: s.suelo ? 4 : 2.5 };
+  sonido.reproducir("senal");
+}
+// cerca: si el jugador sigue al alcance del lugar que está observando
+function pasoObservacion(dt, cerca) {
+  if (!medir) return;
+  if (!cerca) { medir = null; aviso("Te alejaste y la observación se cortó. Vuelve a acercarte y pulsa E."); return sonido.reproducir("error"); }
+  medir.t += dt;
+  if (medir.t < medir.dur) return;
+  const i = medir.i, s = sitiosMision()[i];
+  medir = null;
+  const r = observarSitio(estado.mision, i);
+  if (!r) return;
+  if (s.suelo) superficie.marcarSitio(i); else espacio.marcarSitio(i);
+  sonido.reproducir("recoger");
+  aviso(`${VERBO[r.id][2]} de ${s.nombre}! +${r.mb} MB · ${r.hechos}/${r.total} lugares${r.perdidos ? ` · ⚠ ${Math.round(r.perdidos)} MB no cupieron en la memoria` : ""}`);
+  // El dato real del lugar llega un momento después, como una ficha del Dr. Nova
+  setTimeout(() => { if (estado.mision) aviso(`📖 ${s.nombre}: ${s.dato}`); }, 3000);
+  if (r.hechos >= r.total) setTimeout(() => { if (estado.mision) { aviso("🎯 ¡Observaste los 3 lugares! Vuelve a casa para entregar los datos y cumplir el objetivo."); sonido.reproducir("vender"); } }, 9500);
+}
+// Texto del botón de acción mientras se observa o cerca de un lugar
+function textoObservar(s, i) {
+  const inst = instrumentoObjetivo(estado.mision);
+  if (medir && medir.i === i) return `⏳ ${VERBO[inst][1]} ${s.nombre}… ${Math.round(100 * medir.t / medir.dur)} %`;
+  return inst ? `<b>E</b> ${VERBO[inst][0]} ${s.nombre}` : `${s.nombre} · necesitas otro instrumento`;
 }
 
 // ----- Diseño de misión: tipo, observación y datos -----
@@ -645,7 +702,8 @@ function textoDatos() {
   const m = estado.mision;
   if (!m || !m.datos) return "";
   const D = m.datos, falta = tipoMision() === "sobrevuelo" ? ` · ⏱ ${Math.max(0, Math.ceil(TIPOS.sobrevuelo.ventana - (m.tObs || 0)))} s` : "";
-  return `💾 ${Math.round(D.memoria)}/${memoriaNave()} MB · 📡 ${Math.round(D.enviados)} MB enviados${falta}`;
+  const objetivo = sitiosMision().length ? `🎯 ${(D.sitios || []).length}/${sitiosMision().length} lugares · ` : "";
+  return `${objetivo}💾 ${Math.round(D.memoria)}/${memoriaNave()} MB · 📡 ${Math.round(D.enviados)} MB enviados${falta}`;
 }
 
 // ----- Radio con retraso de la señal -----
@@ -714,7 +772,7 @@ addEventListener("mousemove", e => {
   if (modo === "espacio" && document.pointerLockElement && !pausado()) espacio.girar(e.movementX * 0.0022, e.movementY * 0.0022);
 });
 
-let esperaAviso = 0;
+let esperaAviso = 0, sitioEnAlcance = -1;
 function volar(dt) {
   const k = jugador.teclas;
   const giroYaw = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
@@ -753,7 +811,17 @@ function volar(dt) {
     m.tObs = (m.tObs || 0) + dt;
     if (m.tObs >= TIPOS.sobrevuelo.ventana) { aviso("☄ Fin del sobrevuelo: el planeta queda atrás. Rumbo a casa."); return volver(); }
   }
-  pintarBaliza($("marcador-senal"), null);
+  // Lugares del objetivo: el más cercano se marca siempre; de cerca se puede observar con E
+  const cerca = espacio.sitioCercano();
+  const alcance = 55 + espacio.radioPlaneta * 0.25;
+  const alAlcance = cerca && cerca.visible && cerca.distancia < alcance;
+  if (medir) espacio.estabilizar(dt); // la nave frena sola para que la foto o el escaneo salgan bien
+  // mientras observa, puede alejarse un poco sin que se corte
+  pasoObservacion(dt, !!(medir && cerca && cerca.i === medir.i && cerca.distancia < alcance * 1.6 && (cerca.visible || cerca.distancia < alcance)));
+  pintarBaliza($("marcador-sitio"), cerca && cerca.pos, espacio.camera, espacio.nave.position, cerca ? `🎯 ${sitiosMision()[cerca.i].nombre}` : "");
+  sitioEnAlcance = alAlcance ? cerca.i : -1;
+  $("accion").classList.toggle("visible", alAlcance);
+  if (alAlcance) $("accion").innerHTML = textoObservar(sitiosMision()[cerca.i], cerca.i);
 
   esperaAviso -= dt;
   if (r.enPista && tipoMision() === "aterrizaje") {
@@ -841,6 +909,11 @@ const NOMBRE_AVERIA = { pata: "pata rota", fuga: "fuga de combustible", antena: 
 let desc = null;
 let averias = {}, piezasNecesarias = 0, piezasEnMano = 0;
 
+function ponerSitiosSuelo() {
+  medir = null;
+  superficie.ponerSitios(sitiosEnSuelo());
+  (estado.mision.datos ? estado.mision.datos.sitios : []).forEach(i => superficie.marcarSitio(i));
+}
 function empezarDescenso() {
   eventosEsp.limpiar();
   ponerModo("transicion");
@@ -848,6 +921,7 @@ function empezarDescenso() {
   const dest = estado.mision.dest, d = DATOS_PLANETAS[dest];
   fundido(() => {
     superficie.iniciar(dest, estado.mejoras, generarCampo(dest, 12), !!estado.misiones[dest]);
+    ponerSitiosSuelo();
     extras.iniciar(dest, estado.secundarias);
     mundo = superficie;
     desc = { h: 150, v: -8, g: 9.8 * d.gravedad, arrastre: d.arrastre };
@@ -1043,6 +1117,12 @@ function pasoSuperficie(dt) {
   pintarMarcadores(camera, p);
   pintarBaliza($("marcador-pista"), posCohete, camera, p, "🚀 Cohete");
   pintarBaliza($("marcador-senal"), superficie.senal && superficie.senal.visible && superficie.senal.position, camera, p, "📡 Señal");
+  // Sitios de medición del objetivo: baliza al más cercano y la medición en curso
+  const pendientes = superficie.sitiosSuelo.filter(x => !x.hecho);
+  const sitioCerca = pendientes.sort((a, b) => a.pos.distanceTo(p) - b.pos.distanceTo(p))[0];
+  pintarBaliza($("marcador-sitio"), sitioCerca && sitioCerca.pos, camera, p, sitioCerca ? `🎯 ${sitiosMision()[sitioCerca.i].nombre}` : "");
+  for (const x of pendientes) x.it.texto = textoObservar(sitiosMision()[x.i], x.i).replace("<b>E</b> ", "");
+  if (medir) { const x = superficie.sitiosSuelo.find(s => s.i === medir.i); pasoObservacion(dt, x && Math.hypot(x.pos.x - p.x, x.pos.z - p.z) < 3.8); }
   pintarBalizasMision(mi.balizas.concat(extras.balizas(p)), p);
   $("mision").style.display = mi.objetivo ? "" : "none";
   if (mi.objetivo) $("mision").innerHTML = `<b>🎯 Misión</b>${mi.objetivo}`;
@@ -1171,6 +1251,7 @@ function reanudarSuelo(s) {
   const dest = estado.mision.dest, d = DATOS_PLANETAS[dest];
   const num = (x, def, max) => (typeof x === "number" && isFinite(x) ? Math.max(0, Math.min(max, x)) : def);
   superficie.iniciar(dest, estado.mejoras, generarCampo(dest, 12), !!estado.misiones[dest]);
+  ponerSitiosSuelo();
   extras.iniciar(dest, estado.secundarias);
   mundo = superficie;
   const a = s.averias || {};

@@ -1,12 +1,14 @@
 // Escena espacial: el cohete vuela cerca del planeta de destino y recoge objetos.
 import * as THREE from "three";
-import { toon, TINTA } from "./estilo.js";
+import { toon, TINTA, etiqueta } from "./estilo.js";
 import { crearCohete } from "./cohete.js";
 import { texturaSuave } from "./particulas.js";
 import { crearLlama } from "./efectos.js";
 
 const matContorno = new THREE.MeshBasicMaterial({ color: TINTA, side: THREE.BackSide });
-const LIMITE = 330;      // radio de la zona de vuelo
+const LIMITE = 330;      // radio de la zona de vuelo alrededor del punto de llegada
+const ORBITA_MAX = 190;  // además, se puede volar alrededor del planeta hasta esta altura sobre su superficie
+const ALTURA_MIN = 7;    // y nunca más cerca del suelo que esto (no se atraviesa el planeta)
 const RADIO_RECOGER = 4.5;
 
 // ----- Texturas de planetas dibujadas en un canvas (datos visuales de ejemplo) -----
@@ -191,7 +193,7 @@ export function crearEspacio() {
 
   let objetos = [], pista = null;
   let yaw = 0, pitch = 0, t = 0;
-  const vel = new THREE.Vector3();
+  const vel = new THREE.Vector3(), tmpV = new THREE.Vector3();
   const frente = new THREE.Vector3(), deseada = new THREE.Vector3();
 
   function iniciar(dest, mejoras, campo) {
@@ -207,11 +209,14 @@ export function crearEspacio() {
       jupiter.position.set(-520, 120, -1300);
       mundo.add(jupiter);
     }
-    const planeta = crearPlaneta(dest, dest === "mercurio" ? 110 : dest === "jupiter" ? 220 : 150);
+    const radioPlaneta = dest === "mercurio" ? 110 : dest === "jupiter" ? 220 : 150;
+    const planeta = crearPlaneta(dest, radioPlaneta);
+    planeta.userData.radio = radioPlaneta;
     planeta.position.set(40, -40, -520);
     planeta.rotation.z = 0.2;
     mundo.add(planeta);
     mundo.userData.planeta = planeta;
+    sitios = [];
     mundo.userData.lunas = (LUNAS[dest] || []).map(([nombre, color, radio, papa], i) => {
       const m = luna(color, radio, papa);
       const ref = dest === "europa" ? new THREE.Vector3(-520, 120, -1300) : planeta.position;
@@ -250,6 +255,63 @@ export function crearEspacio() {
     nave.rotation.set(0, 0, 0);
     camera.position.set(0, 4.2, 14);
     camera.quaternion.identity();
+  }
+
+  // ----- Lugares del objetivo sobre el planeta: un aro que brilla, una baliza y su nombre -----
+  let sitios = [];
+  // compacto: en un sobrevuelo los lugares se juntan en la cara que mira a la nave (hay poco tiempo)
+  function ponerSitios(lista, compacto = false) {
+    const P = mundo.userData.planeta;
+    sitios.forEach(x => P && P.remove(x.grupo));
+    sitios = [];
+    if (!P) return;
+    const R = P.userData.radio;
+    lista.forEach((s, i) => {
+      const lonReal = ((s.lon + 180) % 360 + 360) % 360 - 180;
+      const lat = THREE.MathUtils.degToRad(compacto ? s.lat * 0.5 : s.lat), lon = THREE.MathUtils.degToRad(compacto ? lonReal * 0.3 : lonReal);
+      // Se reparten por la cara que mira hacia la llegada, para que se pueda dar la vuelta y encontrarlos
+      const n = new THREE.Vector3(Math.cos(lat) * Math.sin(lon), Math.sin(lat), Math.cos(lat) * Math.cos(lon)).normalize();
+      const g = new THREE.Group();
+      g.position.copy(n).multiplyScalar(R * 1.004);
+      g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+      const aro = new THREE.Mesh(new THREE.RingGeometry(R * 0.07, R * 0.085, 40), mat);
+      aro.rotation.x = -Math.PI / 2;
+      const aro2 = new THREE.Mesh(new THREE.RingGeometry(R * 0.07, R * 0.085, 40), mat.clone());
+      aro2.rotation.x = -Math.PI / 2;
+      const haz = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 1.6, R * 0.35, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.35, depthWrite: false }));
+      haz.position.y = R * 0.175;
+      const cartel = etiqueta(s.nombre.toUpperCase(), { fondo: "#ffd23f", ancho: R * 0.22 });
+      cartel.position.y = R * 0.4;
+      g.add(aro, aro2, haz, cartel);
+      P.add(g);
+      sitios.push({ grupo: g, aro2, mat, haz, i, hecho: false });
+    });
+  }
+  function marcarSitio(i) {
+    const x = sitios.find(s => s.i === i);
+    if (!x) return;
+    x.hecho = true;
+    x.mat.color.set(0x5cc46b);
+    x.aro2.material.color.set(0x5cc46b);
+    x.haz.material.color.set(0x5cc46b);
+  }
+  const posSitio = new THREE.Vector3();
+  // El lugar pendiente más cercano: { i, pos, distancia, visible (de frente, no al otro lado del planeta) }
+  function sitioCercano() {
+    let mejor = null;
+    const P = mundo.userData.planeta;
+    for (const x of sitios) {
+      if (x.hecho) continue;
+      x.grupo.getWorldPosition(posSitio);
+      const d = posSitio.distanceTo(nave.position);
+      if (!mejor || d < mejor.distancia) {
+        const normal = posSitio.clone().sub(P.position).normalize();
+        const haciaNave = nave.position.clone().sub(posSitio).normalize();
+        mejor = { i: x.i, pos: posSitio.clone(), distancia: d, visible: normal.dot(haciaNave) > 0.15 };
+      }
+    }
+    return mejor;
   }
 
   function girar(dYaw, dPitch) {
@@ -301,7 +363,21 @@ export function crearEspacio() {
     nave.position.addScaledVector(vel, dt);
 
     let enLimite = false;
-    if (nave.position.length() > LIMITE) {
+    const P = mundo.userData.planeta;
+    if (P) {
+      const rel = tmpV.copy(nave.position).sub(P.position), d = rel.length(), R = P.userData.radio;
+      if (d < R + ALTURA_MIN) { // no se puede atravesar el planeta: se queda justo encima, sin velocidad hacia el suelo
+        rel.setLength(R + ALTURA_MIN);
+        nave.position.copy(P.position).add(rel);
+        const haciaAfuera = rel.normalize(), v = vel.dot(haciaAfuera);
+        if (v < 0) vel.addScaledVector(haciaAfuera, -v * 1.3);
+      } else if (nave.position.length() > LIMITE && d > R + ORBITA_MAX) {
+        rel.setLength(R + ORBITA_MAX);
+        nave.position.copy(P.position).add(rel);
+        vel.multiplyScalar(-0.4);
+        enLimite = true;
+      }
+    } else if (nave.position.length() > LIMITE) {
       nave.position.setLength(LIMITE);
       vel.multiplyScalar(-0.4);
       enLimite = true;
@@ -323,6 +399,11 @@ export function crearEspacio() {
     });
 
     if (mundo.userData.planeta) mundo.userData.planeta.rotation.y += dt * 0.02;
+    for (const x of sitios) { // el segundo aro se expande como una onda
+      const f = (t * 0.6 + x.i * 0.33) % 1;
+      x.aro2.scale.setScalar(1 + f * 1.4);
+      x.aro2.material.opacity = 0.9 * (1 - f);
+    }
     for (const l of mundo.userData.lunas || []) {
       const u = l.userData, a = u.fase + t * u.vel;
       l.position.set(u.ref.x + Math.cos(a) * u.r, u.ref.y + Math.sin(a) * u.r * u.inc + 60, u.ref.z + Math.sin(a) * u.r * 0.5 + 120);
@@ -368,7 +449,9 @@ export function crearEspacio() {
   }
 
   return {
-    scene, camera, nave, iniciar, girar, actualizar, iniciarLluvia,
+    scene, camera, nave, iniciar, girar, actualizar, iniciarLluvia, ponerSitios, marcarSitio, sitioCercano,
+    get radioPlaneta() { return mundo.userData.planeta ? mundo.userData.planeta.userData.radio : 150; },
+    get centroPlaneta() { return mundo.userData.planeta ? mundo.userData.planeta.position : null; },
     get lluvia() { return rocas.length > 0; },
     // Para los eventos
     agregarObjeto(dato, pos) {
@@ -381,6 +464,7 @@ export function crearEspacio() {
       return o;
     },
     empujar(v) { vel.add(v); },
+    estabilizar(dt) { vel.multiplyScalar(Math.max(0, 1 - 2.5 * dt)); },
     sacudir(s) { sacudida = Math.max(sacudida, s); },
     dirSol: sol.position.clone().normalize(),
     get t() { return t; },

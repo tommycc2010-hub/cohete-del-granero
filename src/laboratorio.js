@@ -9,7 +9,7 @@ import { estado, ponerEquipo } from "./reglas.js";
 import { DATOS_PLANETAS } from "./datos.js";
 import {
   INSTRUMENTOS, LANZADORES, TIPOS, OBJETIVOS, ROLES, calcularDiseno, disenoParaMision,
-  memoriaNave, premioObjetivo, armarEquipo, quienTieneRol,
+  memoriaNave, premioObjetivo, armarEquipo, quienTieneRol, sitiosDe,
 } from "./diseno.js";
 
 // Madurez del diseño (CML), dicha con palabras sencillas
@@ -143,8 +143,9 @@ export function crearLaboratorio(avisos) {
     if (pasoA.id === "objetivo") {
       cuerpo = `<div class="lc-grid tres">${OBJETIVOS[dest].map(o => `<button class="lc ${sel.objetivo === o.id ? "sel" : ""}" data-objetivo="${o.id}" ${bloq}>
         <span class="lc-icono">${INSTRUMENTOS[o.necesita[0]].icono}</span><b>${o.titulo}</b><p>${o.desc}</p>
+        <span class="lc-sitios">${sitiosDe(dest, o.id).every(s => s.suelo) ? "🥾 Medirás en 3 sitios del suelo (hay que aterrizar)" : "📍 Observarás: " + sitiosDe(dest, o.id).map(s => s.nombre).join(", ")}</span>
         <div class="lc-chips">${chip("Necesitas " + o.necesita.map(id => INSTRUMENTOS[id].icono + " " + INSTRUMENTOS[id].nombre).join(" o "), "morado")}${chip("🏆 premio " + premioObjetivo(dest) + " 💰", "oro")}</div></button>`).join("")}</div>`;
-      nova = `Cada objetivo es una pregunta de verdad que la ciencia quiere responder sobre ${P.lugar}. Elige una: en el siguiente paso escogerás los instrumentos que la responden.`;
+      nova = `Cada objetivo es una pregunta de verdad que la ciencia quiere responder sobre ${P.lugar}. Para cumplirlo tendrás que ir a <b>3 lugares reales</b> y observarlos de cerca con el instrumento que pide. Elige uno.`;
     } else if (pasoA.id === "inst") {
       const necesita = obj ? obj.necesita.map(id => INSTRUMENTOS[id].icono + " " + INSTRUMENTOS[id].nombre).join(" o ") : "";
       cuerpo = `<div class="lc-grid">${Object.entries(INSTRUMENTOS).map(([id, I]) => {

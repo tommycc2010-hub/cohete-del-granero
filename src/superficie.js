@@ -1,7 +1,7 @@
 // Superficie de un planeta: un bioma por destino para explorar a pie.
 // El relieve es siempre el mismo para cada planeta; los objetos cambian en cada viaje.
 import * as THREE from "three";
-import { caja, toon } from "./estilo.js";
+import { caja, toon, cilindro, esfera, etiqueta } from "./estilo.js";
 import { crearCohete } from "./cohete.js";
 import { crearLlama, geoBocanada } from "./efectos.js";
 import { crearPlaneta, crearObjeto } from "./espacio.js";
@@ -165,6 +165,7 @@ export function crearSuperficie() {
     golpePolvo = 0;
     colisiones.length = 0;
     interactuables.length = 0;
+    sitiosSuelo = [];
     bioma = BIOMAS[dest];
     destino = dest;
     rafagas = [];
@@ -498,8 +499,55 @@ export function crearSuperficie() {
     return { recogidos, piezasRecogidas, enPeligro, enSenal, nombrePeligro: bioma.peligro.nombre, mision: mision.actualizar(dt, pos) };
   }
 
+  // ----- Sitios de medición del objetivo (sismómetro, estación meteorológica…): una bandera y un haz de luz -----
+  let sitiosSuelo = [];
+  function ponerSitios(lista) {
+    sitiosSuelo = [];
+    lista.forEach((s, i) => {
+      const a = 0.9 + i * 2.2, r = 30 + i * 12;
+      const x = Math.cos(a) * r, z = Math.sin(a) * r, y = altura(x, z);
+      const g = new THREE.Group();
+      g.position.set(x, y, z);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+      const aro = new THREE.Mesh(new THREE.RingGeometry(1.7, 2.1, 32), mat);
+      aro.rotation.x = -Math.PI / 2;
+      aro.position.y = 0.08;
+      const haz = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.55, 16, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.3, depthWrite: false }));
+      haz.position.y = 8;
+      const poste = cilindro(0.06, 0.06, 1.5, 0x555555, 6);
+      poste.position.set(0, 0.75, 0);
+      const bandera = caja(0.7, 0.42, 0.04, 0xffd23f);
+      bandera.position.set(0.36, 1.28, 0);
+      const cartel = etiqueta(s.nombre.toUpperCase(), { fondo: "#ffd23f", ancho: 3.2 });
+      cartel.position.y = 2.5;
+      g.add(aro, haz, poste, bandera, cartel);
+      mundo.add(g);
+      const it = { id: "sitio", i, texto: `Medir en ${s.nombre}`, x, z, radio: 3.4 };
+      interactuables.push(it);
+      sitiosSuelo.push({ g, it, i, mat, haz, bandera, hecho: false, pos: new THREE.Vector3(x, y + 1.2, z) });
+    });
+  }
+  // Sitio medido: se pone verde y queda el instrumento desplegado en el suelo
+  function marcarSitio(i) {
+    const x = sitiosSuelo.find(s => s.i === i);
+    if (!x || x.hecho) return;
+    x.hecho = true;
+    x.mat.color.set(0x5cc46b);
+    x.haz.material.color.set(0x5cc46b);
+    x.bandera.material.color.set(0x5cc46b);
+    const k = interactuables.indexOf(x.it);
+    if (k >= 0) interactuables.splice(k, 1);
+    const sensor = esfera(0.35, 0xd8d8d8, 10);
+    sensor.scale.y = 0.6;
+    sensor.position.set(-0.5, 0.15, 0.4);
+    const antena = cilindro(0.03, 0.03, 0.8, 0x333333, 5);
+    antena.position.set(-0.5, 0.55, 0.4);
+    x.g.add(sensor, antena);
+  }
+
   return {
     scene, colisiones, interactuables, iniciar, actualizar, moverCohete, inclinar, ponerPiezas, polvareda, limite: TAM / 2 - 22,
+    ponerSitios, marcarSitio, get sitiosSuelo() { return sitiosSuelo; },
     // Tormenta solar: el cielo se tiñe de un resplandor anaranjado (0 = normal, 1 = máximo)
     tormenta(k) {
       const cielo = CIELOS[destino], naranja = new THREE.Color(0xffb36b);

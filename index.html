@@ -108,6 +108,8 @@
     white-space: nowrap; color: #fff; background: rgba(29, 29, 29, .75); border: 2px solid #fff; border-radius: 8px; pointer-events: none; }
   .marcador i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 50%; background: #888; border: 1px solid #fff; }
   .baliza { margin: -16px 0 0 -70px; font-size: 15px; z-index: 5; }
+  .baliza.objetivo { background: var(--yellow); border-color: var(--ink); }
+  .lc-sitios { font-size: 12px; line-height: 1.35; padding: 5px 8px; background: #fff8dc; border: 1.5px dashed var(--ink); border-radius: 8px; }
   #marcador-pista { background: #2f7d3a; border-color: #6ee37a; }
   #marcador-senal { background: #0e6f8f; border-color: #4de3ff; }
 
@@ -618,7 +620,7 @@
   <div id="secundarias" class="tarjeta" data-en="superficie"></div>
 </div>
 <div id="mira" data-en="granero superficie"></div>
-<div id="accion" class="tarjeta" data-en="granero superficie"></div>
+<div id="accion" class="tarjeta" data-en="granero superficie espacio"></div>
 <div id="dialogo" class="tarjeta" data-en="granero">
   <h4 id="dialogo-nombre"></h4>
   <p id="dialogo-texto"></p>
@@ -677,6 +679,7 @@
 <div id="marcadores" data-en="espacio superficie"></div>
 <div id="marcador-pista" class="marcador baliza" data-en="espacio superficie"></div>
 <div id="marcador-senal" class="marcador baliza" data-en="superficie"></div>
+<div id="marcador-sitio" class="marcador baliza objetivo" data-en="espacio superficie"></div>
 <div id="alerta" class="tarjeta" data-en="espacio superficie"></div>
 <div id="laboratorio"></div>
 <div id="red-insignia" class="tarjeta"></div>

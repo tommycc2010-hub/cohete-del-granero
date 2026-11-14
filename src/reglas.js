@@ -242,7 +242,7 @@ export function iniciarMision(id, diseno = null) {
     if (diseno) estado.dinero -= diseno.costo;
     estado.visitados[id] = true;
     estado.mision = { dest: id, ida, hecho: 0, encuentros: ENCUENTROS, carga: [], ultimo: "", recargo: ventana(id).recargo, dias: DATOS_PLANETAS[id].viaje,
-      diseno, datos: diseno ? { memoria: 0, enviados: 0, perdidos: 0, generados: {}, sinEnergia: 0 } : null };
+      diseno, datos: diseno ? { memoria: 0, enviados: 0, perdidos: 0, generados: {}, sinEnergia: 0, objetivo: 0, sitios: [] } : null };
     t = msg(`Despegaste hacia ${DATOS_PLANETAS[id].nombre}.`);
   }
   cambio();
@@ -514,7 +514,8 @@ export function importarMision(m) {
   if (estado.mision.diseno) {
     const D = m.datos && typeof m.datos === "object" ? m.datos : {};
     estado.mision.datos = { memoria: num(D.memoria, 0), enviados: num(D.enviados, 0), perdidos: num(D.perdidos, 0), sinEnergia: num(D.sinEnergia, 0),
-      generados: Object.fromEntries(Object.entries(D.generados || {}).filter(([, x]) => typeof x === "number" && x >= 0)) };
+      generados: Object.fromEntries(Object.entries(D.generados || {}).filter(([, x]) => typeof x === "number" && x >= 0)),
+      objetivo: num(D.objetivo, 0), sitios: Array.isArray(D.sitios) ? [...new Set(D.sitios.filter(i => Number.isInteger(i) && i >= 0 && i < 3))] : [] };
   }
   return true;
 }

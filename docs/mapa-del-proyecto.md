@@ -54,7 +54,7 @@ Sirve para saber **qué tocar y qué se rompe** antes de editar. Si el código c
 | `telefono.js` | Menú del teléfono: mapa, taller, misiones, logros |
 | `menu.js` | Menú principal, pausa, opciones y las 4 ranuras |
 | `informe.js` | Reporte de misión como pantalla de resultados (`htmlReporte`, `animarReporte`) y la lección del viaje |
-| `diseno.js` | **Diseño de misión** (sin nada visual): instrumentos, lanzadores, tipos de misión, objetivos, cálculo del diseño, datos y memoria, evaluación, récords y modo equipo |
+| `diseno.js` | **Diseño de misión** (sin nada visual): instrumentos, lanzadores, tipos de misión, objetivos, `SITIOS` (3 lugares reales por objetivo), `observarSitio`, cálculo del diseño, datos y memoria, evaluación, récords y modo equipo |
 | `laboratorio.js` | Laboratorio de Diseño de Misión paso a paso (`PASOS`): una decisión por pantalla, "Tu nave" con medidores y el Dr. Nova explicando cada paso. Cada persona navega los pasos por su cuenta; solo el diseño se comparte |
 | `tutorial.js`, `tactil.js` | Objetivos del tutorial · controles del celular |
 | `red.js` | **Red del multijugador** (sin nada visual): crear sala, unirse, enviar mensajes, video. Usa PeerJS (WebRTC) |
@@ -97,11 +97,11 @@ Sirve para saber **qué tocar y qué se rompe** antes de editar. Si el código c
 - **Añadir un dato de planeta:** `datos.js` (`DATOS_PLANETAS`) y, si tiene bioma, `superficie.js` (`BIOMAS`, `CIELOS`).
 - **Tocar el aspecto de un objeto 3D:** su archivo (`objetos.js`, `granja.js`, `pueblo.js`…) y después fotografiarlo con `herramientas/revisar.cjs`.
 - **Añadir un instrumento:** `diseno.js` (`INSTRUMENTOS`); si es el que pide un objetivo, también en `OBJETIVOS`. Aparece solo en el laboratorio.
-- **Añadir un objetivo científico:** `diseno.js` (`OBJETIVOS[destino]`) y, si tiene misión real parecida, `REALES`.
+- **Añadir un objetivo científico:** `diseno.js` (`OBJETIVOS[destino]` y sus 3 lugares en `SITIOS[destino][id]`, con `lat`/`lon` o `suelo: true` y un dato real) y, si tiene misión real parecida, `REALES`.
 - **Publicar:** `npm run empaquetar` → release en GitHub (el APK lo compila Actions solo).
 
 ## Flujo del diseño de misión
-`telefono.js` (elegir destino) → `laboratorio.js` (diseñar; `diseno.calcularDiseno`) → `reglas.iniciarMision(dest, diseno)` (cobra el diseño, crea la memoria de datos) → `main.observar()` cada fotograma en órbita y en el suelo (`diseno.pasoDatos`) → `main.volver()` → `diseno.evaluar` + `evaluarEquipo` → premio (`reglas.ganar`), récord y reporte (`informe.htmlReporte`).
+`telefono.js` (elegir destino) → `laboratorio.js` (diseñar; `diseno.calcularDiseno`) → `reglas.iniciarMision(dest, diseno)` (cobra el diseño, crea la memoria de datos) → `main.observar()` cada fotograma en órbita y en el suelo (`diseno.pasoDatos`, ciencia de fondo) · los lugares del objetivo: `espacio.ponerSitios` (en el planeta) o `superficie.ponerSitios` (en el suelo), y con E `main.empezarObservacion` → `diseno.observarSitio` (solo esto cuenta para el objetivo) → `main.volver()` → `diseno.evaluar` + `evaluarEquipo` → premio (`reglas.ganar`), récord y reporte (`informe.htmlReporte`).
 
 ## Flujo del multijugador en línea
 Anfitrión: menú → *Jugar en línea* → `red.crearSala` (código de 4 letras). Invitados: `red.unirse(código)` → reciben la partida (`estado`) y la lista de la sala.

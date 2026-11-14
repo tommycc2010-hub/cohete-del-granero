@@ -41,7 +41,7 @@ const COMO_JUGAR = `
     <tr><td>🖱</td><td>Mirar · dirigir el cohete</td></tr>
     <tr><td><kbd>Espacio</kbd></td><td>Saltar (depende de la gravedad)</td></tr>
     <tr><td><kbd>Shift</kbd></td><td>Correr (gasta más oxígeno)</td></tr>
-    <tr><td><kbd>E</kbd></td><td>Usar, hablar, reparar</td></tr>
+    <tr><td><kbd>E</kbd></td><td>Usar, hablar, reparar · observar un lugar del objetivo (foto, escaneo o medición)</td></tr>
     <tr><td><kbd>Tab</kbd></td><td>Teléfono</td></tr>
     <tr><td><kbd>R</kbd></td><td>Volver a casa desde la órbita</td></tr>
     <tr><td><kbd>M</kbd> · <kbd>Esc</kbd></td><td>Silenciar · pausa</td></tr>

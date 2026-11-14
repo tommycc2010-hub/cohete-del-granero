@@ -77,6 +77,101 @@ export const OBJETIVOS = {
     { id: "mapa", titulo: "Mapa del hielo", necesita: ["camara"], datos: 160, desc: "Fotografiar las grietas para elegir dónde aterrizar algún día." },
   ],
 };
+// ----- Lugares para observar: 3 por objetivo, todos reales -----
+// El objetivo se cumple observándolos (foto, escaneo o medición) con el instrumento que pide.
+// lat/lon: dónde está en el planeta (grados), para los que se ven desde órbita.
+// Los objetivos que solo se miden en el suelo (sismómetro, estación meteorológica) tienen sitios de medición en la superficie.
+export const SITIOS = {
+  mercurio: {
+    hielo: [
+      { nombre: "Cráter Prokofiev", lat: 85, lon: -63, dato: "Está junto al polo norte. Su fondo nunca recibe luz del Sol, y el radar y la nave MESSENGER confirmaron que guarda hielo." },
+      { nombre: "Cráter Kandinsky", lat: 88, lon: 80, dato: "Otro cráter polar en sombra permanente: ahí el hielo puede durar miles de millones de años aunque Mercurio esté junto al Sol." },
+      { nombre: "Cráter Chao Meng-Fu", lat: -88, lon: 135, dato: "Cerca del polo sur. Los radares desde la Tierra vieron en él un brillo típico del hielo." },
+    ],
+    mapa: [
+      { nombre: "Cuenca Caloris", lat: 30, lon: 170, dato: "Uno de los cráteres de impacto más grandes del sistema solar: mide unos 1500 km, casi un tercio del ancho de Mercurio." },
+      { nombre: "Cráter Hokusai", lat: 58, lon: 17, dato: "Un cráter joven con rayos brillantes de material lanzado por el impacto, que se ven a cientos de kilómetros." },
+      { nombre: "Discovery Rupes", lat: -55, lon: -38, dato: "Un acantilado de cientos de kilómetros: se formó cuando Mercurio se encogió al enfriarse, como una manzana que se arruga." },
+    ],
+    campo: [
+      { nombre: "Sobre el polo norte", lat: 80, lon: 0, dato: "MESSENGER descubrió que el campo magnético de Mercurio no está centrado: está corrido hacia el norte." },
+      { nombre: "Sobre el ecuador", lat: 0, lon: 90, dato: "Mercurio es pequeño y aun así tiene campo magnético: eso indica que su núcleo de hierro sigue en parte fundido." },
+      { nombre: "Sobre el polo sur", lat: -80, lon: 180, dato: "El viento solar choca con este campo y lo estira, formando una cola magnética detrás del planeta." },
+    ],
+  },
+  venus: {
+    atmosfera: [
+      { nombre: "Nubes del ecuador", lat: 0, lon: 0, dato: "Las nubes de Venus son gotitas de ácido sulfúrico y dan la vuelta al planeta en unos 4 días, mucho más rápido que el suelo." },
+      { nombre: "Vórtice del polo sur", lat: -80, lon: 120, dato: "La nave Venus Express encontró un enorme remolino de nubes que gira sobre el polo sur." },
+      { nombre: "Nubes del lado nocturno", lat: 20, lon: 200, dato: "La atmósfera es casi toda dióxido de carbono: atrapa el calor y deja el suelo a unos 465 °C día y noche." },
+    ],
+    volcanes: [
+      { nombre: "Maat Mons", lat: 1, lon: 195, dato: "El volcán más alto de Venus: se eleva unos 8 km. La nave Magellan lo cartografió con radar a través de las nubes." },
+      { nombre: "Idunn Mons", lat: -46, lon: 215, dato: "Venus Express midió en sus laderas lava más caliente que el suelo de alrededor: puede haber erupciones recientes." },
+      { nombre: "Sif Mons", lat: 22, lon: 352, dato: "Al comparar imágenes de radar de Magellan tomadas con meses de diferencia, se vieron cambios que parecen coladas de lava nuevas." },
+    ],
+    sismos: [
+      { nombre: "Llanura de lava", suelo: true, dato: "Nadie ha medido nunca un temblor en Venus: las sondas soviéticas Venera duraron pocas horas por el calor y la presión." },
+      { nombre: "Junto a las rocas", suelo: true, dato: "Venera 13 resistió 127 minutos en la superficie y envió las primeras fotos en color del suelo de Venus." },
+      { nombre: "Borde de la colina", suelo: true, dato: "Si Venus tiembla, sabremos si su interior sigue activo y si sus volcanes podrían despertar." },
+    ],
+  },
+  marte: {
+    agua: [
+      { nombre: "Utopia Planitia", lat: 45, lon: 110, dato: "El radar SHARAD encontró aquí hielo enterrado con tanta agua como un gran lago de la Tierra." },
+      { nombre: "Casquete polar sur", lat: -85, lon: 0, dato: "Bajo el hielo del polo sur, el radar MARSIS detectó señales que podrían ser agua líquida muy salada." },
+      { nombre: "Arcadia Planitia", lat: 40, lon: 200, dato: "Aquí hay hielo a poca profundidad: es uno de los lugares candidatos para que aterricen los primeros astronautas." },
+    ],
+    clima: [
+      { nombre: "Llanura abierta", suelo: true, dato: "La atmósfera de Marte tiene menos del 1 % de la presión de la Tierra: el agua líquida se evapora enseguida." },
+      { nombre: "Junto a la duna", suelo: true, dato: "En Marte hay remolinos de polvo, como pequeños tornados, que a veces limpian los paneles solares de los rovers." },
+      { nombre: "Cima de la loma", suelo: true, dato: "Entre el día y la noche la temperatura puede cambiar más de 80 °C, porque el aire es muy fino y no guarda el calor." },
+    ],
+    interior: [
+      { nombre: "Llanura abierta", suelo: true, dato: "El sismómetro de la misión InSight registró más de 1300 martemotos entre 2018 y 2022." },
+      { nombre: "Junto a las rocas", suelo: true, dato: "El martemoto más fuerte que midió InSight fue de magnitud 4.7, en mayo de 2022." },
+      { nombre: "Borde del cráter", suelo: true, dato: "Escuchando cómo viajan las ondas de los martemotos, InSight descubrió que el núcleo de Marte es de hierro líquido." },
+    ],
+  },
+  jupiter: {
+    volcanes: [
+      { nombre: "Loki Patera", lat: 13, lon: 309, dato: "Un lago de lava de unos 200 km de ancho: el volcán más potente de Ío." },
+      { nombre: "Pelé", lat: -19, lon: 255, dato: "Su penacho sube unos 300 km y deja un gran anillo rojo de azufre alrededor." },
+      { nombre: "Tvashtar", lat: 63, lon: 124, dato: "La nave New Horizons vio en 2007 una erupción de Tvashtar con un penacho de más de 300 km." },
+    ],
+    azufre: [
+      { nombre: "Anillo rojo de Pelé", lat: -19, lon: 255, dato: "El rojo viene de azufre que cae del penacho del volcán y se acumula alrededor." },
+      { nombre: "Penacho de Prometeo", lat: -2, lon: 153, dato: "Prometeo lleva activo desde que lo vio la Voyager 1 en 1979: lo llaman el «géiser fiel» de Ío." },
+      { nombre: "Escarcha de las llanuras", lat: 30, lon: 30, dato: "Las zonas blancas de Ío son escarcha de dióxido de azufre: el gas de los volcanes se congela en el suelo." },
+    ],
+    magnetosfera: [
+      { nombre: "Toro de plasma", lat: 0, lon: 90, dato: "Ío suelta cada segundo una tonelada de material que forma un anillo de gas cargado alrededor de Júpiter." },
+      { nombre: "Tubo de flujo de Ío", lat: 30, lon: 200, dato: "Entre Ío y Júpiter corre una corriente eléctrica de millones de amperios a lo largo del campo magnético." },
+      { nombre: "Huella en la aurora", lat: -40, lon: 300, dato: "Esa corriente deja una mancha brillante en las auroras de Júpiter que sigue a Ío en su órbita." },
+    ],
+  },
+  europa: {
+    oceano: [
+      { nombre: "Conamara Chaos", lat: 10, lon: 273, dato: "Bloques de hielo movidos y girados, como témpanos que flotaron sobre agua o hielo blando y se volvieron a congelar." },
+      { nombre: "Thera Macula", lat: -47, lon: 181, dato: "Una zona hundida y revuelta: podría haber un lago de agua líquida atrapado dentro del hielo, no muy hondo." },
+      { nombre: "Cerca del polo sur", lat: -70, lon: 180, dato: "El telescopio Hubble vio señales que podrían ser chorros de vapor de agua saliendo de esta zona." },
+    ],
+    sales: [
+      { nombre: "Tara Regio", lat: -10, lon: 75, dato: "El Hubble detectó aquí sal de mesa (cloruro de sodio): podría venir del océano escondido." },
+      { nombre: "Grietas rojizas", lat: 20, lon: 150, dato: "Las grietas de Europa tienen material rojizo; se cree que son sales del océano teñidas por la radiación de Júpiter." },
+      { nombre: "Thera Macula", lat: -47, lon: 181, dato: "Su material oscuro y rojizo pudo subir desde abajo del hielo." },
+    ],
+    mapa: [
+      { nombre: "Conamara Chaos", lat: 10, lon: 273, dato: "La nave Galileo fotografió aquí bloques de hielo del tamaño de ciudades, movidos y vueltos a congelar." },
+      { nombre: "Cráter Pwyll", lat: -25, lon: 271, dato: "Uno de los cráteres más jóvenes de Europa: sus rayos blancos se extienden más de 1000 km." },
+      { nombre: "Thrace Macula", lat: -46, lon: 172, dato: "Una mancha oscura de terreno caótico, uno de los posibles lugares para aterrizar algún día." },
+    ],
+  },
+};
+export const sitiosDe = (dest, objetivo) => ((SITIOS[dest] || {})[objetivo] || []);
+// MB que da cada sitio observado: con los 3 se cumple el objetivo (con un poco de margen)
+export const datosPorSitio = obj => Math.ceil(obj.datos * 0.36);
+
 // Premio en 💰 al cumplir el objetivo, según lo lejos del destino
 export const premioObjetivo = dest => 120 + 90 * ORDEN.indexOf(dest);
 
@@ -120,7 +215,8 @@ export function calcularDiseno(dest, { objetivo, instrumentos = [], lanzador = "
   if (estado.dinero < costo) errores.push(`El diseño cuesta ${costo} 💰 y tienes ${estado.dinero} 💰.`);
   if (estado.combustible < ida * 2) errores.push(`Hace falta ${ida * 2} ⛽ para ir y volver y tienes ${Math.floor(estado.combustible)} ⛽. Compra combustible o elige un sobrevuelo.`);
   if (obj && !sirven.length) avisos.push(`Para "${obj.titulo}" necesitas: ${obj.necesita.map(id => INSTRUMENTOS[id].nombre).join(" o ")}. Sin eso el objetivo no se cumple.`);
-  else if (obj && datosObjetivo < obj.datos) avisos.push(`Con este diseño esperas unos ${datosObjetivo} MB para el objetivo y hacen falta ${obj.datos} MB: quizá tengas que observar más tiempo.`);
+  else if (obj && sitiosDe(dest, obj.id).every(s => s.suelo) && !T.aterriza) avisos.push(`"${obj.titulo}" se mide en el suelo: con un ${T.nombre.toLowerCase()} no podrás llegar a los sitios de medición.`);
+  else if (obj && tipo === "sobrevuelo") avisos.push(`En un sobrevuelo solo hay ${T.ventana} segundos cerca del planeta: date prisa para observar los 3 lugares del objetivo.`);
   inst.filter(id => !utilesAqui(id)).forEach(id => avisos.push(`${INSTRUMENTOS[id].nombre} no sirve en un ${T.nombre.toLowerCase()}: ${INSTRUMENTOS[id].donde.includes("suelo") ? "solo funciona en el suelo" : "solo funciona desde órbita"}. Es masa y costo de más.`));
   if (gen < gasto) avisos.push(`En ${DATOS_PLANETAS[dest].lugar} generarás ${gen.toFixed(1)} de energía por segundo y gastarás ${gasto.toFixed(1)}: la batería dura unos ${Math.round(energiaMax() / (gasto - gen))} s. Sin energía los instrumentos se apagan.`);
   if (datosEsperados > memoriaNave() + enlace(dest) * (segOrbita + segSuelo)) avisos.push(`Generarás más datos (${datosEsperados} MB) de los que caben (${memoriaNave()} MB) y la antena puede enviar: perderás ciencia. Mejora sensores o antena.`);
@@ -149,7 +245,31 @@ export function disenoAutomatico(dest) {
 }
 
 // ----- Datos durante la misión -----
-export const nuevosDatos = () => ({ memoria: 0, enviados: 0, perdidos: 0, generados: {}, sinEnergia: 0 });
+export const nuevosDatos = () => ({ memoria: 0, enviados: 0, perdidos: 0, generados: {}, sinEnergia: 0, objetivo: 0, sitios: [] });
+
+// Instrumento de la nave que sirve para el objetivo (el primero que lleve), o null
+export function instrumentoObjetivo(m) {
+  const d = m && m.diseno, obj = d && OBJETIVOS[d.dest].find(o => o.id === d.objetivo);
+  return obj ? d.instrumentos.find(id => obj.necesita.includes(id)) || null : null;
+}
+
+// Observar un lugar del objetivo (foto, escaneo o medición): suma sus datos a la memoria.
+// Devuelve { mb, perdidos, hechos, total } o null si no se puede.
+export function observarSitio(m, i) {
+  const d = m && m.diseno, D = m && m.datos;
+  const obj = d && OBJETIVOS[d.dest].find(o => o.id === d.objetivo);
+  const lista = obj ? sitiosDe(d.dest, obj.id) : [];
+  const id = instrumentoObjetivo(m);
+  if (!obj || !id || !D || !lista[i] || D.sitios.includes(i)) return null;
+  const mb = datosPorSitio(obj), cap = memoriaNave();
+  const cabe = Math.max(0, Math.min(mb, cap - D.memoria));
+  D.memoria += cabe;
+  D.generados[id] = (D.generados[id] || 0) + cabe;
+  D.objetivo += cabe;
+  D.perdidos += mb - cabe;
+  D.sitios.push(i);
+  return { mb: cabe, perdidos: mb - cabe, hechos: D.sitios.length, total: lista.length, id };
+}
 
 // Un paso de observación: los instrumentos generan datos (si hay energía), la memoria se llena y la antena envía.
 // lugar: "orbita" o "suelo". Devuelve { lleno } para avisar al jugador.
@@ -189,7 +309,8 @@ export function evaluar(m, { rescate, averias = [], desmayos = 0, combustibleFin
   const entregado = Object.fromEntries(Object.entries(D.generados).map(([id, x]) => [id, x * parte]));
   const ciencia = Math.round(Object.entries(entregado).reduce((s, [id, x]) => s + x * INSTRUMENTOS[id].valor, 0));
   const obj = OBJETIVOS[d.dest].find(o => o.id === d.objetivo);
-  const datosObj = obj ? obj.necesita.reduce((s, id) => s + (entregado[id] || 0), 0) : 0;
+  const datosObj = (D.objetivo || 0) * parte; // solo cuenta lo observado en los lugares del objetivo
+  const nSitios = (D.sitios || []).length;
   const cumplido = !!obj && datosObj >= obj.datos;
   const pctEnviado = generadoTotal ? D.enviados / generadoTotal : 0;
 
@@ -206,9 +327,10 @@ export function evaluar(m, { rescate, averias = [], desmayos = 0, combustibleFin
 
   // ¿Por qué salió así? Explicaciones en palabras simples, de lo más importante a lo menos
   const porque = [];
-  if (cumplido) porque.push(`✅ Objetivo cumplido: entregaste ${Math.round(datosObj)} MB de ${obj.necesita.filter(id => entregado[id]).map(id => INSTRUMENTOS[id].nombre.toLowerCase()).join(" y ")} y hacían falta ${obj.datos} MB.`);
+  if (cumplido) porque.push(`✅ Objetivo cumplido: observaste los ${nSitios} lugares y entregaste ${Math.round(datosObj)} MB (hacían falta ${obj.datos} MB).`);
   else if (obj && !d.instrumentos.some(id => obj.necesita.includes(id))) porque.push(`❌ Objetivo no cumplido: "${obj.titulo}" necesita ${obj.necesita.map(id => INSTRUMENTOS[id].nombre.toLowerCase()).join(" o ")}, y no lo llevabas.`);
-  else if (obj) porque.push(`❌ Objetivo no cumplido: entregaste ${Math.round(datosObj)} de ${obj.datos} MB. ${d.tipo === "sobrevuelo" ? "Un sobrevuelo da poco tiempo para observar." : "Faltó tiempo observando, energía o espacio en la memoria."}`);
+  else if (obj && nSitios < 3) porque.push(`❌ Objetivo no cumplido: observaste ${nSitios} de los 3 lugares del objetivo. ${d.tipo === "sobrevuelo" ? "Un sobrevuelo da poco tiempo: hay que ir directo a cada lugar." : "Sigue los marcadores 🎯 y pulsa E cerca de cada lugar."}`);
+  else if (obj) porque.push(`❌ Objetivo no cumplido: observaste los 3 lugares, pero solo llegaron ${Math.round(datosObj)} de ${obj.datos} MB: la memoria se llenó o hubo que rescatarte.`);
   if (D.perdidos > 1) porque.push(`💾 La memoria se llenó y se perdieron ${Math.round(D.perdidos)} MB. Más memoria (sensores) o una antena mejor para enviar más rápido.`);
   if (D.sinEnergia > 5) porque.push(`🔋 Los instrumentos estuvieron ${Math.round(D.sinEnergia)} s apagados por falta de energía. Cada instrumento gasta: más paneles, batería o un RTG.`);
   if (rescate) porque.push("🛟 Hubo que rescatarte: los datos que quedaban en la memoria se perdieron. Solo contó lo que ya habías enviado por la antena.");
